@@ -80,23 +80,6 @@ WHERE ((column_name LIKE 'lat%')
     )
 	and table_schema = 'mastr';
 
--- Bounding hull from lat lon points
-SELECT
-    ST_Transform(
-        ST_ConcaveHull(
-            ST_Collect(
-                ST_SetSRID(
-                    ST_MakePoint(lon, lat),
-                    4326
-                )
-            ),
-            0.5
-        ),
-        4326
-    ) AS bounding_geometry
-FROM
-    e2watch.buildings;
-
 -- Bounding hull from geometry
 SELECT
     ST_Transform(ST_ConcaveHull(ST_Collect(ST_Points(ST_Simplify(geometry, 20))),0.5), 4326) AS bounding_geometry

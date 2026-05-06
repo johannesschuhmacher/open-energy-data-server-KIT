@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: OEDS Contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 import logging
 import io
 
@@ -234,4 +238,3 @@ if __name__ == "__main__":
         datefmt='%d-%m-%Y %H:%M:%S')
 
     main()
-

@@ -1,0 +1,21 @@
+LicenseRef-Eurostat-GISCO-NUTS-2021
+
+This license reference covers the Eurostat/GISCO NUTS 2021 statistical units
+data files included in this repository.
+
+Source:
+https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics
+https://gisco-services.ec.europa.eu/distribution/v2/nuts/nuts-2021-metadata.pdf
+
+The upstream metadata identifies the dataset as "Nomenclature of Territorial
+Units for Statistics (NUTS) 2021 - Statistical Units - Data set" and identifies
+European Commission, Eurostat (ESTAT), GISCO as the point of contact. The
+metadata states that the dataset is based on EuroBoundaryMap v2020 from
+EuroGeographics, Global Administrative Unit Layer 2015 country data from
+UN/FAO, and data from the National Statistical Institute of Turkey.
+
+Use, redistribution, publication, and commercial use are governed by the
+applicable Eurostat/GISCO copyright and licence policy, the NUTS 2021 metadata,
+and the source-specific terms referenced by Eurostat/GISCO. Any printed or
+electronic publication using the data must acknowledge the applicable source
+and copyright notices required by Eurostat/GISCO.
