@@ -161,11 +161,13 @@ def _seasonal_case() -> tuple[str, pd.DataFrame, SeriesFillConfig, int]:
         time_column="DateTime",
         value_columns=("Value",),
         groupby_columns=("Area",),
-        method="previous_period",
+        method="donor_refined",
         period=pd.Timedelta(hours=24),
+        candidate_periods=(pd.Timedelta(hours=24), pd.Timedelta(days=7)),
+        donor_context_periods=4,
         max_gap_periods=6,
     )
-    return "previous_period_gap", dataframe, config, 3
+    return "donor_refined_seasonal_gap", dataframe, config, 3
 
 
 def _series_for_dashboard(

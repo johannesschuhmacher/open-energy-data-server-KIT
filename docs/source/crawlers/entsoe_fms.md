@@ -69,9 +69,13 @@ entsoe_fms:
   gapfill:
     enable: true
     target_schema: "entsoe_fms_gapfilled"
-    method: "linear"
+    method: "donor_refined"
+    candidate_periods: ["24h", "7d"]
+    donor_context_periods: 6
+    donor_search_radius: "28d"
+    refinement_periods: 3
     max_gap_periods: 24
-    lookback: "7d"
+    lookback: "28d"
     fail_on_table_error: true
     tables:
       - "ActualTotalLoad"
@@ -143,9 +147,15 @@ Tracking uses source timestamps and, when available, `UpdateTime(UTC)`. This is
 important for ENTSO-E FMS because historical records can be revised after their
 original `DateTime(UTC)`.
 
-The default method is `linear`, which uses time-based interpolation inside
-bounded gaps. `max_gap_periods` prevents large outages from being filled
-silently. Manual runs can use:
+The default method is `donor_refined`. It searches complete donor windows using
+the configured seasonal periods, compares the surrounding context and boundary
+continuity, copies the best matching segment, and smooths the segment edges to
+avoid visible jumps. With the default `candidate_periods` of `24h` and `7d`,
+the filler can choose between daily and weekly patterns instead of always using
+the previous day. `max_gap_periods` prevents large outages from being filled
+silently. The configured `lookback` matches the donor search radius so
+incremental runs read enough history for weekly donor candidates. Manual runs
+can use:
 
 ```shell
 uv run python scripts/gapfill_timeseries.py --job entsoe_fms

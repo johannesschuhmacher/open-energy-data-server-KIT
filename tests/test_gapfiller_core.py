@@ -34,6 +34,7 @@ class GapfillerCoreTest(unittest.TestCase):
             time_column="DateTime",
             value_columns=("Value",),
             groupby_columns=("Area",),
+            method="linear",
             max_gap_periods=4,
         )
 
@@ -57,6 +58,7 @@ class GapfillerCoreTest(unittest.TestCase):
             time_column="DateTime",
             value_columns=("Value",),
             groupby_columns=("Area",),
+            method="linear",
             max_gap_periods=4,
         )
 
@@ -78,6 +80,7 @@ class GapfillerCoreTest(unittest.TestCase):
             time_column="DateTime",
             value_columns=("Value",),
             groupby_columns=("Area",),
+            method="linear",
             max_gap_periods=3,
         )
 
@@ -98,6 +101,7 @@ class GapfillerCoreTest(unittest.TestCase):
             time_column="DateTime",
             value_columns=("Generation", "Consumption"),
             groupby_columns=("Area",),
+            method="linear",
             max_gap_periods=4,
         )
 
@@ -132,6 +136,80 @@ class GapfillerCoreTest(unittest.TestCase):
         filled = result.dataframe.set_index("DateTime")
 
         self.assertEqual(filled.loc[index[30], "Value"], 6.0)
+
+    def test_donor_match_uses_best_context_instead_of_fixed_prior_day(self) -> None:
+        index = pd.date_range("2026-01-01", periods=96, freq="h", tz="UTC")
+        base = 100.0 + 20.0 * np.sin(np.arange(96) * 2 * np.pi / 24)
+        values = base.copy()
+        values[30:33] = [500.0, 500.0, 500.0]
+        expected = values[6:9].copy()
+        values[54:57] = np.nan
+        dataframe = pd.DataFrame({
+            "DateTime": index,
+            "Value": values,
+            "Area": "DE",
+        })
+        config = SeriesFillConfig(
+            table_name="Example",
+            time_column="DateTime",
+            value_columns=("Value",),
+            groupby_columns=("Area",),
+            method="donor_match",
+            period=pd.Timedelta(hours=24),
+            candidate_periods=(pd.Timedelta(hours=24),),
+            donor_context_periods=3,
+            max_gap_periods=6,
+        )
+
+        result = fill_table(dataframe, config, "run-1", pd.Timestamp("2026-01-05T00:00:00Z"))
+        filled = result.dataframe.set_index("DateTime")
+        actual = filled.loc[index[54:57], "Value"].to_numpy(dtype="float64")
+
+        np.testing.assert_allclose(actual, expected)
+        self.assertFalse(np.allclose(actual, [500.0, 500.0, 500.0]))
+
+    def test_donor_refined_reduces_edge_jumps(self) -> None:
+        index = pd.date_range("2026-01-01", periods=72, freq="h", tz="UTC")
+        values = np.full(72, np.nan)
+        values[23:26] = [8.0, 9.0, 10.0]
+        values[26:30] = [100.0, 110.0, 120.0, 130.0]
+        values[30:33] = [13.0, 14.0, 15.0]
+        values[47:50] = [8.0, 9.0, 10.0]
+        values[54:57] = [13.0, 14.0, 15.0]
+        dataframe = pd.DataFrame({
+            "DateTime": index,
+            "Value": values,
+            "Area": "DE",
+        })
+        base_config = dict(
+            table_name="Example",
+            time_column="DateTime",
+            value_columns=("Value",),
+            groupby_columns=("Area",),
+            period=pd.Timedelta(hours=24),
+            candidate_periods=(pd.Timedelta(hours=24),),
+            donor_context_periods=3,
+            max_gap_periods=4,
+        )
+        raw = fill_table(
+            dataframe,
+            SeriesFillConfig(**base_config, method="donor_match"),
+            "run-1",
+            pd.Timestamp("2026-01-04T00:00:00Z"),
+        ).dataframe.set_index("DateTime")
+        refined = fill_table(
+            dataframe,
+            SeriesFillConfig(**base_config, method="donor_refined"),
+            "run-2",
+            pd.Timestamp("2026-01-04T00:00:00Z"),
+        ).dataframe.set_index("DateTime")
+
+        raw_values = raw.loc[index[50:54], "Value"].to_numpy(dtype="float64")
+        refined_values = refined.loc[index[50:54], "Value"].to_numpy(dtype="float64")
+
+        self.assertEqual(int(np.isfinite(refined_values).sum()), 4)
+        self.assertLess(abs(refined_values[0] - 10.0), abs(raw_values[0] - 10.0))
+        self.assertLess(abs(refined_values[-1] - 13.0), abs(raw_values[-1] - 13.0))
 
     def test_builtin_self_tests_pass(self) -> None:
         _, results, series = run_self_tests()

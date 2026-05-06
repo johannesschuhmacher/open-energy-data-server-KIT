@@ -54,15 +54,18 @@ entsoe_fms:
   schedule: "0 * * * *"
   default_start_date: "2014-01-01"
   post_run_scripts:
-    - "scripts/refresh_entsoe_legacy_views.py"
     - "scripts/gapfill_timeseries.py"
     - "scripts/refresh_entsoe_availability_map.py"
   gapfill:
     enable: true
     target_schema: "entsoe_fms_gapfilled"
-    method: "linear"
+    method: "donor_refined"
+    candidate_periods: ["24h", "7d"]
+    donor_context_periods: 6
+    donor_search_radius: "28d"
+    refinement_periods: 3
     max_gap_periods: 24
-    lookback: "7d"
+    lookback: "28d"
     fail_on_table_error: true
     tables:
       - "ActualTotalLoad"

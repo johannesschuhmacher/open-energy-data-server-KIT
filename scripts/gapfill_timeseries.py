@@ -26,6 +26,7 @@ from scripts.lib.gapfiller.config import (
     load_job_from_crawler_config,
     select_tables,
 )  # noqa: E402
+from scripts.lib.gapfiller.core import GAPFILL_METHODS  # noqa: E402
 from scripts.lib.gapfiller.db import run_gapfill_job  # noqa: E402
 from scripts.lib.gapfiller.selftest import write_self_test_results  # noqa: E402
 
@@ -57,7 +58,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--method",
-        choices=["linear", "previous_period", "seasonal_linear"],
+        choices=GAPFILL_METHODS,
         default=None,
         help="Override the configured filling method.",
     )

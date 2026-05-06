@@ -12,7 +12,7 @@ import pandas as pd
 import yaml
 
 from crawler.common.runtime_env import resolve_database_uri
-from scripts.lib.gapfiller.core import GapfillMethod, SeriesFillConfig
+from scripts.lib.gapfiller.core import GAPFILL_METHODS, GapfillMethod, SeriesFillConfig
 
 
 @dataclass(frozen=True)
@@ -22,9 +22,13 @@ class TimeSeriesTableConfig:
     value_columns: tuple[str, ...]
     groupby_columns: tuple[str, ...]
     update_time_column: str | None = "UpdateTime(UTC)"
-    method: GapfillMethod = "linear"
+    method: GapfillMethod = "donor_refined"
     resolution: pd.Timedelta | None = None
     period: pd.Timedelta = pd.Timedelta(hours=24)
+    candidate_periods: tuple[pd.Timedelta, ...] | None = None
+    donor_context_periods: int = 6
+    donor_search_radius: pd.Timedelta = pd.Timedelta(days=28)
+    refinement_periods: int = 3
     max_gap_periods: int = 24
     min_points: int = 3
 
@@ -37,6 +41,10 @@ class TimeSeriesTableConfig:
             method=self.method,
             resolution=self.resolution,
             period=self.period,
+            candidate_periods=self.candidate_periods,
+            donor_context_periods=self.donor_context_periods,
+            donor_search_radius=self.donor_search_radius,
+            refinement_periods=self.refinement_periods,
             max_gap_periods=self.max_gap_periods,
             min_points=self.min_points,
         )
@@ -163,8 +171,12 @@ def load_job_from_crawler_config(
     target_schema = str(gapfill_config.get("target_schema", f"{source_schema}_gapfilled"))
     database_uri = _database_uri_for_schema(crawler_config, default_config, source_schema)
     enabled = bool(gapfill_config.get("enable", True))
-    method = gapfill_config.get("method", "linear")
+    method = gapfill_config.get("method", "donor_refined")
     max_gap_periods = int(gapfill_config.get("max_gap_periods", 24))
+    candidate_periods = _parse_timedelta_tuple(gapfill_config.get("candidate_periods"))
+    donor_context_periods = int(gapfill_config.get("donor_context_periods", 6))
+    donor_search_radius = _parse_timedelta(gapfill_config.get("donor_search_radius", "28d"))
+    refinement_periods = int(gapfill_config.get("refinement_periods", 3))
     lookback = _parse_timedelta(gapfill_config.get("lookback", "7d"))
     fail_on_table_error = bool(gapfill_config.get("fail_on_table_error", True))
 
@@ -173,6 +185,10 @@ def load_job_from_crawler_config(
         selected,
         method=method,
         max_gap_periods=max_gap_periods,
+        candidate_periods=candidate_periods,
+        donor_context_periods=donor_context_periods,
+        donor_search_radius=donor_search_radius,
+        refinement_periods=refinement_periods,
     )
 
     return GapfillJobConfig(
@@ -190,8 +206,12 @@ def load_job_from_crawler_config(
 def select_tables(
     table_names: list[str] | tuple[str, ...],
     *,
-    method: str = "linear",
+    method: str = "donor_refined",
     max_gap_periods: int = 24,
+    candidate_periods: tuple[pd.Timedelta, ...] | None = None,
+    donor_context_periods: int = 6,
+    donor_search_radius: pd.Timedelta = pd.Timedelta(days=28),
+    refinement_periods: int = 3,
 ) -> list[TimeSeriesTableConfig]:
     known_tables = {table.table_name: table for table in ENTSOE_FMS_TABLES}
     selected: list[TimeSeriesTableConfig] = []
@@ -203,6 +223,10 @@ def select_tables(
                 known_tables[table_name],
                 method=_validate_method(method),
                 max_gap_periods=max_gap_periods,
+                candidate_periods=candidate_periods,
+                donor_context_periods=donor_context_periods,
+                donor_search_radius=donor_search_radius,
+                refinement_periods=refinement_periods,
             )
         )
     return selected
@@ -224,7 +248,18 @@ def _parse_timedelta(value: object) -> pd.Timedelta:
     return pd.Timedelta(str(value))
 
 
+def _parse_timedelta_tuple(value: object) -> tuple[pd.Timedelta, ...] | None:
+    if value is None:
+        return None
+    if isinstance(value, str | int | float | pd.Timedelta):
+        values = [value]
+    else:
+        values = list(value)  # type: ignore[arg-type]
+    return tuple(_parse_timedelta(item) for item in values)
+
+
 def _validate_method(method: str) -> GapfillMethod:
-    if method not in {"linear", "previous_period", "seasonal_linear"}:
-        raise ValueError("gapfill method must be one of: linear, previous_period, seasonal_linear")
+    if method not in GAPFILL_METHODS:
+        methods = ", ".join(GAPFILL_METHODS)
+        raise ValueError(f"gapfill method must be one of: {methods}")
     return method  # type: ignore[return-value]

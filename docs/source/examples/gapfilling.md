@@ -52,9 +52,13 @@ entsoe_fms:
   gapfill:
     enable: true
     target_schema: "entsoe_fms_gapfilled"
-    method: "linear"
+    method: "donor_refined"
+    candidate_periods: ["24h", "7d"]
+    donor_context_periods: 6
+    donor_search_radius: "28d"
+    refinement_periods: 3
     max_gap_periods: 24
-    lookback: "7d"
+    lookback: "28d"
     fail_on_table_error: true
     tables:
       - "ActualTotalLoad"
@@ -67,29 +71,32 @@ entsoe_fms:
 
 Available methods are:
 
+- `donor_refined`: find a complete donor window with matching context,
+  seasonality, and edge continuity, then smooth the imputed segment at both
+  boundaries
+- `donor_match`: copy the best matching donor window without the edge
+  refinement step
 - `linear`: time-based linear interpolation inside bounded gaps
 - `previous_period`: copy from the previous configured period, then fall back to
   linear interpolation
 - `seasonal_linear`: blend previous-period and linear candidates where both are
   available
 
-`max_gap_periods` prevents large outages from being filled silently.
+`donor_refined` is the recommended default for ENTSO-E time series because it
+can choose between daily and weekly seasonal candidates instead of always
+copying exactly one fixed period. `max_gap_periods` prevents large outages from
+being filled silently. Keep `lookback` at least as large as
+`donor_search_radius`; otherwise incremental post-run executions may not read
+enough historical rows for weekly donor matching.
 
 ## Advanced quality ideas
 
-The current OEDS implementation focuses on deterministic, auditable gapfilling
-for operational post-run use. A separate prototype explored a broader
-three-stage quality pipeline:
+The production path now implements contextual donor matching and edge
+refinement behind the OEDS interface: crawler config, separate target schema,
+idempotent writes, run metrics, dashboard data, and tests.
 
-1. Detect linear interpolation artefacts with rolling R2 scores and convert
-   confirmed artefact ranges back to missing values.
-2. Fill missing values with contextual donor matching or probabilistic seasonal
-   methods.
-3. Refine imputed segments by checking edge jumps, variance, autocorrelation,
-   and distribution differences.
-
-Those ideas are useful future extensions, but they should be added behind the
-same OEDS interface used here: crawler config, separate target schema,
-idempotent writes, run metrics, and tests. The prototype's separate `.env`
-handling, hard-coded schema paths, and per-value-column append workflow are not
-used in the production post-run path.
+Linear-interpolation artefact detection is deliberately not enabled as a
+destructive default. It can produce false positives on real ramp-like energy
+time series. If this is needed later, it should first be added as an audit
+metric that reports suspicious linear ranges before any raw-looking values are
+converted to gaps.

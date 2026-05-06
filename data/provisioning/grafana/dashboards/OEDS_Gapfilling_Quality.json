@@ -314,7 +314,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT run_id\n  FROM entsoe_fms_gapfilled.gapfill_runs\n  ORDER BY started_at DESC\n  LIMIT 1\n)\nSELECT\n  table_name,\n  value_column,\n  group_key,\n  status,\n  source_rows,\n  output_rows,\n  created_gap_rows,\n  missing_before,\n  filled_values,\n  missing_after\nFROM entsoe_fms_gapfilled.gapfill_metrics\nWHERE run_id = (SELECT run_id FROM latest)\nORDER BY table_name, value_column, group_key\nLIMIT 500;",
+          "rawSql": "WITH latest AS (\n  SELECT run_id\n  FROM entsoe_fms_gapfilled.gapfill_runs\n  ORDER BY started_at DESC\n  LIMIT 1\n)\nSELECT\n  table_name,\n  value_column,\n  method,\n  group_key,\n  status,\n  source_rows,\n  output_rows,\n  created_gap_rows,\n  missing_before,\n  filled_values,\n  missing_after\nFROM entsoe_fms_gapfilled.gapfill_metrics\nWHERE run_id = (SELECT run_id FROM latest)\nORDER BY table_name, value_column, method, group_key\nLIMIT 500;",
           "refId": "A"
         }
       ],
@@ -470,7 +470,7 @@
           "refId": "A"
         }
       ],
-      "title": "Synthetic Test Series",
+      "title": "Synthetic Gapfill Test Series",
       "type": "timeseries"
     }
   ],

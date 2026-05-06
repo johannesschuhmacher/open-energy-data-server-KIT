@@ -90,4 +90,3 @@ surface failures consistently.
 | `scripts/gapfill_smard.py` | `smard` | Legacy SMARD gapfill helper |
 | `scripts/gapfill_timeseries.py` | `entsoe_fms` | Generic OEDS time-series gapfilling |
 | `scripts/refresh_entsoe_availability_map.py` | `entsoe_fms` | Refresh ENTSO-E availability map SQL objects |
-
