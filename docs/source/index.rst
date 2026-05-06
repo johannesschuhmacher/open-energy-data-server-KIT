@@ -46,6 +46,12 @@ Architecture
 .. image:: media/oeds-architecture.png
    :alt: OEDS architecture overview
 
+Detailed Architecture
+---------------------
+
+.. image:: media/oeds-architecture-detail.png
+   :alt: Detailed OEDS architecture overview
+
 Workflow
 --------
 

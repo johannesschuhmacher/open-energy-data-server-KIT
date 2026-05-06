@@ -1,0 +1,82 @@
+<!-- SPDX-FileCopyrightText: Florian Maurer, Christian Rieke, Andre Meyer, Haoshen Zhang, Johannes Schuhmacher -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">SQL client export workflow</title>
+  <desc id="desc">Neutral SQL client mockup showing schema navigation, query execution, result grid, and CSV export.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .bar { fill: #ffffff; stroke: #dbe3ee; stroke-width: 2; }
+      .title { font: 700 34px "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 18px "Segoe UI", Arial, sans-serif; fill: #475569; }
+      .label { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .text { font: 400 15px "Segoe UI", Arial, sans-serif; fill: #334155; }
+      .small { font: 400 13px "Segoe UI", Arial, sans-serif; fill: #64748b; }
+      .mono { font: 600 14px Consolas, "Courier New", monospace; fill: #334155; }
+      .sql { font: 600 16px Consolas, "Courier New", monospace; fill: #334155; }
+      .card { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .panel { fill: #f8fafc; stroke: #dbe3ee; stroke-width: 1.5; }
+      .blue { fill: #0284c7; }
+      .grid { stroke: #e2e8f0; stroke-width: 1; }
+    </style>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#94a3b8" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect class="bg" width="1600" height="900"/>
+  <rect class="bar" x="0" y="0" width="1600" height="70"/>
+  <text class="title" x="60" y="118">SQL Export</text>
+  <text class="subtitle" x="60" y="150">Run a query against an OEDS schema and export the result table for external analysis.</text>
+
+  <g transform="translate(60 205)" filter="url(#shadow)">
+    <rect class="card" width="1480" height="560" rx="24"/>
+
+    <g transform="translate(30 30)">
+      <rect class="panel" width="300" height="500" rx="18"/>
+      <text class="label" x="24" y="40">Schema browser</text>
+      <text class="mono" x="24" y="82">opendata</text>
+      <text class="mono" x="46" y="120">weather</text>
+      <text class="mono" x="46" y="154">entsoe_fms</text>
+      <text class="mono" x="46" y="188">smard</text>
+      <text class="mono" x="46" y="222">londondatastore</text>
+      <rect x="38" y="242" width="225" height="34" rx="10" fill="#dbeafe" stroke="#60a5fa"/>
+      <text class="mono" x="58" y="264">consumption</text>
+      <text class="mono" x="70" y="310">DateTime</text>
+      <text class="mono" x="70" y="342">power</text>
+      <text class="mono" x="70" y="374">tariff</text>
+    </g>
+
+    <g transform="translate(360 30)">
+      <rect class="panel" width="1088" height="230" rx="18"/>
+      <text class="label" x="24" y="40">Query editor</text>
+      <rect x="24" y="64" width="1040" height="138" rx="12" fill="#ffffff" stroke="#dbe3ee"/>
+      <text class="sql" x="48" y="100">SELECT time_bucket('1 hour', "DateTime") AS hourly_timestamp,</text>
+      <text class="sql" x="48" y="128">       AVG("power") AS average_power</text>
+      <text class="sql" x="48" y="156">FROM londondatastore.consumption</text>
+      <text class="sql" x="48" y="184">GROUP BY hourly_timestamp;</text>
+      <rect x="895" y="25" width="116" height="34" rx="10" class="blue"/>
+      <text x="929" y="47" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">Run</text>
+    </g>
+
+    <g transform="translate(360 288)">
+      <rect class="panel" width="1088" height="242" rx="18"/>
+      <text class="label" x="24" y="40">Result grid</text>
+      <rect x="910" y="20" width="130" height="34" rx="10" class="blue"/>
+      <text x="938" y="42" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">Export CSV</text>
+      <rect x="24" y="68" width="1040" height="142" rx="12" fill="#ffffff" stroke="#dbe3ee"/>
+      <rect x="24" y="68" width="1040" height="36" rx="12" fill="#f1f5f9"/>
+      <g class="grid">
+        <path d="M24 104H1064M24 138H1064M24 172H1064"/>
+        <path d="M360 68V210M650 68V210"/>
+      </g>
+      <text class="mono" x="48" y="92">hourly_timestamp</text>
+      <text class="mono" x="388" y="92">average_power</text>
+      <text class="mono" x="680" y="92">row_status</text>
+      <text class="mono" x="48" y="126">2012-01-01 01:00</text><text class="mono" x="388" y="126">519.0</text><text class="mono" x="680" y="126">ready</text>
+      <text class="mono" x="48" y="160">2012-01-01 02:00</text><text class="mono" x="388" y="160">522.0</text><text class="mono" x="680" y="160">ready</text>
+      <text class="mono" x="48" y="194">2012-01-01 03:00</text><text class="mono" x="388" y="194">430.0</text><text class="mono" x="680" y="194">ready</text>
+    </g>
+  </g>
+</svg>

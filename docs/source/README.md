@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Open Energy Data Server
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10607894.svg)](https://doi.org/10.5281/zenodo.10607894)
+DOI: [10.5281/zenodo.10607894](https://doi.org/10.5281/zenodo.10607894)
 
 OEDS is a crawler-driven data platform for energy-system analysis. It combines
 data ingestion, PostgreSQL/TimescaleDB storage, HTTP export through PostgREST,

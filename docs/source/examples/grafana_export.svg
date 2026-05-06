@@ -1,0 +1,73 @@
+<!-- SPDX-FileCopyrightText: Florian Maurer, Christian Rieke, Andre Meyer, Haoshen Zhang, Johannes Schuhmacher -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Dashboard data export workflow</title>
+  <desc id="desc">Neutral mockup showing a dashboard panel, inspect drawer, table preview, and CSV download action.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .top { fill: #ffffff; stroke: #dbe3ee; stroke-width: 2; }
+      .title { font: 700 34px "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 18px "Segoe UI", Arial, sans-serif; fill: #475569; }
+      .label { font: 700 18px "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .text { font: 400 15px "Segoe UI", Arial, sans-serif; fill: #334155; }
+      .small { font: 400 13px "Segoe UI", Arial, sans-serif; fill: #64748b; }
+      .mono { font: 600 14px Consolas, "Courier New", monospace; fill: #334155; }
+      .card { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .muted { fill: #f1f5f9; }
+      .accent { fill: #0284c7; }
+      .green { fill: none; stroke: #16a34a; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+      .grid { stroke: #e2e8f0; stroke-width: 1; }
+    </style>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#94a3b8" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect class="bg" width="1600" height="900"/>
+  <rect class="top" x="0" y="0" width="1600" height="70"/>
+  <text class="title" x="60" y="118">Dashboard Export</text>
+  <text class="subtitle" x="60" y="150">Inspect a panel, preview the data table, then download a CSV for analysis.</text>
+
+  <g transform="translate(60 205)" filter="url(#shadow)">
+    <rect class="card" width="650" height="500" rx="24"/>
+    <text class="label" x="34" y="48">1. Open a dashboard panel</text>
+    <rect x="34" y="76" width="582" height="360" rx="16" fill="#f8fafc" stroke="#dbe3ee"/>
+    <g transform="translate(70 115)">
+      <path class="grid" d="M0 0H500M0 70H500M0 140H500M0 210H500M0 280H500M0 0V280M100 0V280M200 0V280M300 0V280M400 0V280M500 0V280"/>
+      <path class="green" d="M0 220 C40 210 42 140 80 155 C120 170 120 100 165 112 C215 126 218 62 260 86 C310 114 305 172 350 154 C395 136 405 88 450 105 C480 116 486 166 500 150"/>
+      <path d="M0 235 C45 230 70 215 110 220 C150 225 175 200 215 205 C260 212 280 190 315 197 C350 204 380 188 420 190 C455 192 475 184 500 187" fill="none" stroke="#86efac" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <rect x="34" y="456" width="165" height="28" rx="14" fill="#dcfce7" stroke="#16a34a"/>
+    <text class="small" x="54" y="475" fill="#166534">time-series panel</text>
+  </g>
+
+  <g transform="translate(775 205)" filter="url(#shadow)">
+    <rect class="card" width="765" height="500" rx="24"/>
+    <text class="label" x="34" y="48">2. Inspect data and export</text>
+    <rect x="34" y="76" width="697" height="60" rx="16" fill="#f1f5f9"/>
+    <text class="label" x="58" y="114">Panel data</text>
+    <rect x="575" y="91" width="128" height="30" rx="8" class="accent"/>
+    <text x="598" y="111" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Download CSV</text>
+
+    <g transform="translate(34 160)">
+      <rect width="697" height="282" rx="14" fill="#ffffff" stroke="#dbe3ee"/>
+      <rect class="muted" width="697" height="42" rx="14"/>
+      <text class="mono" x="28" y="27">hourly_timestamp</text>
+      <text class="mono" x="345" y="27">average_power</text>
+      <text class="mono" x="530" y="27">unit</text>
+      <g class="grid">
+        <path d="M0 42H697M0 82H697M0 122H697M0 162H697M0 202H697M0 242H697"/>
+        <path d="M310 0V282M500 0V282"/>
+      </g>
+      <text class="mono" x="28" y="68">2012-01-01 01:00</text><text class="mono" x="345" y="68">519</text><text class="mono" x="530" y="68">W</text>
+      <text class="mono" x="28" y="108">2012-01-01 02:00</text><text class="mono" x="345" y="108">522</text><text class="mono" x="530" y="108">W</text>
+      <text class="mono" x="28" y="148">2012-01-01 03:00</text><text class="mono" x="345" y="148">430</text><text class="mono" x="530" y="148">W</text>
+      <text class="mono" x="28" y="188">2012-01-01 04:00</text><text class="mono" x="345" y="188">360</text><text class="mono" x="530" y="188">W</text>
+      <text class="mono" x="28" y="228">2012-01-01 05:00</text><text class="mono" x="345" y="228">283</text><text class="mono" x="530" y="228">W</text>
+      <text class="mono" x="28" y="268">2012-01-01 06:00</text><text class="mono" x="345" y="268">286</text><text class="mono" x="530" y="268">W</text>
+    </g>
+    <text class="text" x="34" y="472">Use formatted data for quick downloads or inspect the query for reproducible exports.</text>
+  </g>
+</svg>

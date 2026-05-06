@@ -3,7 +3,7 @@
 
 # Open Energy Data Server
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10607894.svg)](https://doi.org/10.5281/zenodo.10607894)
+DOI: [10.5281/zenodo.10607894](https://doi.org/10.5281/zenodo.10607894)
 
 Open Energy Data Server (OEDS) is a crawler-driven data platform for
 energy-system analysis. It combines data ingestion, PostgreSQL/TimescaleDB,
@@ -15,7 +15,7 @@ The repository already ships a `.readthedocs.yaml` for the future public
 Read the Docs project, but this README intentionally does not link to the old
 unrelated RTD instance.
 
-![OEDS architecture](docs/source/media/oeds-architecture.png)
+![OEDS architecture overview](docs/source/media/oeds-architecture.png)
 
 ## What OEDS includes
 
