@@ -33,17 +33,17 @@
           "mappings": [
             {
               "options": {
-                "failed": {
+                "-1": {
                   "color": "red",
                   "index": 0,
                   "text": "failed"
                 },
-                "partial": {
+                "0": {
                   "color": "yellow",
                   "index": 1,
-                  "text": "partial"
+                  "text": "partial/skipped"
                 },
-                "success": {
+                "1": {
                   "color": "green",
                   "index": 2,
                   "text": "success"
@@ -95,7 +95,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT status\nFROM entsoe_fms_gapfilled.gapfill_runs\nORDER BY started_at DESC\nLIMIT 1;",
+          "rawSql": "SELECT CASE status\n  WHEN 'success' THEN 1\n  WHEN 'failed' THEN -1\n  ELSE 0\nEND AS value\nFROM entsoe_fms_gapfilled.gapfill_runs\nORDER BY started_at DESC\nLIMIT 1;",
           "refId": "A"
         }
       ],
