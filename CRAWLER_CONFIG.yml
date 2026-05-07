@@ -1,0 +1,110 @@
+#<!--SPDX-FileCopyrightText: Andre Meyer, Haoshen Zhang, Johannes Schuhmacher-->
+
+#<!--SPDX-License-Identifier: AGPL-3.0-or-later-->
+
+default:
+  email:
+    mailhost: ""
+    fromaddr: ""
+    toaddrs: []
+    subject: "OEDS Crawler :crawler_name Critical Error Notification" # :crawler_name will be replaced by the crawler name
+    username: ""
+    password: ""
+  enable: false
+  schedule: "0 4 * * *" # CRON STRING see on: https://cron.help
+  post_run_scripts:
+  database_uri: "postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path="
+eurostat_crawler:
+  enable: false
+  schema_name: "eurostat" # default for schema_name is the crawler name
+  description: "Crawls Eurostat data"
+  # schedule: "* * * * *" # CRON STRING see on: https://cron.help
+  # between form 1999 to 2023
+  dataset_id: "nrg_inf_epcrw"
+  start_year: 2019
+  end_year: 2025
+  post_run_scripts:
+  schedule: "0 4 * * *"
+smard:
+  enable: false
+  schema_name: "smard"
+  schedule: "0 4 * * *"
+  post_run_scripts:
+    - "scripts/gapfill_smard.py"
+ninja:
+  schema_name: "ninja"
+  # schedule: "* * * * *"
+  enable: false
+  datafiles:
+    wind:
+      download_url: "https://www.renewables.ninja/downloads/ninja_europe_wind_v1.1.zip"
+      extract_filename: "ninja_wind_europe_v1.1_current_on-offshore.csv"
+    solar:
+      download_url: "https://www.renewables.ninja/downloads/ninja_europe_pv_v1.1.zip"
+      extract_filename: "ninja_pv_europe_v1.1_merra2.csv"
+mastr:
+  enable: false
+  schema_name: "mastr"
+  base_download_url: "https://download.marktstammdatenregister.de/Gesamtdatenexport"
+
+entsoe_fms:
+  enable: false
+  schema_name: "entsoe_fms"
+  description: "Crawls ENTSO-E FMS data (Transparency Platform File Library)"
+  schedule: "0 * * * *"
+  default_start_date: "2014-01-01"
+  post_run_scripts:
+    - "scripts/refresh_entsoe_legacy_views.py"
+    - "scripts/gapfill_timeseries.py"
+    - "scripts/refresh_entsoe_availability_map.py"
+  gapfill:
+    enable: true
+    target_schema: "entsoe_fms_gapfilled"
+    method: "linear"
+    max_gap_periods: 24
+    lookback: "7d"
+    fail_on_table_error: true
+    tables:
+      - "ActualTotalLoad"
+      - "DayAheadTotalLoadForecast"
+      - "GenerationForecastsForWindAndSolar"
+      - "EnergyPrices"
+      - "ForecastedTransferCapacities"
+      - "PhysicalFlows"
+
+entsog:
+  enable: false
+  schema_name: "entsog"
+  description: "Crawls ENTSOG transparency platform reference and operational gas data"
+  schedule: "30 2 * * *"
+  default_start_date: "2024-01-01"
+  chunk_days: 7
+  request_pause_seconds: 1.0
+
+energy_forecast_crawler:
+  enable: false
+  schema_name: "energy_forecast"
+  description: "Crawls Energy Price Forecasts (Next 48h)"
+  schedule: "0 4,16 * * *"
+epex_spot:
+  enable: false
+  schema_name: "epex_spot"
+  database_uri: "postgresql://opendata:opendata@127.0.0.1:6432/opendata?options=--search_path="
+  description: "Crawls EPEX SPOT Germany intraday market data via SFTP"
+  schedule: "20 * * * *"
+  start_date: "1970-01-01"
+  update_interval_days: 14
+  database_batch_size: 5000
+  include_continuous_statistics: true
+  include_continuous_indices: true
+  include_intraday_auctions: true
+  include_continuous_trades: true
+weather_forecast:
+  enable: true
+  schema_name: "weather"
+  database_uri: "postgresql://opendata:opendata@127.0.0.1:6432/opendata?options=--search_path="
+  description: "Crawls hourly DWD ICON weather forecasts for weather and energy-weather
+    dashboards"
+  schedule: "15 */3 * * *"
+  forecast_hours: 120
+  past_hours: 24

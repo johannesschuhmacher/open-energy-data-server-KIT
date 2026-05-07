@@ -1,0 +1,16 @@
+- name: OEDS nginx config
+  hosts: oeds
+  remote_user: root
+  tasks:
+  - name: Copy nginx template
+    ansible.builtin.copy:
+      src: /opt/ansible/resources/oeds/nginx.conf
+      dest: /etc/nginx/conf.d/default.conf
+      owner: root
+      group: root
+      mode: "u=rw,g=rw,o=r"
+  - name: Replace a localhost entry with our own
+    ansible.builtin.replace:
+      path: /etc/nginx/conf.d/default.conf
+      regexp: "^(.+)@ansible_host@(.+)$"
+      replace: \1{{ ansible_host }}\2

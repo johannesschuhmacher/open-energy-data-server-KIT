@@ -1,0 +1,128 @@
+<!--
+SPDX-FileCopyrightText: Florian Maurer, Christian Rieke
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+# Open Energy Data Server
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10607894.svg)](https://doi.org/10.5281/zenodo.10607894)
+
+OEDS is a crawler-driven data platform for energy-system analysis. It combines
+data ingestion, PostgreSQL/TimescaleDB storage, HTTP export through PostgREST,
+and dashboarding through Grafana.
+
+![Basic outline of the architecture and included services](media/oeds-architecture.png)
+
+## Core components
+
+### TimescaleDB and PostgreSQL
+
+The main data store is PostgreSQL with TimescaleDB for time-series workloads.
+This allows OEDS to handle both large temporal tables and non-time-series
+reference data in one system.
+
+### PostGIS
+
+PostGIS is available for schemas that need spatial data or geometry-based
+queries.
+
+### Crawlers
+
+Crawler modules under `crawler/` fetch source data and load it into dedicated
+schemas such as `entsoe_fms`, `weather`, or `energy_forecast`.
+
+Crawler-specific operational notes live under
+[Crawler Documentation](./crawlers/README.md).
+
+## Choose your setup path
+
+Pick the shortest path that matches your goal:
+
+| Goal | Recommended path | Use this when |
+| --- | --- | --- |
+| Explore the stack locally | `docker compose up -d` | you want PostgreSQL, PgAdmin, PostgREST, and Grafana without scheduled crawlers |
+| Run crawlers locally or on a small VM | `docker compose --profile crawlers up -d scheduler crawler-admin` | you want the core stack plus the scheduler and admin UI in containers |
+| Install or update a long-lived server reproducibly | `ansible-playbook -i inventory.yml oeds-install-core.yml` or `oeds-install-crawlers.yml` | you want repeatable host preparation, repo rollout, runtime directories, and update playbooks |
+
+If you are unsure, start with the local Compose path and only move to the
+deployment playbooks once the crawler scope and operating model are clear.
+
+## Supported crawler functions
+
+The current maintained baseline in this repository covers these data functions:
+
+| Crawler | Source | Auth | Schema | Main outputs | Typical consumers |
+| --- | --- | --- | --- | --- | --- |
+| `weather_forecast` | Open-Meteo DWD | none | `weather` | hourly forecasts, location views, country views | `Weather Dashboard`, `Energy Weather Dashboard` |
+| `entsoe_fms` | ENTSO-E File Library | `ENTSOE_USERNAME`, `ENTSOE_PASSWORD` | `entsoe_fms` | prices, load, generation, outages, transfer capacities, asset lookups | ENTSO-E dashboards, availability map, gapfilling, `Energy Weather Dashboard` |
+| `entsog` | ENTSOG transparency API | none | `entsog` | gas operators, points, physical flow, allocation, firm technical capacity | `ENTSOG-Monitor` |
+| `smard` | SMARD | none | `smard` | German generation, consumption, and price series | SQL analysis, custom dashboards, SMARD gapfilling |
+| `eurostat_crawler` | Eurostat | none | `eurostat` | annual European energy statistics | SQL analysis, country comparison workflows |
+| `mastr` | Marktstammdatenregister | none | `mastr` | registry and asset master data | enrichment joins, asset lookups |
+| `energy_forecast_crawler` | `energyforecast.de` | `ENERGY_FORECAST_TOKEN` | `energy_forecast` | next-48h quarter-hourly price forecasts | custom dashboards and forecast analysis |
+| `epex_spot` | EPEX SPOT SFTP | `EPEX_SFTP_USERNAME`, `EPEX_SFTP_PASSWORD` | `epex_spot` | intraday auctions, trades, indices, and statistics | intraday market analysis and custom dashboards |
+
+For crawler-specific run modes, output tables, and downstream dependencies,
+start with [Crawler Documentation](./crawlers/README.md).
+
+## How to access the data
+
+Once the stack is running, there are four main ways to inspect or use the data:
+
+| Access path | What you get | How to use it |
+| --- | --- | --- |
+| Grafana | ready-made dashboards and exploratory charts | open `http://localhost:3006/` and use the provisioned dashboards |
+| PgAdmin / SQL | direct schema, table, and query access | open `http://localhost:8080/` and query PostgreSQL directly |
+| PostgREST | HTTP access to tables, views, and database objects | call `http://localhost:3001/` from scripts, notebooks, or services |
+| Python / notebooks | programmatic access and custom analysis | run `uv run python ...` and use the example scripts under `examples/` or `scripts/` |
+
+The Crawler Admin UI at `http://localhost:3010/admin` is the operational
+surface for schedules, manual runs, YAML editing, logs, and run history. It is
+not the primary data browser, but it is the fastest way to see which crawlers
+exist, which ones are enabled, and whether recent runs succeeded.
+
+If you want to know where a specific dataset ends up:
+
+- check the crawler page under [Crawler Documentation](./crawlers/README.md)
+- inspect the crawler section in `CRAWLER_CONFIG.yml`
+- query `public.metadata` in PostgreSQL after the first successful crawler run
+
+## Data sources and licensing
+
+OEDS itself is open-source infrastructure, but the crawled datasets do not all
+share the same access model.
+
+In this repository you will find:
+
+- fully open public sources
+- sources that require user credentials or approved accounts
+- proprietary APIs that can be integrated technically but not redistributed by default
+
+For production and publication scenarios, document each crawler's source,
+authentication model, and declared license on its crawler page. The deployment
+operator remains responsible for complying with upstream terms of use.
+
+## Contributing
+
+When adding a new crawler:
+
+1. create a module in `crawler/`
+2. add its scheduler entry to `CRAWLER_CONFIG.yml`
+3. document it under `docs/source/crawlers/`
+4. add any required bootstrap SQL to `init.sql` if fresh installs need it
+
+## Citation
+
+You can cite `open-energy-data-server` through the conference proceedings:
+
+> Maurer, F., Sejdija, J., & Sander, V. (2024, February 2). Decentralized energy data storages through an Open Energy Database Server. 1st NFDI4Energy Conference (NFDI4Energy), Hanover, Germany. https://doi.org/10.5281/zenodo.10607895
+
+## Notable crawler-backed dashboards
+
+- `Weather Dashboard`
+- `Energy Weather Dashboard`
+- `ENTSOE Transfer Capacity, Adequacy & Projects`
+
+These dashboards are provisioned from `data/provisioning/grafana/dashboards/`
+and depend on their related crawler schemas being populated.

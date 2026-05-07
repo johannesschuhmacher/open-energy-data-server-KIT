@@ -1,0 +1,230 @@
+# SPDX-FileCopyrightText: OpenAI
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+import yaml
+
+from crawler.common.runtime_env import resolve_database_uri
+from scripts.lib.gapfiller.core import GapfillMethod, SeriesFillConfig
+
+
+@dataclass(frozen=True)
+class TimeSeriesTableConfig:
+    table_name: str
+    time_column: str
+    value_columns: tuple[str, ...]
+    groupby_columns: tuple[str, ...]
+    update_time_column: str | None = "UpdateTime(UTC)"
+    method: GapfillMethod = "linear"
+    resolution: pd.Timedelta | None = None
+    period: pd.Timedelta = pd.Timedelta(hours=24)
+    max_gap_periods: int = 24
+    min_points: int = 3
+
+    def to_series_config(self) -> SeriesFillConfig:
+        return SeriesFillConfig(
+            table_name=self.table_name,
+            time_column=self.time_column,
+            value_columns=self.value_columns,
+            groupby_columns=self.groupby_columns,
+            method=self.method,
+            resolution=self.resolution,
+            period=self.period,
+            max_gap_periods=self.max_gap_periods,
+            min_points=self.min_points,
+        )
+
+
+@dataclass(frozen=True)
+class GapfillJobConfig:
+    job_name: str
+    database_uri: str
+    source_schema: str
+    target_schema: str
+    enabled: bool
+    tables: tuple[TimeSeriesTableConfig, ...]
+    lookback: pd.Timedelta = pd.Timedelta(days=7)
+    fail_on_table_error: bool = True
+
+
+ENTSOE_FMS_TABLES: tuple[TimeSeriesTableConfig, ...] = (
+    TimeSeriesTableConfig(
+        table_name="ActualTotalLoad",
+        time_column="DateTime(UTC)",
+        value_columns=("TotalLoad[MW]",),
+        groupby_columns=("ResolutionCode", "AreaCode", "AreaDisplayName", "AreaTypeCode", "AreaMapCode"),
+    ),
+    TimeSeriesTableConfig(
+        table_name="DayAheadTotalLoadForecast",
+        time_column="DateTime(UTC)",
+        value_columns=("TotalLoad[MW]",),
+        groupby_columns=("ResolutionCode", "AreaCode", "AreaDisplayName", "AreaTypeCode", "AreaMapCode"),
+    ),
+    TimeSeriesTableConfig(
+        table_name="AggregatedGenerationPerType",
+        time_column="DateTime(UTC)",
+        value_columns=("ActualGenerationOutput[MW]", "ActualConsumption[MW]"),
+        groupby_columns=("ResolutionCode", "AreaCode", "AreaDisplayName", "AreaTypeCode", "AreaMapCode", "ProductionType"),
+    ),
+    TimeSeriesTableConfig(
+        table_name="DayAheadAggregatedGeneration",
+        time_column="DateTime(UTC)",
+        value_columns=("GenerationForecast[MW]", "ScheduledConsumption[MW]"),
+        groupby_columns=("ResolutionCode", "AreaCode", "AreaDisplayName", "AreaTypeCode", "AreaMapCode"),
+    ),
+    TimeSeriesTableConfig(
+        table_name="GenerationForecastsForWindAndSolar",
+        time_column="DateTime(UTC)",
+        value_columns=(
+            "DayAheadGenerationForecast[MW]",
+            "IntradayGenerationForecast[MW]",
+            "CurrentGenerationForecast[MW]",
+        ),
+        groupby_columns=("ResolutionCode", "AreaCode", "AreaDisplayName", "AreaTypeCode", "AreaMapCode", "ProductionType"),
+    ),
+    TimeSeriesTableConfig(
+        table_name="EnergyPrices",
+        time_column="DateTime(UTC)",
+        value_columns=("Price[Currency/MWh]",),
+        groupby_columns=("ResolutionCode", "AreaCode", "AreaDisplayName", "AreaTypeCode", "MapCode", "ContractType", "Sequence", "Currency"),
+    ),
+    TimeSeriesTableConfig(
+        table_name="ForecastedTransferCapacities",
+        time_column="DateTime(UTC)",
+        value_columns=("ForecastTransferCapacity[MW]",),
+        groupby_columns=(
+            "ResolutionCode",
+            "OutAreaCode",
+            "OutAreaDisplayName",
+            "OutAreaTypeCode",
+            "OutMapCode",
+            "InAreaCode",
+            "InAreaDisplayName",
+            "InAreaTypeCode",
+            "InMapCode",
+            "ContractType",
+        ),
+    ),
+    TimeSeriesTableConfig(
+        table_name="PhysicalFlows",
+        time_column="DateTime(UTC)",
+        value_columns=("Flow[MW]",),
+        groupby_columns=(
+            "ResolutionCode",
+            "OutAreaCode",
+            "OutAreaDisplayName",
+            "OutAreaTypeCode",
+            "OutAreaMapCode",
+            "InAreaCode",
+            "InAreaDisplayName",
+            "InAreaTypeCode",
+            "InAreaMapCode",
+        ),
+    ),
+    TimeSeriesTableConfig(
+        table_name="TotalLoadForecast",
+        time_column="DateTime(UTC)",
+        value_columns=("MinimumLoadForecast[MW]", "MaximumLoadForecast[MW]"),
+        groupby_columns=("ResolutionCode", "AreaCode", "AreaDisplayName", "AreaTypeCode", "AreaMapCode", "ContractType"),
+    ),
+)
+
+
+DEFAULT_POSTRUN_TABLES = (
+    "ActualTotalLoad",
+    "DayAheadTotalLoadForecast",
+    "GenerationForecastsForWindAndSolar",
+    "EnergyPrices",
+    "ForecastedTransferCapacities",
+    "PhysicalFlows",
+)
+
+
+def load_job_from_crawler_config(
+    config_path: Path,
+    job_name: str = "entsoe_fms",
+    table_names: list[str] | None = None,
+) -> GapfillJobConfig:
+    with config_path.open(encoding="utf-8") as handle:
+        raw_config = yaml.safe_load(handle) or {}
+
+    default_config = raw_config.get("default", {})
+    crawler_config = {**default_config, **raw_config.get(job_name, {})}
+    gapfill_config = crawler_config.get("gapfill") or {}
+
+    source_schema = str(crawler_config.get("schema_name", job_name))
+    target_schema = str(gapfill_config.get("target_schema", f"{source_schema}_gapfilled"))
+    database_uri = _database_uri_for_schema(crawler_config, default_config, source_schema)
+    enabled = bool(gapfill_config.get("enable", True))
+    method = gapfill_config.get("method", "linear")
+    max_gap_periods = int(gapfill_config.get("max_gap_periods", 24))
+    lookback = _parse_timedelta(gapfill_config.get("lookback", "7d"))
+    fail_on_table_error = bool(gapfill_config.get("fail_on_table_error", True))
+
+    selected = table_names or gapfill_config.get("tables") or list(DEFAULT_POSTRUN_TABLES)
+    tables = select_tables(
+        selected,
+        method=method,
+        max_gap_periods=max_gap_periods,
+    )
+
+    return GapfillJobConfig(
+        job_name=job_name,
+        database_uri=database_uri,
+        source_schema=source_schema,
+        target_schema=target_schema,
+        enabled=enabled,
+        tables=tuple(tables),
+        lookback=lookback,
+        fail_on_table_error=fail_on_table_error,
+    )
+
+
+def select_tables(
+    table_names: list[str] | tuple[str, ...],
+    *,
+    method: str = "linear",
+    max_gap_periods: int = 24,
+) -> list[TimeSeriesTableConfig]:
+    known_tables = {table.table_name: table for table in ENTSOE_FMS_TABLES}
+    selected: list[TimeSeriesTableConfig] = []
+    for table_name in table_names:
+        if table_name not in known_tables:
+            raise ValueError(f"Unknown gapfill table '{table_name}'. Known tables: {sorted(known_tables)}")
+        selected.append(
+            replace(
+                known_tables[table_name],
+                method=_validate_method(method),
+                max_gap_periods=max_gap_periods,
+            )
+        )
+    return selected
+
+
+def _database_uri_for_schema(crawler_config: dict[str, Any], default_config: dict[str, Any], source_schema: str) -> str:
+    database_uri = str(crawler_config.get("database_uri") or default_config.get("database_uri"))
+    resolved = resolve_database_uri(database_uri)
+    if resolved.endswith("search_path="):
+        return f"{resolved}{source_schema}"
+    return resolved
+
+
+def _parse_timedelta(value: object) -> pd.Timedelta:
+    if isinstance(value, pd.Timedelta):
+        return value
+    if isinstance(value, int | float):
+        return pd.Timedelta(hours=float(value))
+    return pd.Timedelta(str(value))
+
+
+def _validate_method(method: str) -> GapfillMethod:
+    if method not in {"linear", "previous_period", "seasonal_linear"}:
+        raise ValueError("gapfill method must be one of: linear, previous_period, seasonal_linear")
+    return method  # type: ignore[return-value]

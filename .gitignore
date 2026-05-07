@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Florian Maurer, Christian Rieke
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+*.orig
+.spyproject
+.vscode
+.idea/
+__pycache__
+ninja_*
+*.grb
+/axxteq
+*.log
+*.ipynb
+config.py
+/env/
+.env
+.venv
+git_server_token
+crawler/data/Waermebedarf_NRW.gdb/
+data/pgadmin
+/dashboard/node_modules
+crawler/data/energy_forecast_history.csv
+docs/_build/
+crawler_admin_state/

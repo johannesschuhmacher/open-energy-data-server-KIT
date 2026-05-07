@@ -1,0 +1,26 @@
+FROM python:3.14.4-slim
+
+COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0 \
+    PATH="/src/.venv/bin:$PATH"
+
+WORKDIR /src
+
+COPY pyproject.toml uv.lock .python-version ./
+
+RUN uv sync --locked --only-group mastr
+RUN useradd -s /bin/bash admin
+
+ENV TZ="Europe/Berlin"
+
+RUN chown -R admin /src
+
+COPY ./crawler/mastr.py ./crawler/common ./crawler/__init__.py /src/
+
+USER admin
+WORKDIR /src
+
+CMD ["python", "-u","./mastr.py"]

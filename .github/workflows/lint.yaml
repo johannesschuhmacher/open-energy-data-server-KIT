@@ -1,0 +1,50 @@
+name: Linting
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      opendata-db:
+        image: postgres:18.3-alpine
+        env:
+          POSTGRES_DB: opendata
+          POSTGRES_PASSWORD: opendata
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: opendata
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Clone this repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.14.4
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.7"
+
+      - name: Verify lockfile
+        run: uv lock --check
+
+      - name: Run ruff check
+        run: uv run --only-group dev ruff check
+
+      - name: Run ruff check format
+        run: uv run --only-group dev ruff format --check

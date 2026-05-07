@@ -1,0 +1,67 @@
+[project]
+name = "open-energy-data-server"
+version = "0.1.0"
+description = "Crawler-driven data platform for energy-system analysis."
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+license = { file = "LICENSES/AGPL-3.0-or-later.txt" }
+dependencies = [
+    "requests",
+    "pygrib",
+    "shapely",
+    "pyshp",
+    "pandas",
+    "numpy",
+    "psycopg2-binary",
+    "sqlalchemy",
+    "tqdm",
+    "lxml",
+    "bs4",
+    "json5",
+    "geopandas",
+    "openpyxl",
+    "scipy",
+    "python-dateutil",
+    "entsoe-py",
+    "swifter",
+    "cdsapi",
+    "xarray",
+    "cfgrib",
+    "eccodes",
+    "eurostat",
+    "cron_converter",
+    "watchdog",
+    "pyyaml",
+    "ruamel.yaml",
+    "python-dotenv",
+    "paramiko",
+    "pytz",
+    "py7zr",
+    "fastapi",
+    "uvicorn",
+    "jinja2",
+    "python-multipart",
+]
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "ruff",
+]
+docs = [
+    "recommonmark",
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+mastr = [
+    "lxml",
+    "pandas",
+    "psycopg2-binary",
+    "python-dotenv",
+    "requests",
+    "sqlalchemy",
+]
+
+[tool.uv]
+default-groups = []
+required-version = ">=0.11.7,<0.12"

@@ -1,0 +1,21 @@
+- name: OEDS package installation
+  hosts: oeds
+  remote_user: root
+  vars:
+    oeds_package_state: present
+  tasks:
+  - name: Install nginx
+    ansible.builtin.dnf:
+      name:
+        - nginx
+      state: "{{ oeds_package_state }}"
+  - name: Install Docker packages
+    ansible.builtin.dnf:
+      name:
+        - containerd.io
+        - docker-ce
+        - docker-ce-cli
+        - docker-ce-rootless-extras
+        - docker-buildx-plugin
+        - docker-compose-plugin
+      state: "{{ oeds_package_state }}"

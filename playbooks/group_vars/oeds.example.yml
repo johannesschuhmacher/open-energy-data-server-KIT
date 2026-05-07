@@ -1,0 +1,32 @@
+---
+# Copy this file to group_vars/oeds.yml and adjust it for the target host.
+# Do not store secrets here.
+
+oeds_root: /open_energy_data_server
+# The target host must be able to clone this URL. For unpublished branches,
+# use a reachable mirror or a local bare repository on the target host.
+oeds_repo_url: https://gitlab.kit.edu/kit/iip/energyeconomics/sem-fec/josc/oeds.git
+oeds_repo_version: OEDS_Johannes
+oeds_repo_source_mode: git
+# For private or not-yet-published refs, set oeds_repo_source_mode: local_archive
+# and point this to a local checkout on the control node, for example:
+# oeds_repo_local_src: /home/user/src/oeds
+# or in WSL:
+# oeds_repo_local_src: /mnt/c/Users/<user>/PycharmProjects/oeds
+# oeds_repo_local_src: ""
+oeds_compose_project_name: oeds
+
+# Set true for the crawler scheduler and crawler admin UI containers.
+oeds_enable_crawlers: false
+
+# Runtime files are kept outside the Git checkout.
+oeds_runtime_dir: "{{ oeds_root }}/runtime"
+oeds_data_dir: "{{ oeds_root }}/docker_data"
+oeds_repo_dir: "{{ oeds_root }}/repo"
+
+# Uninstall defaults are intentionally non-destructive.
+oeds_uninstall_destroy_data: false
+oeds_uninstall_remove_repo: false
+oeds_uninstall_remove_runtime: false
+oeds_uninstall_remove_backups: false
+oeds_uninstall_remove_images: false
