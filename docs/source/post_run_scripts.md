@@ -83,6 +83,45 @@ surface failures consistently.
 - Prefer bounded incremental windows over full-table recomputation.
 - Use parametrized SQL for values; only quote identifiers manually when needed.
 
+## Testing Post-Run Gapfilling
+
+The generic time-series gapfiller includes synthetic self-tests. They inject
+controlled faults into in-memory series, run the same gapfill core that the
+post-run script uses, and assert the expected number of imputed values.
+
+For database-backed dashboard data:
+
+```bash
+uv run python scripts/gapfill_timeseries.py --job entsoe_fms --self-test
+```
+
+For an interactive local check, open the crawler admin UI and use
+`/admin/gapfill`. The admin view lets operators select fault scenarios and
+renders source-versus-filled previews without writing synthetic data to the
+database.
+
+The admin UI also has a holdout error test for gapfilling. Select a synthetic
+time-series dataset, remove a configurable number of periods from a configurable
+start index, fill the resulting gap, and compare the result with the held-out
+truth. This reports MAE, RMSE, maximum absolute error, MAPE, compared points,
+and filled points.
+
+For real database data, use the holdout mode of the post-run script:
+
+```bash
+uv run python scripts/gapfill_timeseries.py \
+  --job entsoe_fms \
+  --holdout-test \
+  --holdout-table ActualTotalLoad \
+  --holdout-value-column "TotalLoad[MW]" \
+  --holdout-start "2026-04-01T00:00:00Z" \
+  --holdout-length 24
+```
+
+This reads real source rows, removes the selected segment only in memory, and
+writes QA output to the gapfill target schema for Grafana. It does not modify
+raw crawler tables.
+
 ## Current Post-Run Scripts
 
 | Script | Main crawler | Purpose |

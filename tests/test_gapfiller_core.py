@@ -9,7 +9,12 @@ import unittest
 import numpy as np
 import pandas as pd
 from scripts.lib.gapfiller.core import SeriesFillConfig, fill_table, infer_frequency
-from scripts.lib.gapfiller.selftest import run_self_tests
+from scripts.lib.gapfiller.selftest import (
+    list_holdout_datasets,
+    list_self_test_cases,
+    run_holdout_test,
+    run_self_tests,
+)
 
 
 class GapfillerCoreTest(unittest.TestCase):
@@ -217,6 +222,77 @@ class GapfillerCoreTest(unittest.TestCase):
         self.assertTrue(results)
         self.assertTrue(all(result.status == "passed" for result in results))
         self.assertFalse(series.empty)
+
+    def test_self_test_catalog_describes_fault_injection_cases(self) -> None:
+        cases = {test_case.name: test_case for test_case in list_self_test_cases()}
+
+        self.assertIn("linear_value_gap", cases)
+        self.assertIn("missing_timestamp_gap", cases)
+        self.assertIn("donor_refined_seasonal_gap", cases)
+        self.assertEqual(cases["linear_value_gap"].fault_type, "value_gap")
+        self.assertEqual(cases["missing_timestamp_gap"].fault_type, "timestamp_gap")
+        self.assertEqual(cases["donor_refined_seasonal_gap"].method, "donor_refined")
+        self.assertGreater(cases["donor_refined_seasonal_gap"].source_rows, 0)
+
+    def test_self_tests_can_run_selected_fault_injection_case(self) -> None:
+        _, results, series = run_self_tests(["missing_timestamp_gap"])
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].test_name, "missing_timestamp_gap")
+        self.assertEqual(results[0].status, "passed")
+        self.assertEqual(results[0].actual_filled, 2)
+        self.assertTrue((series["test_name"] == "missing_timestamp_gap").all())
+        self.assertEqual(int(series["was_filled"].sum()), 2)
+
+    def test_self_tests_reject_unknown_selected_case(self) -> None:
+        with self.assertRaises(ValueError):
+            run_self_tests(["does_not_exist"])
+
+    def test_holdout_catalog_exposes_selectable_datasets(self) -> None:
+        datasets = {dataset.name: dataset for dataset in list_holdout_datasets()}
+
+        self.assertIn("linear_hourly", datasets)
+        self.assertIn("daily_seasonal", datasets)
+        self.assertGreaterEqual(datasets["linear_hourly"].max_gap_length, datasets["linear_hourly"].recommended_gap_length)
+        self.assertEqual(datasets["daily_seasonal"].method, "donor_refined")
+
+    def test_holdout_test_removes_selected_length_and_calculates_error(self) -> None:
+        _, result, series = run_holdout_test(
+            "linear_hourly",
+            6,
+            gap_start_index=24,
+            fault_type="value_gap",
+            method="linear",
+        )
+
+        self.assertEqual(result.status, "passed")
+        self.assertEqual(result.gap_length_periods, 6)
+        self.assertEqual(result.compared_points, 6)
+        self.assertEqual(result.actual_filled, 6)
+        self.assertEqual(result.mean_absolute_error, 0.0)
+        self.assertEqual(result.root_mean_squared_error, 0.0)
+        self.assertEqual(result.max_absolute_error, 0.0)
+        self.assertIn("truth", set(series["series_name"]))
+        self.assertEqual(int(series["was_filled"].sum()), 6)
+
+    def test_holdout_timestamp_removal_recreates_rows_for_error_check(self) -> None:
+        _, result, series = run_holdout_test(
+            "linear_hourly",
+            4,
+            gap_start_index=18,
+            fault_type="timestamp_gap",
+            method="linear",
+        )
+
+        self.assertEqual(result.status, "passed")
+        self.assertEqual(result.compared_points, 4)
+        self.assertEqual(result.actual_filled, 4)
+        self.assertEqual(result.mean_absolute_error, 0.0)
+        self.assertEqual(int(series["was_filled"].sum()), 4)
+
+    def test_holdout_rejects_gap_length_without_context(self) -> None:
+        with self.assertRaises(ValueError):
+            run_holdout_test("linear_hourly", 200, gap_start_index=1)
 
 
 if __name__ == "__main__":

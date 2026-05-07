@@ -20,6 +20,8 @@ CONTROL_TABLES = (
     "gapfill_tracking",
     "gapfill_test_results",
     "gapfill_test_series",
+    "gapfill_holdout_results",
+    "gapfill_holdout_series",
 )
 
 
@@ -317,6 +319,46 @@ def ensure_control_tables(engine: Engine, target_schema: str) -> None:
                 series_name TEXT NOT NULL,
                 value DOUBLE PRECISION,
                 is_original BOOLEAN NOT NULL,
+                was_filled BOOLEAN NOT NULL,
+                checked_at TIMESTAMPTZ NOT NULL
+            )
+        """))
+        conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS {schema}.gapfill_holdout_results (
+                run_id TEXT NOT NULL,
+                job_name TEXT NOT NULL,
+                source_schema TEXT NOT NULL,
+                target_schema TEXT NOT NULL,
+                table_name TEXT NOT NULL,
+                value_column TEXT NOT NULL,
+                group_key TEXT NOT NULL,
+                method TEXT NOT NULL,
+                fault_type TEXT NOT NULL,
+                gap_start_time TIMESTAMPTZ NOT NULL,
+                gap_end_time TIMESTAMPTZ NOT NULL,
+                gap_length_periods INTEGER NOT NULL,
+                expected_points INTEGER NOT NULL,
+                compared_points INTEGER NOT NULL,
+                actual_filled INTEGER NOT NULL,
+                missing_after INTEGER NOT NULL,
+                mean_absolute_error DOUBLE PRECISION,
+                root_mean_squared_error DOUBLE PRECISION,
+                max_absolute_error DOUBLE PRECISION,
+                mean_absolute_percentage_error DOUBLE PRECISION,
+                status TEXT NOT NULL,
+                message TEXT,
+                checked_at TIMESTAMPTZ NOT NULL
+            )
+        """))
+        conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS {schema}.gapfill_holdout_series (
+                run_id TEXT NOT NULL,
+                table_name TEXT NOT NULL,
+                value_column TEXT NOT NULL,
+                group_key TEXT NOT NULL,
+                time TIMESTAMPTZ NOT NULL,
+                series_name TEXT NOT NULL,
+                value DOUBLE PRECISION,
                 was_filled BOOLEAN NOT NULL,
                 checked_at TIMESTAMPTZ NOT NULL
             )

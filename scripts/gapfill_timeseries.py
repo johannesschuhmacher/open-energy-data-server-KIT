@@ -12,6 +12,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
+import pandas as pd
 from sqlalchemy import create_engine
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,7 @@ from scripts.lib.gapfiller.config import (
 )  # noqa: E402
 from scripts.lib.gapfiller.core import GAPFILL_METHODS  # noqa: E402
 from scripts.lib.gapfiller.db import run_gapfill_job  # noqa: E402
+from scripts.lib.gapfiller.holdout import run_database_holdout_test  # noqa: E402
 from scripts.lib.gapfiller.selftest import write_self_test_results  # noqa: E402
 
 
@@ -79,6 +81,48 @@ def parse_args() -> argparse.Namespace:
         help="Run synthetic gapfiller self-tests and write their results for the dashboard.",
     )
     parser.add_argument(
+        "--holdout-test",
+        action="store_true",
+        help="Run a real database holdout test and write results for the Grafana dashboard.",
+    )
+    parser.add_argument(
+        "--holdout-table",
+        default=None,
+        help="Source table for --holdout-test, for example ActualTotalLoad.",
+    )
+    parser.add_argument(
+        "--holdout-value-column",
+        default=None,
+        help="Value column for --holdout-test. Defaults to the first configured value column.",
+    )
+    parser.add_argument(
+        "--holdout-group-key",
+        default=None,
+        help="Optional exact group key, for example AreaCode=10Y1001A1001A83F|ResolutionCode=PT60M.",
+    )
+    parser.add_argument(
+        "--holdout-start",
+        default=None,
+        help="First timestamp to remove for --holdout-test, for example 2026-04-01T00:00:00Z.",
+    )
+    parser.add_argument(
+        "--holdout-length",
+        type=int,
+        default=None,
+        help="Number of consecutive periods to remove for --holdout-test.",
+    )
+    parser.add_argument(
+        "--holdout-fault-type",
+        default="value_gap",
+        choices=["value_gap", "timestamp_gap"],
+        help="Whether the real-data holdout removes values or timestamps.",
+    )
+    parser.add_argument(
+        "--holdout-context",
+        default="28d",
+        help="Amount of context to read before and after the holdout start. Defaults to 28d.",
+    )
+    parser.add_argument(
         "--list-tables",
         action="store_true",
         help="List built-in time-series table configs and exit.",
@@ -106,11 +150,47 @@ def main() -> int:
         return 0
 
     load_local_crawler_env(ROOT)
-    table_names = _split_tables(args.tables)
+    table_names = [args.holdout_table] if args.holdout_test and args.holdout_table else _split_tables(args.tables)
     job = load_job_from_crawler_config(args.config, job_name=args.job, table_names=table_names)
     job = _apply_overrides(job, args)
 
     engine = create_engine(job.database_uri)
+
+    if args.holdout_test:
+        if not args.holdout_table:
+            raise ValueError("--holdout-table is required with --holdout-test.")
+        if not args.holdout_start:
+            raise ValueError("--holdout-start is required with --holdout-test.")
+        if args.holdout_length is None:
+            raise ValueError("--holdout-length is required with --holdout-test.")
+
+        result, _ = run_database_holdout_test(
+            engine,
+            job,
+            table_name=args.holdout_table,
+            value_column=args.holdout_value_column,
+            group_key=args.holdout_group_key,
+            gap_start_time=pd.Timestamp(args.holdout_start),
+            gap_length_periods=args.holdout_length,
+            fault_type=args.holdout_fault_type,
+            method=args.method,
+            context=pd.Timedelta(args.holdout_context),
+            persist=True,
+        )
+        logger.info(
+            "holdout %s: %s.%s %s group=%s compared=%s/%s filled=%s mae=%s rmse=%s",
+            result.status,
+            result.source_schema,
+            result.table_name,
+            result.value_column,
+            result.group_key,
+            result.compared_points,
+            result.expected_points,
+            result.actual_filled,
+            result.mean_absolute_error,
+            result.root_mean_squared_error,
+        )
+        return 0 if result.status == "passed" else 1
 
     if args.self_test:
         results = write_self_test_results(engine, job)

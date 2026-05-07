@@ -137,7 +137,16 @@ The self-test catalog currently covers:
 Each run injects the selected faults into synthetic data, calls the same
 gapfiller core used by `scripts/gapfill_timeseries.py`, checks the expected fill
 counts, and renders source and gapfilled series previews with imputed points
-marked. The CLI self-test path remains available through:
+marked.
+
+The same page also contains a holdout error test. Operators select a synthetic
+time-series dataset, the start index, the number of periods to remove, the
+removal type (`value_gap` or `timestamp_gap`), and the gapfill method. The test
+removes that known data segment, fills it, and compares the imputed values with
+the held-out original values. The UI reports MAE, RMSE, maximum absolute error,
+MAPE, compared point count, and filled point count.
+
+The CLI self-test path remains available through:
 
 ```bash
 uv run python scripts/gapfill_timeseries.py --job entsoe_fms --self-test
@@ -146,6 +155,12 @@ uv run python scripts/gapfill_timeseries.py --job entsoe_fms --self-test
 The CLI writes the same synthetic QA results to the configured gapfill target
 schema for Grafana dashboards. The admin page keeps the latest run in the admin
 process so it is useful for quick local demonstrations and regression checks.
+
+Real database holdout tests are executed through
+`scripts/gapfill_timeseries.py --holdout-test`. They read real source rows,
+remove the selected segment only in memory, compare the filled values with the
+held-out truth, and write QA rows to the gapfill target schema. Grafana displays
+these results in `OEDS Gapfilling Quality`.
 
 ## YAML validation rules
 

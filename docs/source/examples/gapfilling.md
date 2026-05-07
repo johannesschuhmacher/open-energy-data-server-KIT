@@ -20,6 +20,8 @@ Run metadata is written to:
 - `entsoe_fms_gapfilled.gapfill_tracking`
 - `entsoe_fms_gapfilled.gapfill_test_results`
 - `entsoe_fms_gapfilled.gapfill_test_series`
+- `entsoe_fms_gapfilled.gapfill_holdout_results`
+- `entsoe_fms_gapfilled.gapfill_holdout_series`
 
 ## Manual run
 
@@ -39,6 +41,52 @@ uv run python scripts/gapfill_timeseries.py --job entsoe_fms --self-test
 This writes synthetic test results and sample time series to the gapfill target
 schema. The Grafana dashboard `OEDS Gapfilling Quality` displays both the latest
 real gapfill run and these self-test results.
+
+The same synthetic checks are available in the crawler admin UI under
+`/admin/gapfill`. That view lets operators select fault-injection scenarios,
+run the gapfiller against the synthetic data, and inspect source-versus-filled
+series previews directly in the admin UI. The admin run is process-local and
+does not write to the database; use the CLI self-test command when Grafana
+dashboard tables should be refreshed.
+
+The built-in self-tests currently inject:
+
+- NaN value gaps in complete hourly data
+- missing timestamps that require row creation
+- daily seasonal gaps handled by `donor_refined` donor matching and refinement
+
+For error measurement, the admin UI also provides a holdout test. Select a
+synthetic dataset, choose the start index and length of the removed period,
+select `value_gap` or `timestamp_gap`, and run a chosen gapfill method. The UI
+then compares the imputed values with the held-out truth and reports MAE, RMSE,
+maximum absolute error, MAPE, compared points, and filled points.
+
+## Real-data holdout tests
+
+Real source data can be tested without modifying raw tables. The holdout mode
+reads a real group from the database, removes the selected segment in memory,
+runs the gapfiller, compares the filled values with the held-out truth, and
+writes only QA rows to `gapfill_holdout_results` and
+`gapfill_holdout_series`.
+
+Example:
+
+```shell
+uv run python scripts/gapfill_timeseries.py \
+  --job entsoe_fms \
+  --holdout-test \
+  --holdout-table ActualTotalLoad \
+  --holdout-value-column "TotalLoad[MW]" \
+  --holdout-start "2026-04-01T00:00:00Z" \
+  --holdout-length 24 \
+  --holdout-fault-type value_gap
+```
+
+Use `--holdout-group-key` to target one exact series. Without it, the script
+selects the first eligible group with enough non-missing truth values in the
+requested window. The Grafana dashboard `OEDS Gapfilling Quality` displays the
+latest real-data holdout result table, latest MAE, and truth/source/gapfilled
+series with imputed points.
 
 ## Configuration
 
