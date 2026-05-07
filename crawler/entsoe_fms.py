@@ -706,6 +706,37 @@ class EntsoeFMSCrawler(BaseCrawler):
 
         return pd.DataFrame(), df.copy()
 
+    @staticmethod
+    def calculate_package_window_start(end_time: pd.Timestamp, window_months: int) -> pd.Timestamp:
+        if window_months < 1:
+            raise ValueError("fms_package_window_months must be at least 1.")
+
+        if end_time.tzinfo is None:
+            end_time = end_time.tz_localize("Europe/Berlin")
+        else:
+            end_time = end_time.tz_convert("Europe/Berlin")
+
+        current_month_start = end_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return current_month_start - pd.DateOffset(months=window_months - 1)
+
+    def _get_run_start_time(self, end_time: pd.Timestamp) -> pd.Timestamp:
+        window_months = self.config.get("fms_package_window_months")
+        if window_months is None:
+            return self.default_start_time
+
+        try:
+            parsed_window_months = int(window_months)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("fms_package_window_months must be an integer.") from exc
+
+        return self.calculate_package_window_start(end_time, parsed_window_months)
+
+    def _uses_full_package_upsert(self) -> bool:
+        return self.config.get("fms_package_write_mode") == "full_upsert"
+
+    def _split_package_refresh_chunk(self, table_name: str, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+        return pd.DataFrame(), self._deduplicate_on_unique_keys(table_name, df.copy())
+
     # ---------------------------
     # Main download routine
     # ---------------------------
@@ -730,6 +761,10 @@ class EntsoeFMSCrawler(BaseCrawler):
         if not target_data_items:
             self.logger.warning("No FMS data items selected. Nothing to download.")
             return
+
+        full_package_upsert = self._uses_full_package_upsert()
+        if full_package_upsert:
+            self.logger.info("Full package upsert mode is enabled for this ENTSO-E FMS run.")
 
         for data_item in target_data_items:
             create = False
@@ -756,7 +791,13 @@ class EntsoeFMSCrawler(BaseCrawler):
             effective_start_time = start_time
             try:
                 table_state = self._get_table_state(table_name)
-                if table_state["table_exists"] and table_state["last_update_time"]:
+                if full_package_upsert:
+                    self.logger.info(
+                        "Table '%s' uses package-refresh mode. Processing package files from %s.",
+                        table_name,
+                        effective_start_time,
+                    )
+                elif table_state["table_exists"] and table_state["last_update_time"]:
                     effective_start_time = end_time - update_interval
                     self.logger.info(
                         "Table '%s' exists. Incremental mode starts at %s.",
@@ -815,6 +856,19 @@ class EntsoeFMSCrawler(BaseCrawler):
                                 print(f"    Processing chunk {chunk_idx+1}: Inserting {total_rows} rows...")
                                 total_file_inserts += total_rows
                                 self._insert_dataframe(table_name, df)
+
+                            elif full_package_upsert:
+                                df_insert_chunk, df_update_chunk = self._split_package_refresh_chunk(table_name, df)
+
+                                if df_insert_chunk.empty and df_update_chunk.empty:
+                                    continue
+
+                                print(
+                                    f"    Processing chunk {chunk_idx+1}: "
+                                    f"0 new inserts, {len(df_update_chunk)} package upserts."
+                                )
+                                self._flush_to_database(table_name, df_insert_chunk, df_update_chunk)
+                                total_file_updates += len(df_update_chunk)
 
                             elif table_state["last_update_time"]:
                                 df_insert_chunk, df_update_chunk = self._split_incremental_chunk(
@@ -1670,16 +1724,25 @@ class EntsoeFMSCrawler(BaseCrawler):
         """
 
         local_dir = os.path.join("crawler", "data")
-        start_time = self.default_start_time
         end_time = pd.Timestamp.now(tz="Europe/Berlin")
+        start_time = self._get_run_start_time(end_time)
 
-        self.logger.info(f"Crawler run started.")
+        self.logger.info("Crawler run started.")
+        if self.config.get("_scheduler_job_id"):
+            self.logger.info("Scheduler job: %s", self.config["_scheduler_job_id"])
         if self.config.get("target_data_items"):
             self.logger.info(
                 "Targeted FMS run enabled for: %s",
                 ", ".join(self.config["target_data_items"]),
             )
-        self.logger.info("ENTSO-E FMS initial/default start date: %s", start_time)
+        if self.config.get("fms_package_window_months") is not None:
+            self.logger.info(
+                "ENTSO-E FMS package refresh window starts at %s for %s month(s).",
+                start_time,
+                self.config.get("fms_package_window_months"),
+            )
+        else:
+            self.logger.info("ENTSO-E FMS initial/default start date: %s", start_time)
 
         try:
             self.logger.info("Saving power system data...")

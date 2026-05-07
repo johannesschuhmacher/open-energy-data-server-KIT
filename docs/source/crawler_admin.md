@@ -7,6 +7,7 @@ Implemented phases:
 
 - read-only dashboard for configured and discoverable crawler modules
 - compact schedule cards with a modal editor for `enable` and `schedule`
+- multi-job schedule previews for crawler sections that define `jobs`
 - denser operations list with search, quick filters, and collapsible crawler rows
 - recurrence editor with `Hourly`, `Daily`, `Weekly`, and `Advanced` modes
 - CRON preview for effective schedules
@@ -17,6 +18,8 @@ Implemented phases:
 - run history with persistent status tracking
 - live log tailing for active and completed runs
 - in-process locking so the same crawler cannot be started twice at once
+- separate Gapfill QA page for synthetic fault injection, gapfill self-tests,
+  and source-versus-filled series previews
 - crawler-specific operation forms for:
   - `weather_forecast`
   - `eurostat_crawler`
@@ -78,7 +81,7 @@ The dashboard combines:
 - crawler modules discovered under `crawler/`
 - configured crawler sections from `CRAWLER_CONFIG.yml`
 - merged default values where applicable
-- the next three local run times for each effective CRON schedule
+- the next local run times for each effective CRON schedule or named scheduler job
 - latest manual run status and lock state
 - a search field plus quick filters for `Enabled`, `Disabled`, `Running`, and `Issues`
 - a three-level flow:
@@ -86,6 +89,11 @@ The dashboard combines:
   - expandable summary with a reduced operational overview
   - dedicated `Settings & Details` page for alerts, config, actions, history, and logs
 - a modal schedule editor opened from the dashboard
+
+Crawler sections with a `jobs` mapping, such as the ENTSO-E FMS package-refresh
+setup, are shown as multiple named schedules. The compact modal editor is kept
+for legacy single-schedule crawlers; multi-job schedules are edited in the raw
+YAML editor so the job-specific overrides stay explicit.
 
 Local email recipient overrides:
 
@@ -105,6 +113,7 @@ Dashboard scheduler edits:
 - support compact recurrence forms for hourly, daily, and weekly schedules
 - allow weekday selection with individual weekday chips in weekly mode
 - fall back to advanced CRON mode when an existing schedule cannot be mapped safely
+- direct operators to the YAML editor when a crawler uses named scheduler jobs
 
 Cards intentionally distinguish between:
 
@@ -112,6 +121,31 @@ Cards intentionally distinguish between:
 - crawler sections that are configured and enabled
 - crawler sections that are configured but disabled
 - sections that need attention because validation found issues
+
+## Gapfill QA
+
+The `Gapfill QA` navigation item opens `/admin/gapfill`. Operators can run the
+synthetic gapfiller self-tests from the admin UI without touching raw crawler
+tables.
+
+The self-test catalog currently covers:
+
+- value gaps in an otherwise complete hourly series
+- missing timestamps that must be recreated before values can be imputed
+- daily seasonal value gaps filled by `donor_refined`
+
+Each run injects the selected faults into synthetic data, calls the same
+gapfiller core used by `scripts/gapfill_timeseries.py`, checks the expected fill
+counts, and renders source and gapfilled series previews with imputed points
+marked. The CLI self-test path remains available through:
+
+```bash
+uv run python scripts/gapfill_timeseries.py --job entsoe_fms --self-test
+```
+
+The CLI writes the same synthetic QA results to the configured gapfill target
+schema for Grafana dashboards. The admin page keeps the latest run in the admin
+process so it is useful for quick local demonstrations and regression checks.
 
 ## YAML validation rules
 
@@ -121,7 +155,9 @@ The editor validates the file before saving. Phase 1 checks:
 - presence and type of the top-level `default` section
 - crawler sections being mappings
 - valid effective `schedule`
+- valid job-level `schedule` values when a crawler uses `jobs`
 - valid effective `enable`
+- valid job-level `enable` values when a crawler uses `jobs`
 - presence of effective `schema_name`
 - presence of effective `database_uri`
 - `post_run_scripts` being a list when present

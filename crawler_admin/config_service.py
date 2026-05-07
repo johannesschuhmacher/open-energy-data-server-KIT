@@ -1,22 +1,21 @@
 from __future__ import annotations
 
+import errno
+import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from hashlib import sha256
 from io import StringIO
 from pathlib import Path
 from typing import Any
-import errno
-import os
-import re
 
+import yaml
+from crawler.common.local_env import apply_email_env_overrides
 from cron_converter import Cron
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
-import yaml
-
-from crawler.common.local_env import apply_email_env_overrides
 
 CONFIG_FILENAME = "CRAWLER_CONFIG.yml"
 EXCLUDED_CRAWLER_MODULES = {"__init__"}
@@ -44,6 +43,14 @@ class CronPreview:
     summary: str
     next_runs: list[str] = field(default_factory=list)
     error: str | None = None
+
+
+@dataclass(frozen=True)
+class CrawlerJobPreview:
+    name: str
+    enabled: bool | None
+    schedule: str | None
+    preview: CronPreview
 
 
 @dataclass(frozen=True)
@@ -75,6 +82,7 @@ class CrawlerCard:
     schedule: str | None
     schedule_source: str | None
     preview: CronPreview
+    job_previews: list[CrawlerJobPreview]
     issues: list[ValidationIssue]
     state_label: str
     state_variant: str
@@ -270,6 +278,7 @@ def _validate_merged_crawler_config(
     merged_config: dict[str, Any],
     issues: list[ValidationIssue],
 ) -> None:
+    jobs_value = crawler_config.get("jobs")
     schedule_value = merged_config.get("schedule")
     if schedule_value is None:
         issues.append(
@@ -295,8 +304,11 @@ def _validate_merged_crawler_config(
                     level="error",
                     message=f"Invalid CRON schedule: {preview.error}",
                     scope=crawler_name,
-                )
             )
+        )
+
+    if jobs_value is not None:
+        _validate_crawler_jobs(crawler_name, merged_config, jobs_value, issues)
 
     enable_value = merged_config.get("enable")
     if not isinstance(enable_value, bool):
@@ -346,6 +358,113 @@ def _validate_merged_crawler_config(
                 scope=crawler_name,
             )
         )
+
+
+def _validate_crawler_jobs(
+    crawler_name: str,
+    merged_config: dict[str, Any],
+    jobs_value: Any,
+    issues: list[ValidationIssue],
+) -> None:
+    if not isinstance(jobs_value, dict):
+        issues.append(
+            ValidationIssue(
+                level="error",
+                message="The 'jobs' value must be a mapping of named scheduler jobs.",
+                scope=crawler_name,
+            )
+        )
+        return
+
+    if not jobs_value:
+        issues.append(
+            ValidationIssue(
+                level="warning",
+                message="The 'jobs' mapping is empty; the crawler will fall back to its legacy schedule.",
+                scope=crawler_name,
+            )
+        )
+        return
+
+    base_config = {key: value for key, value in merged_config.items() if key != "jobs"}
+    for job_name, job_config in jobs_value.items():
+        job_scope = f"{crawler_name}:{job_name}"
+        if not isinstance(job_name, str):
+            issues.append(
+                ValidationIssue(
+                    level="error",
+                    message=f"Job key {job_name!r} must be a string.",
+                    scope=crawler_name,
+                )
+            )
+            continue
+
+        if not isinstance(job_config, dict):
+            issues.append(
+                ValidationIssue(
+                    level="error",
+                    message="Crawler job configuration must be a mapping.",
+                    scope=job_scope,
+                )
+            )
+            continue
+
+        effective_job_config = merge_with_defaults(base_config, job_config)
+        job_schedule = effective_job_config.get("schedule")
+        if not isinstance(job_schedule, str) or not job_schedule.strip():
+            issues.append(
+                ValidationIssue(
+                    level="error",
+                    message="Crawler job must have an effective CRON 'schedule'.",
+                    scope=job_scope,
+                )
+            )
+        else:
+            preview = build_cron_preview(job_schedule)
+            if preview.error:
+                issues.append(
+                    ValidationIssue(
+                        level="error",
+                        message=f"Invalid job CRON schedule: {preview.error}",
+                        scope=job_scope,
+                    )
+                )
+
+        job_enable = effective_job_config.get("enable")
+        if not isinstance(job_enable, bool):
+            issues.append(
+                ValidationIssue(
+                    level="error",
+                    message="Crawler job must have an effective boolean 'enable' value.",
+                    scope=job_scope,
+                )
+            )
+
+        if crawler_name == "entsoe_fms":
+            window_months = effective_job_config.get("fms_package_window_months")
+            if window_months is not None:
+                try:
+                    parsed_window_months = int(window_months)
+                except (TypeError, ValueError):
+                    parsed_window_months = 0
+                if parsed_window_months < 1:
+                    issues.append(
+                        ValidationIssue(
+                            level="error",
+                            message="'fms_package_window_months' must be an integer greater than or equal to 1.",
+                            scope=job_scope,
+                        )
+                    )
+
+            write_mode = effective_job_config.get("fms_package_write_mode")
+            if write_mode is not None and write_mode != "full_upsert":
+                issues.append(
+                    ValidationIssue(
+                        level="warning",
+                        message="Unknown ENTSO-E FMS package write mode; supported value is 'full_upsert'.",
+                        scope=job_scope,
+                    )
+                )
 
 
 def build_cron_preview(schedule: str | None, count: int = 3) -> CronPreview:
@@ -443,6 +562,57 @@ def _describe_day_token(token: str) -> str:
     return "Custom weekdays"
 
 
+def build_crawler_job_previews(
+    default_config: dict[str, Any],
+    crawler_config: dict[str, Any],
+    merged_config: dict[str, Any],
+) -> list[CrawlerJobPreview]:
+    jobs_value = crawler_config.get("jobs")
+    if not isinstance(jobs_value, dict) or not jobs_value:
+        return []
+
+    base_config = {key: value for key, value in merged_config.items() if key != "jobs"}
+    job_previews: list[CrawlerJobPreview] = []
+    for job_name, job_config in jobs_value.items():
+        if not isinstance(job_name, str) or not isinstance(job_config, dict):
+            continue
+
+        effective_job_config = merge_with_defaults(base_config, job_config)
+        schedule = effective_job_config.get("schedule")
+        preview = build_cron_preview(schedule if isinstance(schedule, str) else None)
+        enabled = effective_job_config.get("enable") if isinstance(effective_job_config.get("enable"), bool) else None
+        job_previews.append(
+            CrawlerJobPreview(
+                name=job_name,
+                enabled=enabled,
+                schedule=schedule if isinstance(schedule, str) else None,
+                preview=preview,
+            )
+        )
+
+    return job_previews
+
+
+def build_multi_job_preview(job_previews: list[CrawlerJobPreview]) -> CronPreview:
+    enabled_jobs = [job for job in job_previews if job.enabled is True]
+    if not enabled_jobs:
+        return CronPreview(schedule=None, summary="No enabled jobs", next_runs=[])
+
+    next_runs = []
+    for job in enabled_jobs:
+        if job.preview.next_runs:
+            next_runs.append(f"{job.name}: {job.preview.next_runs[0]}")
+        elif job.preview.error:
+            return CronPreview(schedule=None, summary="Invalid job schedule", error=f"{job.name}: {job.preview.error}")
+
+    next_runs.sort()
+    return CronPreview(
+        schedule=None,
+        summary=f"{len(enabled_jobs)} enabled scheduler job(s)",
+        next_runs=next_runs,
+    )
+
+
 def build_dashboard_state(repo_root: Path | None = None) -> DashboardState:
     root = repo_root or get_repo_root()
     config_path = get_config_path(root)
@@ -480,23 +650,33 @@ def build_dashboard_state(repo_root: Path | None = None) -> DashboardState:
                 else "Crawler module available without dedicated description."
             )
 
-            schedule = merged.get("schedule") if configured else None
+            job_previews = build_crawler_job_previews(default_config, crawler_config, merged) if configured else []
+            schedule = merged.get("schedule") if configured and not job_previews else None
             if isinstance(schedule, str):
                 schedule_samples.add(schedule)
+            for job_preview in job_previews:
+                if isinstance(job_preview.schedule, str):
+                    schedule_samples.add(job_preview.schedule)
 
-            preview = build_cron_preview(schedule if isinstance(schedule, str) else None)
+            preview = build_multi_job_preview(job_previews) if job_previews else build_cron_preview(schedule if isinstance(schedule, str) else None)
             enabled = merged.get("enable") if configured and isinstance(merged.get("enable"), bool) else None
             if enabled:
                 enabled_count += 1
 
             schedule_source = None
             if configured and isinstance(crawler_config, dict):
-                if "schedule" in crawler_config:
+                if job_previews:
+                    schedule_source = "jobs"
+                elif "schedule" in crawler_config:
                     schedule_source = "crawler"
                 elif isinstance(default_config, dict) and "schedule" in default_config:
                     schedule_source = "default"
 
-            card_issues = [issue for issue in validation.issues if issue.scope == crawler_name]
+            card_issues = [
+                issue
+                for issue in validation.issues
+                if issue.scope == crawler_name or issue.scope.startswith(f"{crawler_name}:")
+            ]
             state_label, state_variant = _determine_card_state(
                 configured=configured,
                 module_present=module_present,
@@ -515,6 +695,7 @@ def build_dashboard_state(repo_root: Path | None = None) -> DashboardState:
                     schedule=schedule if isinstance(schedule, str) else None,
                     schedule_source=schedule_source,
                     preview=preview,
+                    job_previews=job_previews,
                     issues=card_issues,
                     state_label=state_label,
                     state_variant=state_variant,
@@ -606,7 +787,8 @@ def get_all_crawler_overviews(repo_root: Path | None = None) -> dict[str, Crawle
     for issue in validation.issues:
         if issue.scope == "global":
             continue
-        issues_by_scope.setdefault(issue.scope, []).append(issue)
+        crawler_scope = issue.scope.split(":", 1)[0]
+        issues_by_scope.setdefault(crawler_scope, []).append(issue)
 
     overview_map: dict[str, CrawlerOverview] = {}
     for crawler_name in all_names:
@@ -653,6 +835,10 @@ def update_crawler_schedule_config_text(
         created_section = True
     elif not isinstance(crawler_config, dict):
         raise ValueError(f"Crawler section '{crawler_name}' must be a mapping before it can be edited.")
+    elif isinstance(crawler_config.get("jobs"), dict):
+        raise ValueError(
+            f"Crawler '{crawler_name}' uses multiple scheduler jobs. Edit its 'jobs' block in the YAML editor."
+        )
     else:
         crawler_config["enable"] = enabled
         crawler_config["schedule"] = DoubleQuotedScalarString(schedule)

@@ -40,12 +40,56 @@ Most crawlers use some or all of these options:
 List values are replaced completely when overridden. Dictionary values are
 merged key-by-key.
 
+## Multiple scheduler jobs
+
+A crawler can define a `jobs` mapping when it needs more than one schedule.
+Each job inherits the crawler's effective settings and can override options such
+as `schedule`, `target_data_items`, or crawler-specific window settings.
+
+Example:
+
+```yaml
+entsoe_fms:
+  enable: true
+  schema_name: "entsoe_fms"
+  jobs:
+    latest_hourly:
+      enable: true
+      schedule: "0 * * * *"
+      mode: "fms_package_refresh"
+      fms_package_window_months: 1
+      fms_package_write_mode: "full_upsert"
+      run_post_scripts: true
+      target_data_items:
+        - "ActualTotalLoad_6.1.A_r3"
+
+    revision_sweep_daily:
+      enable: true
+      schedule: "30 2 * * *"
+      mode: "fms_package_refresh"
+      fms_package_window_months: 3
+      fms_package_write_mode: "full_upsert"
+      run_post_scripts: true
+      target_data_items:
+        - "ActualTotalLoad_6.1.A_r3"
+```
+
+When `jobs` is present, the scheduler runs named jobs such as
+`entsoe_fms:latest_hourly`. Crawler sections without `jobs` keep the legacy
+single-schedule behavior.
+
+The scheduler uses an in-memory queue. It does not enqueue the same job again
+while that job is already queued or running. For `entsoe_fms`, locks are based
+on the target tables derived from `target_data_items`, so jobs touching the same
+tables wait for each other while non-overlapping jobs can run in parallel.
+
 ## Crawler-specific options
 
 Many crawlers define additional options. Examples:
 
 - `weather_forecast`: `forecast_hours`, `past_hours`, `locations`
-- `entsoe_fms`: `target_data_items`
+- `entsoe_fms`: `target_data_items`, `fms_package_window_months`,
+  `fms_package_write_mode`
 - source-specific tokens or credentials loaded from `crawler/.env`
 
 Crawler-specific behavior should be documented on the crawler page under

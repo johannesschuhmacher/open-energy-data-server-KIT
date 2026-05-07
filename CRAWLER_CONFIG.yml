@@ -48,14 +48,42 @@ mastr:
   base_download_url: "https://download.marktstammdatenregister.de/Gesamtdatenexport"
 
 entsoe_fms:
-  enable: false
+  enable: true
   schema_name: "entsoe_fms"
   description: "Crawls ENTSO-E FMS data (Transparency Platform File Library)"
-  schedule: "0 * * * *"
   default_start_date: "2014-01-01"
   post_run_scripts:
     - "scripts/gapfill_timeseries.py"
     - "scripts/refresh_entsoe_availability_map.py"
+  jobs:
+    latest_hourly:
+      enable: true
+      schedule: "0 * * * *"
+      mode: "fms_package_refresh"
+      fms_package_window_months: 1
+      fms_package_write_mode: "full_upsert"
+      run_post_scripts: true
+      target_data_items:
+        - "ActualTotalLoad_6.1.A_r3"
+        - "DayAheadTotalLoadForecast_6.1.B_r3"
+        - "GenerationForecastsForWindAndSolar_14.1.D_r3"
+        - "EnergyPrices_12.1.D_r3"
+        - "ForecastedTransferCapacities_11.1_r3"
+        - "PhysicalFlows_12.1.G_r3"
+    revision_sweep_daily:
+      enable: true
+      schedule: "30 2 * * *"
+      mode: "fms_package_refresh"
+      fms_package_window_months: 3
+      fms_package_write_mode: "full_upsert"
+      run_post_scripts: true
+      target_data_items:
+        - "ActualTotalLoad_6.1.A_r3"
+        - "DayAheadTotalLoadForecast_6.1.B_r3"
+        - "GenerationForecastsForWindAndSolar_14.1.D_r3"
+        - "EnergyPrices_12.1.D_r3"
+        - "ForecastedTransferCapacities_11.1_r3"
+        - "PhysicalFlows_12.1.G_r3"
   gapfill:
     enable: true
     target_schema: "entsoe_fms_gapfilled"

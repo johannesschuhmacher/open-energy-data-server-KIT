@@ -44,10 +44,13 @@ Important options used by this crawler:
 - `schema_name`
 - `database_uri`
 - `schedule`
+- `jobs`
 - `default_start_date`
 - `post_run_scripts`
 - `gapfill`
 - `target_data_items`
+- `fms_package_window_months`
+- `fms_package_write_mode`
 
 `default_start_date` controls the first historical window for a fresh schema. If the
 target tables do not exist yet, the crawler starts from this date. Once data is
@@ -55,17 +58,64 @@ present, the crawler switches to its incremental update behavior automatically.
 
 `target_data_items` is optional. If it is set, the crawler only processes the named FMS data items. This is useful for partial runs and maintenance tasks.
 
+ENTSO-E FMS exposes many time-series extracts as monthly CSV packages. The
+package month is only the delivery unit; ENTSO-E can revise rows in those files
+at any time. For regular operations, OEDS therefore supports package-refresh
+jobs that reload recent monthly packages frequently and upsert every selected
+row instead of relying on one global `MAX(UpdateTime)` watermark.
+
+Recommended scheduled jobs:
+
+- `latest_hourly`: reloads the current calendar-month package every hour.
+- `revision_sweep_daily`: reloads the current month and the two previous
+  calendar-month packages once per night.
+
+For these jobs:
+
+- `fms_package_window_months: 1` means current month only.
+- `fms_package_window_months: 3` means current month plus two previous months.
+- `fms_package_write_mode: "full_upsert"` bypasses the global `UpdateTime`
+  filter and upserts all selected package rows by the table's unique key.
+
 Example:
 
 ```yaml
 entsoe_fms:
-  enable: false
+  enable: true
   schema_name: "entsoe_fms"
-  schedule: "0 * * * *"
   default_start_date: "2026-01-01"
   post_run_scripts:
     - "scripts/gapfill_timeseries.py"
     - "scripts/refresh_entsoe_availability_map.py"
+  jobs:
+    latest_hourly:
+      enable: true
+      schedule: "0 * * * *"
+      mode: "fms_package_refresh"
+      fms_package_window_months: 1
+      fms_package_write_mode: "full_upsert"
+      run_post_scripts: true
+      target_data_items:
+        - "ActualTotalLoad_6.1.A_r3"
+        - "DayAheadTotalLoadForecast_6.1.B_r3"
+        - "GenerationForecastsForWindAndSolar_14.1.D_r3"
+        - "EnergyPrices_12.1.D_r3"
+        - "ForecastedTransferCapacities_11.1_r3"
+        - "PhysicalFlows_12.1.G_r3"
+    revision_sweep_daily:
+      enable: true
+      schedule: "30 2 * * *"
+      mode: "fms_package_refresh"
+      fms_package_window_months: 3
+      fms_package_write_mode: "full_upsert"
+      run_post_scripts: true
+      target_data_items:
+        - "ActualTotalLoad_6.1.A_r3"
+        - "DayAheadTotalLoadForecast_6.1.B_r3"
+        - "GenerationForecastsForWindAndSolar_14.1.D_r3"
+        - "EnergyPrices_12.1.D_r3"
+        - "ForecastedTransferCapacities_11.1_r3"
+        - "PhysicalFlows_12.1.G_r3"
   gapfill:
     enable: true
     target_schema: "entsoe_fms_gapfilled"
@@ -84,9 +134,6 @@ entsoe_fms:
       - "EnergyPrices"
       - "ForecastedTransferCapacities"
       - "PhysicalFlows"
-  target_data_items:
-    - "DayAheadTotalLoadForecast_6.1.B_r3"
-    - "GenerationForecastsForWindAndSolar_14.1.D_r3"
 ```
 
 Recommended first-run workflow on a clean deployment:

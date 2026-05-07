@@ -30,7 +30,11 @@
     </div>
     <div class="crawler-header__actions">
       <a href="/admin" class="button button--secondary button--small">Back</a>
-      <a href="/admin?edit={{ overview.crawler_name }}#schedule-modal" class="button button--secondary button--small">Edit Schedule</a>
+      {% if card.schedule_source == "jobs" %}
+        <a href="/admin/editor" class="button button--secondary button--small">Edit YAML Jobs</a>
+      {% else %}
+        <a href="/admin?edit={{ overview.crawler_name }}#schedule-modal" class="button button--secondary button--small">Edit Schedule</a>
+      {% endif %}
     </div>
   </section>
 
@@ -93,7 +97,24 @@
             <div>
               <dt>Next runs</dt>
               <dd>
-                {% if card.preview.next_runs %}
+                {% if card.job_previews %}
+                  <ul class="run-list run-list--compact">
+                    {% for job in card.job_previews %}
+                      <li>
+                        <strong>{{ job.name }}</strong>
+                        {% if job.enabled is sameas false %}
+                          disabled
+                        {% elif job.preview.next_runs %}
+                          {{ job.preview.next_runs[0] }} {{ time_label }}
+                        {% elif job.preview.error %}
+                          {{ job.preview.error }}
+                        {% else %}
+                          -
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% elif card.preview.next_runs %}
                   <ul class="run-list run-list--compact">
                     {% for run in card.preview.next_runs %}
                       <li>{{ run }} {{ time_label }}</li>
@@ -108,7 +129,11 @@
             </div>
           </dl>
           <div class="settings-card__actions">
-            <a href="/admin?edit={{ overview.crawler_name }}#schedule-modal" class="button button--secondary button--small">Edit Schedule</a>
+            {% if card.schedule_source == "jobs" %}
+              <a href="/admin/editor" class="button button--secondary button--small">Edit YAML Jobs</a>
+            {% else %}
+              <a href="/admin?edit={{ overview.crawler_name }}#schedule-modal" class="button button--secondary button--small">Edit Schedule</a>
+            {% endif %}
           </div>
         </article>
 

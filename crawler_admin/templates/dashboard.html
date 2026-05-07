@@ -279,9 +279,15 @@
               {% endif %}
 
               <div class="fleet-action-stack">
-                <a href="/admin?edit={{ card.name }}#schedule-modal" class="button button--secondary button--small">
-                  Edit Schedule
-                </a>
+                {% if card.schedule_source == "jobs" %}
+                  <a href="/admin/editor" class="button button--secondary button--small">
+                    Edit YAML Jobs
+                  </a>
+                {% else %}
+                  <a href="/admin?edit={{ card.name }}#schedule-modal" class="button button--secondary button--small">
+                    Edit Schedule
+                  </a>
+                {% endif %}
                 <a href="/admin/crawlers/{{ card.name }}" class="button button--secondary button--small">
                   Settings &amp; Details
                 </a>
