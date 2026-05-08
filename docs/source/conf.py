@@ -2,9 +2,9 @@
 
 # -- Project information
 
-project = "OEDS"
-copyright = "2024, NOWUM-Energy"
-author = "NOWUM-Energy"
+project = "Open Energy Data Server (KIT)"
+copyright = "2026, IIP-KIT"
+author = "IIP-KIT"
 
 release = "0.1"
 version = "0.1.0"
