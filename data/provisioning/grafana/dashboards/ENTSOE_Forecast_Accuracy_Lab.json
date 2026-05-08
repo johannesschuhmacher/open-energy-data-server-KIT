@@ -556,7 +556,7 @@
                                    ],
                        "title":  "Forecast Errors vs Day-Ahead Price",
                        "type":  "timeseries",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -862,7 +862,7 @@
                                    ],
                        "title":  "Worst Forecast Misses ($RES_Type)",
                        "type":  "table",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    }
                ],
     "refresh":  "5m",
@@ -932,7 +932,7 @@
     "version":  1,
     "weekStart":  "",
     "title":  "ENTSOE Forecast Accuracy Lab (Internal)",
-    "description":  "Variante: Intern. Quellen: ENTSO-E.",
+    "description":  "Variant: Internal. Sources: ENTSO-E.",
     "tags":  [
                  "entsoe",
                  "oeds",

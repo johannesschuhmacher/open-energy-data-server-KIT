@@ -232,7 +232,7 @@
                                    ],
                        "title":  "Latest Day-Ahead Price",
                        "type":  "stat",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -564,7 +564,7 @@
                                    ],
                        "title":  "Price Structure",
                        "type":  "timeseries",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -1198,7 +1198,7 @@
                                    ],
                        "title":  "Europe Day-Ahead Price Map",
                        "type":  "geomap",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -1359,7 +1359,7 @@
     "version":  1,
     "weekStart":  "",
     "title":  "ENTSOE Stress Cockpit (Internal)",
-    "description":  "Variante: Intern. Quellen: ENTSO-E.",
+    "description":  "Variant: Internal. Sources: ENTSO-E.",
     "tags":  [
                  "entsoe",
                  "oeds",

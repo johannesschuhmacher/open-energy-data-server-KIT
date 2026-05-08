@@ -554,7 +554,7 @@
                                    ],
                        "title":  "Forecast Errors vs Day-Ahead Price",
                        "type":  "timeseries",
-                       "description":  "Quellen: ENTSO-E. Preis-Darstellungen extern: SMARD."
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
                    },
                    {
                        "datasource":  {
@@ -860,7 +860,7 @@
                                    ],
                        "title":  "Worst Forecast Misses ($RES_Type)",
                        "type":  "table",
-                       "description":  "Quellen: ENTSO-E. Preis-Darstellungen extern: SMARD."
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
                    }
                ],
     "refresh":  "5m",
@@ -930,7 +930,7 @@
     "weekStart":  "",
     "uid":  "entsoe-forecast-lab-external",
     "title":  "ENTSOE Forecast Accuracy Lab (External)",
-    "description":  "Variante: Extern. Quellen: ENTSO-E. Preis-Darstellungen extern: SMARD. Preis-Laender: DE-LU, Belgium (BE), DK1, DK2, France (FR), Netherlands (NL), NO2, Austria (AT), Poland (PL), SE4, Switzerland (CH), Czech Republic (CZ), IT-North, Slovenia (SI), Hungary (HU)",
+    "description":  "Variant: External. Sources: ENTSO-E. External price views: SMARD. Price zones: DE-LU, Belgium (BE), DK1, DK2, France (FR), Netherlands (NL), NO2, Austria (AT), Poland (PL), SE4, Switzerland (CH), Czech Republic (CZ), IT-North, Slovenia (SI), Hungary (HU)",
     "tags":  [
                  "entsoe",
                  "oeds",

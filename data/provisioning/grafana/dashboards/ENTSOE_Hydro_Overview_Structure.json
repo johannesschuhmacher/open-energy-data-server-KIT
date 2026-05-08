@@ -54,7 +54,7 @@
             }
         ]
     },
-    "description": "Quelle: ENTSO-E. Hydro overview, structure, utilization and seasonality.",
+    "description": "Source: ENTSO-E. Hydro overview, structure, utilization, and seasonality.",
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
@@ -302,7 +302,7 @@
                 "type": "grafana-postgresql-datasource",
                 "uid": "P6EAA63344BCC9F38"
             },
-            "description": "Quelle: ENTSO-E.",
+            "description": "Source: ENTSO-E.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -393,7 +393,7 @@
                 "type": "grafana-postgresql-datasource",
                 "uid": "P6EAA63344BCC9F38"
             },
-            "description": "Quelle: ENTSO-E.",
+            "description": "Source: ENTSO-E.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -513,7 +513,7 @@
                 "type": "grafana-postgresql-datasource",
                 "uid": "P6EAA63344BCC9F38"
             },
-            "description": "Quelle: ENTSO-E.",
+            "description": "Source: ENTSO-E.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -581,7 +581,7 @@
                 "type": "grafana-postgresql-datasource",
                 "uid": "P6EAA63344BCC9F38"
             },
-            "description": "Quelle: ENTSO-E.",
+            "description": "Source: ENTSO-E.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -649,7 +649,7 @@
                 "type": "grafana-postgresql-datasource",
                 "uid": "P6EAA63344BCC9F38"
             },
-            "description": "Quelle: ENTSO-E.",
+            "description": "Source: ENTSO-E.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -717,7 +717,7 @@
                 "type": "grafana-postgresql-datasource",
                 "uid": "P6EAA63344BCC9F38"
             },
-            "description": "Quelle: ENTSO-E.",
+            "description": "Source: ENTSO-E.",
             "fieldConfig": {
                 "defaults": {
                     "mappings": [],

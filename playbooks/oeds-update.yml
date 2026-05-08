@@ -4,7 +4,7 @@
   vars:
     oeds_default_root: /open_energy_data_server
     oeds_default_repo_url: https://github.com/johannesschuhmacher/open-energy-data-server-KIT.git
-    oeds_default_repo_version: open_source_public
+    oeds_default_repo_version: main
     oeds_default_compose_project_name: oeds
     oeds_default_repo_source_mode: git
     oeds_root_effective: "{{ oeds_root | default(oeds_default_root) }}"
@@ -95,7 +95,7 @@
       group: root
       mode: "u=rwx,g=rx,o=rx"
     when:
-      - oeds_backup_database
+      - oeds_backup_database | bool
       - (oeds_open_data_running.stdout | trim) != ""
   - name: Capture extension versions before the update
     ansible.builtin.shell: >-
@@ -103,14 +103,14 @@
       "SELECT extname || ':' || extversion FROM pg_extension ORDER BY 1;"
       > {{ oeds_backup_run_dir }}/extensions.txt
     when:
-      - oeds_backup_database
+      - oeds_backup_database | bool
       - (oeds_open_data_running.stdout | trim) != ""
   - name: Create globals backup before the update
     ansible.builtin.shell: >-
       docker exec open-data pg_dumpall -U opendata --globals-only
       > {{ oeds_backup_run_dir }}/globals.sql
     when:
-      - oeds_backup_database
+      - oeds_backup_database | bool
       - (oeds_open_data_running.stdout | trim) != ""
   - name: Create logical OEDS database backup before the update
     ansible.builtin.shell: >-

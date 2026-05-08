@@ -4,7 +4,7 @@
   vars:
     oeds_default_root: /open_energy_data_server
     oeds_default_repo_url: https://github.com/johannesschuhmacher/open-energy-data-server-KIT.git
-    oeds_default_repo_version: open_source_public
+    oeds_default_repo_version: main
     oeds_default_compose_project_name: oeds
     oeds_default_enable_crawlers: false
     oeds_default_repo_source_mode: git

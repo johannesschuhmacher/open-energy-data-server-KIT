@@ -126,7 +126,7 @@
                                    ],
                        "title":  "Widest Day-Ahead Price Spread",
                        "type":  "stat",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -380,7 +380,7 @@
                                    ],
                        "title":  "Selected Country Price Comparison",
                        "type":  "timeseries",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -672,7 +672,7 @@
                                    ],
                        "title":  "Selected Country Price Map",
                        "type":  "geomap",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -720,7 +720,7 @@
                                    ],
                        "title":  "Selected Country Snapshot",
                        "type":  "table",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -853,7 +853,7 @@
     "version":  1,
     "weekStart":  "",
     "title":  "ENTSOE Country Comparator (Internal)",
-    "description":  "Variante: Intern. Quellen: ENTSO-E.",
+    "description":  "Variant: Internal. Sources: ENTSO-E.",
     "tags":  [
                  "entsoe",
                  "oeds",

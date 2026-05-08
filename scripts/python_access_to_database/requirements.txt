@@ -2,19 +2,18 @@
 
 #<!--SPDX-License-Identifier: AGPL-3.0-or-later-->
 
-# ───────── Kern-Abhängigkeiten ─────────
-pandas>=2.2,<3.0            # DataFrame-Handling
-SQLAlchemy>=2.0,<3.0        # ORM / DB-Abstraktion
-python-dotenv>=1.0,<2.0     # .env laden
+# Core dependencies
+pandas>=2.2,<3.0
+SQLAlchemy>=2.0,<3.0
+python-dotenv>=1.0,<2.0
 
-# ───────── PostgreSQL-Treiber (nur **einen** auswählen) ─────────
-psycopg[binary]>=3.2,<4.0    # moderner Psycopg 3, C-Binary -↴
-# psycopg2-binary>=2.9,<3.0  # …oder klassischer Psycopg 2
+# PostgreSQL driver: pick one
+psycopg[binary]>=3.2,<4.0
+# psycopg2-binary>=2.9,<3.0
 
-# ───────── SSH-Tunnel ─────────
-sshtunnel>=0.4,<0.5          # Port-Forwarding
-paramiko>=2.12,<3.0          # SSH-Backend  (v3 entfernt DSSKey)
+# SSH tunnel support
+sshtunnel>=0.4,<0.5
+paramiko>=2.12,<3.0
 
-# ───────── Optionale Tools (falls interaktiv) ─────────
-# ipython>=8.0               # nette REPL-Erweiterung
-# uv pip install -r requirements.txt
+# Optional interactive tools
+# ipython>=8.0

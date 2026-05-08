@@ -149,7 +149,7 @@
                                    ],
                        "title":  "Latest Home Price",
                        "type":  "stat",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -242,7 +242,7 @@
                                    ],
                        "title":  "Max Absolute Spread",
                        "type":  "stat",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -492,7 +492,7 @@
                                    ],
                        "title":  "Price Spread vs Selected Markets",
                        "type":  "timeseries",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -568,7 +568,7 @@
                                    ],
                        "title":  "Latest Selected Market Spreads",
                        "type":  "table",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -790,7 +790,7 @@
                                    ],
                        "title":  "Top Bottlenecks (Next 24h)",
                        "type":  "table",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    },
                    {
                        "datasource":  {
@@ -935,7 +935,7 @@
                                    ],
                        "title":  "Spread Map to Selected Markets",
                        "type":  "geomap",
-                       "description":  "Quelle: ENTSO-E."
+                       "description":  "Source: ENTSO-E."
                    }
                ],
     "refresh":  "5m",
@@ -1013,7 +1013,7 @@
     "version":  1,
     "weekStart":  "",
     "title":  "ENTSOE Cross-Border \u0026 Price Spread Cockpit (Internal)",
-    "description":  "Variante: Intern. Quellen: ENTSO-E.",
+    "description":  "Variant: Internal. Sources: ENTSO-E.",
     "tags":  [
                  "entsoe",
                  "oeds",

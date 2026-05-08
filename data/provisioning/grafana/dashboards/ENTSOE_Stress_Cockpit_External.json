@@ -230,7 +230,7 @@
                                    ],
                        "title":  "Latest Day-Ahead Price",
                        "type":  "stat",
-                       "description":  "Quellen: ENTSO-E. Preis-Darstellungen extern: SMARD."
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
                    },
                    {
                        "datasource":  {
@@ -562,7 +562,7 @@
                                    ],
                        "title":  "Price Structure",
                        "type":  "timeseries",
-                       "description":  "Quellen: ENTSO-E. Preis-Darstellungen extern: SMARD."
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
                    },
                    {
                        "datasource":  {
@@ -1196,7 +1196,7 @@
                                    ],
                        "title":  "Europe Day-Ahead Price Map",
                        "type":  "geomap",
-                       "description":  "Quellen: ENTSO-E. Preis-Darstellungen extern: SMARD."
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
                    },
                    {
                        "datasource":  {
@@ -1357,7 +1357,7 @@
     "weekStart":  "",
     "uid":  "entsoe-stress-external",
     "title":  "ENTSOE Stress Cockpit (External)",
-    "description":  "Variante: Extern. Quellen: ENTSO-E. Preis-Darstellungen extern: SMARD. Preis-Laender: DE-LU, Belgium (BE), DK1, DK2, France (FR), Netherlands (NL), NO2, Austria (AT), Poland (PL), SE4, Switzerland (CH), Czech Republic (CZ), IT-North, Slovenia (SI), Hungary (HU)",
+    "description":  "Variant: External. Sources: ENTSO-E. External price views: SMARD. Price zones: DE-LU, Belgium (BE), DK1, DK2, France (FR), Netherlands (NL), NO2, Austria (AT), Poland (PL), SE4, Switzerland (CH), Czech Republic (CZ), IT-North, Slovenia (SI), Hungary (HU)",
     "tags":  [
                  "entsoe",
                  "oeds",

@@ -721,7 +721,7 @@ class EpexSpotCrawler(BaseCrawler):
                 "data_source": EPEX_SOURCE_URL,
                 "license": "EPEX SPOT market data account",
                 "description": "German EPEX SPOT intraday market data",
-                "contact": "oeds@iip.kit.edu",
+                "contact": "OEDS maintainers",
             }
         )
 

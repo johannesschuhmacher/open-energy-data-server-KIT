@@ -76,7 +76,7 @@ def timeseries_panel(
     grid_pos: dict,
     unit: str = "short",
     stack_mode: str = "none",
-    description: str = "Quelle: ENTSO-E.",
+    description: str = "Source: ENTSO-E.",
     overrides: list[dict] | None = None,
 ) -> dict:
     return {
@@ -132,7 +132,7 @@ def barchart_panel(
     raw_sql: str,
     grid_pos: dict,
     x_field: str,
-    description: str = "Quelle: ENTSO-E.",
+    description: str = "Source: ENTSO-E.",
 ) -> dict:
     return {
         "datasource": datasource(),
@@ -169,7 +169,7 @@ def barchart_panel(
     }
 
 
-def table_panel(panel_id: int, title: str, raw_sql: str, grid_pos: dict, description: str = "Quelle: ENTSO-E.") -> dict:
+def table_panel(panel_id: int, title: str, raw_sql: str, grid_pos: dict, description: str = "Source: ENTSO-E.") -> dict:
     return {
         "datasource": datasource(),
         "description": description,
@@ -198,7 +198,7 @@ def geomap_panel(
     grid_pos: dict,
     value_field: str,
     unit: str = "megwatt",
-    description: str = "Quelle: ENTSO-E.",
+    description: str = "Source: ENTSO-E.",
 ) -> dict:
     return {
         "datasource": datasource(),
@@ -770,7 +770,7 @@ LIMIT 25
                 }
             ]
         },
-        "description": "Quelle: ENTSO-E. Hydro overview, structure, utilization and seasonality.",
+        "description": "Source: ENTSO-E. Hydro overview, structure, utilization, and seasonality.",
         "editable": True,
         "fiscalYearStartMonth": 0,
         "graphTooltip": 0,
@@ -1258,7 +1258,7 @@ ORDER BY spread_eur_mwh DESC, avg_export_headroom_mw DESC
                 }
             ]
         },
-        "description": "Quelle: ENTSO-E. Hydro flexibility, pumped storage behaviour, residual load and market context.",
+        "description": "Source: ENTSO-E. Hydro flexibility, pumped storage behavior, residual load, and market context.",
         "editable": True,
         "fiscalYearStartMonth": 0,
         "graphTooltip": 0,

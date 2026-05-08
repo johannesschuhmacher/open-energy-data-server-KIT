@@ -1,114 +1,111 @@
 # OEDS Ansible Playbooks
 
-Diese Playbooks sind der oeffentliche Betriebs- und Installationspfad fuer
-OEDS. Sie decken generische OEDS-Installation, Update, Backup, Migration und
-Rollback ab. Inventories, lokale Variablen, Secrets und Host-spezifische
-Overrides gehoeren nicht ins Repository.
+These playbooks are the public installation and operations path for OEDS.
+They cover generic host preparation, installation, updates, backups, database
+migration, rollback, smoke tests, and uninstall workflows.
 
-## Zielbild
+Secrets, inventories, host-specific overrides, and runtime data do not belong
+in the repository. Keep them in local `group_vars`, untracked `.env` files, or
+host-side runtime directories.
 
-Die Playbooks installieren und betreiben OEDS auf einem Linux-Host mit Docker
-Compose. Die Compose-Datei kommt aus dem OEDS-Repository, mutable Runtime-Daten
-liegen ausserhalb des Git-Checkouts.
+## Target layout
 
-Standardpfade auf dem Zielhost:
+The playbooks install and operate OEDS on a Linux host with Docker Compose.
+The Compose file stays in the repository checkout, while mutable runtime data
+is stored outside the checkout.
+
+Default target paths:
 
 ```text
-/open_energy_data_server/repo          # Git checkout des OEDS-Repos
-/open_energy_data_server/docker_data   # persistente Docker-Volume-Daten
-/open_energy_data_server/runtime       # Config, Secrets, Logs, Admin-State
-/open_energy_data_server/backups       # Backup- und Migrationsartefakte
+/open_energy_data_server/repo          # OEDS repository checkout
+/open_energy_data_server/docker_data   # persistent Docker volume data
+/open_energy_data_server/runtime       # config, secrets, logs, admin state
+/open_energy_data_server/backups       # backup and migration artifacts
 ```
 
-Das "Rausziehen" der Runtime-Dateien bedeutet: `CRAWLER_CONFIG.yml`,
-`crawler/.env`, `crawler/data`, `logs` und `crawler_admin_state` liegen nicht
-mehr nur im Git-Checkout. Dadurch kann das Repo aktualisiert oder neu
-ausgecheckt werden, ohne lokale Konfiguration, Secrets, Logs oder Admin-State zu
-ueberschreiben. Die Crawler-Container lesen `crawler/.env` dabei als Compose
-`env_file`; die Datei muss also auf dem Host vorhanden sein, wird aber nicht als
-lesbare Datei in den Container gemountet.
+Runtime extraction means that `CRAWLER_CONFIG.yml`, `crawler/.env`,
+`crawler/data`, `logs`, and `crawler_admin_state` are stored outside the git
+checkout. This allows repo updates or fresh checkouts without overwriting local
+configuration, secrets, logs, or admin state.
 
-Empfehlung fuer oeffentliches Repo vs. private Betriebsdaten:
+Crawler containers read `crawler/.env` via Compose `env_file`. The file must
+exist on the host, but it is not mounted into the container as a readable bind
+mount.
 
-- das versionierte `CRAWLER_CONFIG.yml` bleibt generisch und enthaelt keine
-  persoenlichen Empfaengeradressen, produktiven SMTP-Hosts oder Zugangsdaten
-- echte Mail-Empfaenger, SMTP-Zugangsdaten und Crawler-Secrets liegen nur in
-  unversionierten Dateien wie `crawler/.env`, Host-Runtime-`.env` oder
-  `group_vars/oeds.yml`
-- Admin-UI und Scheduler koennen Mailziele lokal ueber
-  `OEDS_EMAIL_TOADDRS`, `OEDS_EMAIL_MAILHOST`, `OEDS_EMAIL_FROMADDR`,
-  `OEDS_EMAIL_USERNAME` und `OEDS_EMAIL_PASSWORD` ueberschreiben, ohne die
-  versionierte YAML anzufassen
+Recommended split between public repo content and private operations data:
 
-## Voraussetzungen
+- Keep the versioned `CRAWLER_CONFIG.yml` generic and free of personal email
+  recipients, production SMTP hosts, or credentials.
+- Store real email recipients, SMTP credentials, and crawler secrets only in
+  untracked files such as `crawler/.env`, host runtime `.env`, or
+  `group_vars/oeds.yml`.
+- Use `OEDS_EMAIL_TOADDRS`, `OEDS_EMAIL_MAILHOST`, `OEDS_EMAIL_FROMADDR`,
+  `OEDS_EMAIL_USERNAME`, and `OEDS_EMAIL_PASSWORD` to override mail settings
+  locally without editing the versioned YAML.
 
-Auf dem Control Node:
+## Requirements
 
-- Linux oder WSL wird empfohlen; Ansible ist kein sinnvoller nativer
-  Windows-Control-Node.
-- SSH-Zugriff als `root`. Die aktuellen Playbooks setzen `remote_user: root`
-  direkt in den Plays.
-- `ansible-core` oder `ansible`.
-- Collections aus `requirements.yml`.
+Control node:
 
-Installation auf dem Control Node:
+- Linux or WSL is recommended. Ansible is not a good native Windows control
+  node.
+- SSH access as `root`. The current public playbooks use `remote_user: root`.
+- `ansible` plus the collections from `requirements.yml`.
+
+Install control-node dependencies:
 
 ```bash
 uv tool install --with ansible-lint ansible
 ansible-galaxy collection install -r requirements.yml
 ```
 
-Wenn du WSL nutzt, clone das Repository moeglichst in das Linux-Dateisystem
-statt unter `/mnt/c/...`. In world-writable Mounts ignoriert Ansible `ansible.cfg`.
-Falls du trotzdem aus `/mnt/c/...` arbeitest, uebergib `-i inventory.yml`
-explizit bei jedem Aufruf. Fuer die Playbook-Statusmails muss `ansible.cfg`
-geladen werden; aus `/mnt/c/...` ist der robuste Weg:
+If you use WSL, clone the repository into the Linux filesystem when possible
+instead of `/mnt/c/...`. In world-writable mounts Ansible ignores `ansible.cfg`.
+If you still work from `/mnt/c/...`, always pass `-i inventory.yml` explicitly.
+For playbook status mail support, load `ansible.cfg` explicitly:
 
 ```bash
 ANSIBLE_CONFIG=playbooks/ansible.cfg ansible-playbook -i playbooks/inventory.yml playbooks/oeds-smoke-test.yml
 ```
 
-Auf dem Zielhost:
+Target host:
 
-- RHEL/CentOS/Rocky/Alma-kompatibles System mit `dnf`.
-- Python fuer Ansible-Module.
-- Netzwerkzugang zu Docker-Repos, GitHub oder einem anderen erreichbaren
-  Git-Remote und Container-Registries.
-- Genug Speicherplatz fuer PostgreSQL-Daten und Backups.
+- A RHEL, Rocky, Alma, or CentOS compatible system with `dnf`.
+- Python for Ansible modules.
+- Network access to Docker registries and the selected git remote.
+- Enough storage for PostgreSQL data and backups.
 
-## Inventory
+## Inventory and local variables
 
-`inventory.example.yml` kopieren und als `inventory.yml` anpassen:
+Create a local inventory:
 
 ```bash
 cp inventory.example.yml inventory.yml
-```
-
-Beispielaufruf:
-
-```bash
 ansible -i inventory.yml oeds -m ping
 ```
 
-Optionale zentrale Variablen:
+Optional local variables:
 
 ```bash
 mkdir -p group_vars
 cp group_vars/oeds.example.yml group_vars/oeds.yml
 ```
 
-`group_vars/oeds.yml` ist fuer lokale Zielhost-Konfiguration gedacht und sollte
-nicht versioniert werden.
+`group_vars/oeds.yml` is intended for local host configuration and should stay
+unversioned.
 
-## Repo-Zugriff und privater Rollout
+## Repository access and private rollouts
 
-Der Zielhost muss `oeds_repo_url` selbst per `git clone` erreichen koennen.
-Fuer eine noch nicht veroeffentlichte Branch-/Commit-Version gibt es drei
-sinnvolle Wege:
+In the default `git` mode, the target host must be able to reach
+`oeds_repo_url` on its own. For unpublished branches or commits, there are
+three useful options:
 
-- Git-Zugriff der VM per Deploy-Key oder Token auf das echte Remote.
-- internen Mirror, den die VM lesen darf.
-- lokalen bare Mirror auf dem Zielhost und Override per Extra-Var:
+- Give the host git access with a deploy key or token.
+- Point the playbooks to an internal mirror the host can read.
+- Use `oeds_repo_source_mode=local_archive` to build a local `git archive` on
+  the control node and unpack it on the target host.
+
+Example with a host-local mirror:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
@@ -116,41 +113,40 @@ ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
   -e oeds_repo_version=<commit>
 ```
 
-Wichtig: `oeds_repo_url`, `oeds_repo_version`, `oeds_root`, `oeds_runtime_dir`
-und `oeds_data_dir` lassen sich jetzt ueber `group_vars/oeds.yml` oder `-e`
-ueberschreiben. Die Playbooks verwenden dafuer keine fest verdrahteten
-Pfadwerte mehr.
+All public playbooks honor overrides from `group_vars/oeds.yml` or `-e` for:
 
-Fuer private Repositories oder ungepushte Teststaende koennen Install- und
-Update-Playbooks den OEDS-Stand jetzt auch direkt vom Control Node auf den
-Zielhost ausrollen. Dafuer wird lokal ein `git archive` gebaut und auf dem
-Zielhost entpackt; der Zielhost braucht dann keinen eigenen GitLab-Zugriff.
+- `oeds_repo_url`
+- `oeds_repo_version`
+- `oeds_root`
+- `oeds_runtime_dir`
+- `oeds_data_dir`
 
-Beispiel:
+Example local-archive rollout:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-update.yml \
   -e oeds_repo_source_mode=local_archive \
-  -e oeds_repo_local_src=/mnt/c/Users/js2644/PycharmProjects/oeds \
-  -e oeds_repo_version=open_source_public \
+  -e oeds_repo_local_src=/path/to/oeds \
+  -e oeds_repo_version=main \
   -e oeds_enable_crawlers=true
 ```
 
-Im Standardmodus `git` pruefen die Playbooks den Repo-Zugriff jetzt ausserdem
-vor jedem Downtime-Schritt mit `GIT_TERMINAL_PROMPT=0`. Fehlende Credentials
-fuehren damit zu einem schnellen, klaren Fehler statt zu einem haengenden
-`git fetch`.
+In `git` mode, the playbooks verify repo access before any downtime step with
+`GIT_TERMINAL_PROMPT=0`. Missing credentials fail fast instead of hanging in a
+blocked `git fetch`.
 
-## Playbook-Statusmails
+## Playbook status emails
 
-Die Playbooks liefern einen Ansible-Callback `oeds_mail` mit. Wenn `ansible.cfg`
-geladen wird und SMTP-Host, Absender und Empfaenger konfiguriert sind, sendet
-der Callback am Ende jedes Playbooklaufs eine Statusmail. Runtime-Fehler und
-unerreichbare Hosts werden als `FAILED` gemeldet; erfolgreiche Laeufe als
-`SUCCESS`. Syntaxfehler, die passieren bevor Ansible Callback-Plugins laedt,
-koennen technisch keine Mail ausloesen.
+The public playbooks ship an Ansible callback plugin named `oeds_mail`. When
+`ansible.cfg` is loaded and SMTP sender, recipient, and host are configured,
+the callback sends one status email at the end of each playbook run.
 
-Der Callback kann dieselben lokalen Mail-Overrides wie die Crawler verwenden:
+- Successful runs are reported as `SUCCESS`.
+- Runtime failures and unreachable hosts are reported as `FAILED`.
+- Syntax errors that happen before callback plugins are loaded cannot trigger
+  emails.
+
+The callback can use the same local mail overrides as the crawler runtime:
 
 ```bash
 export OEDS_EMAIL_MAILHOST=smtp.example.com:25
@@ -158,7 +154,7 @@ export OEDS_EMAIL_FROMADDR=oeds@example.com
 export OEDS_EMAIL_TOADDRS=person1@example.com,person2@example.com
 ```
 
-Alternativ gibt es playbook-spezifische Variablen, die Vorrang haben:
+Dedicated Ansible mail variables take precedence:
 
 ```bash
 export OEDS_ANSIBLE_EMAIL_MAILHOST=smtp.example.com:587
@@ -169,11 +165,11 @@ export OEDS_ANSIBLE_EMAIL_USERNAME=smtp-user
 export OEDS_ANSIBLE_EMAIL_PASSWORD='...'
 ```
 
-Wenn `crawler/.env` auf dem Control Node existiert, wird es automatisch als
-Fallback fuer `OEDS_EMAIL_*` gelesen. Secrets gehoeren weiter nur in lokale
-Umgebungsvariablen oder unversionierte `.env`-Dateien, nicht ins Repository.
+If `crawler/.env` exists on the control node, it is used as a fallback source
+for `OEDS_EMAIL_*`. Keep secrets in local environment variables or untracked
+`.env` files, never in the repository.
 
-Zum Testen ohne echten Mailversand:
+Dry-run example:
 
 ```bash
 ANSIBLE_CONFIG=playbooks/ansible.cfg \
@@ -185,73 +181,72 @@ OEDS_ANSIBLE_EMAIL_TOADDRS=ops@example.com \
 ansible-playbook -i playbooks/inventory.yml playbooks/oeds-smoke-test.yml
 ```
 
-## Installationslevel
+## Installation options
 
-Die einfachen Einstiege sind Wrapper-Playbooks. Sie rufen die detaillierten
-Playbooks in der richtigen Reihenfolge auf.
+The public entry points are wrapper playbooks that call the lower-level tasks
+in the correct order.
 
-### Level 0: lokaler Entwicklerstart
+### Option 1: Local developer start
 
-Ohne Ansible, direkt aus dem OEDS-Repo:
+Without Ansible, directly from the repository:
 
 ```bash
 docker compose up -d
 ```
 
-Mit Crawler-Containern:
+With crawler containers:
 
 ```bash
 docker compose --profile crawlers up -d --build
 ```
 
-Das ist der schnellste Weg fuer lokale Tests, aber kein kompletter VM-Setup.
+This is the fastest path for local testing, but not a full server setup.
 
-### Level 1: Host vorbereiten
+### Option 2: Prepare a new host
 
-Nur OS-Repos, SELinux-Policy und Pakete installieren:
+Install OS repositories, SELinux policy, and packages:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-host-prep.yml
 ```
 
-Dieses Level ist fuer neue Linux-Hosts gedacht. Auf Hosts mit bereits
-funktionierendem Docker kann es uebersprungen werden.
+Use this on a fresh Linux host. If Docker is already installed and working, you
+can skip this step.
 
-### Level 2: OEDS Core
+### Option 3: Install OEDS core services
 
-Installiert Pakete, Docker-Volumes, Runtime-Verzeichnisse, Repo-Checkout und
-startet Datenbank, PostgREST, Grafana und PgAdmin:
+Install packages, Docker volumes, runtime directories, the repo checkout, and
+start PostgreSQL, PostgREST, Grafana, and PgAdmin:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-core.yml \
-  -e oeds_repo_version=<branch-or-tag>
+  -e oeds_repo_version=<branch-tag-or-commit>
 ```
 
-Das ist der empfohlene Minimalpfad fuer einen Server ohne Scheduler und ohne
-Crawler-Admin-UI.
+This is the recommended minimal path for a server without the scheduler and
+without the crawler admin UI.
 
-Wenn du Portainer trotzdem nutzen willst, starte es danach bewusst als
-optionales `ops`-Profil, statt es in jede Core-Installation zu mischen:
+Portainer is intentionally optional. If you want it, start it explicitly as an
+ops profile after the core install:
 
 ```bash
 cd /open_energy_data_server/repo
 docker compose --profile ops up -d portainer portainer_agent
 ```
 
-### Level 3: OEDS mit Crawler-Services
+### Option 4: Install OEDS with crawler services
 
-Wie Level 2, zusaetzlich mit Scheduler und Crawler-Admin-UI als Container:
+Install the core stack plus the scheduler and crawler admin UI containers:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
-  -e oeds_repo_version=<branch-or-tag>
+  -e oeds_repo_version=<branch-tag-or-commit>
 ```
 
-Das ist der empfohlene Standardpfad fuer eine laenger laufende OEDS-Instanz.
-Die gewaehlte `oeds_repo_version` muss dafuer den Compose-Profileintrag
-`crawlers` enthalten.
+This is the recommended default path for a long-running OEDS instance. The
+selected `oeds_repo_version` must include the `crawlers` compose profile.
 
-Erstlauf auf einer sauberen Test-VM:
+Example first run on a clean test VM:
 
 ```bash
 ansible -i inventory.yml oeds -m ping
@@ -266,36 +261,35 @@ ansible-playbook -i inventory.yml oeds-smoke-test.yml \
   -e oeds_expect_crawler_admin=true
 ```
 
-Danach sollte die VM nicht direkt als "vollstaendig befuellt" betrachtet
-werden. Auf einem Clean-Setup existieren crawler-abhaengige Schemas und
-Dashboard-Inhalte erst nach dem ersten erfolgreichen Crawler-Lauf. Fuer die
-Validierung wurde deshalb nach dem Installationslauf mindestens ein manueller
-`weather_forecast`-Run ueber die Crawler-Admin-UI ausgefuehrt.
+A clean install is not a fully populated OEDS instance. Crawler-dependent
+schemas and dashboards only become useful after the first successful crawler
+run. The validation flow therefore includes at least one manual
+`weather_forecast` run through the crawler admin UI.
 
-Fuer Produktion sollte `oeds_repo_version` kein bewegliches `latest` sein,
-sondern ein Branch, Tag oder Commit, der vorher getestet wurde.
+For production, `oeds_repo_version` should point to a tested branch, tag, or
+commit, not a floating `latest`.
 
-## Update-Prozess
+## Update workflow
 
-Fuer normale App-, Compose- und Container-Image-Updates:
+Use this playbook for normal application, Compose, and container-image updates:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-update.yml \
-  -e oeds_repo_version=<branch-or-tag> \
+  -e oeds_repo_version=<branch-tag-or-commit> \
   -e oeds_enable_crawlers=true
 ```
 
-Das Playbook:
+The update playbook:
 
-- erstellt bei laufender Datenbank ein logisches Backup,
-- stoppt alte Compose-Projekte,
-- checkt die gewuenschte Repo-Version aus,
-- schreibt `.env` mit `OEDS_RUNTIME_DIR`,
-- kopiert Grafana-/PgAdmin-/SQL-Provisioning,
-- fuehrt `docker compose pull` und `docker compose up -d` aus,
-- blockiert versehentliche PostgreSQL-Major-Upgrades.
+- creates a logical database backup if the DB is running,
+- stops legacy Compose projects,
+- checks out the requested repo version,
+- writes `.env` with `OEDS_RUNTIME_DIR`,
+- refreshes Grafana, PgAdmin, and SQL provisioning from the repo,
+- runs `docker compose pull` and `docker compose up -d`,
+- blocks accidental PostgreSQL major upgrades.
 
-Optional koennen OS-Pakete gezielt mit aktualisiert werden:
+Optional OS package updates:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-update.yml \
@@ -304,29 +298,29 @@ ansible-playbook -i inventory.yml oeds-update.yml \
   -e oeds_update_certbot=true
 ```
 
-Diese Flags sollten bewusst gesetzt werden, nicht dauerhaft per Default.
+Set these flags deliberately rather than leaving them enabled by default.
 
-## PostgreSQL-/TimescaleDB-Migration
+## PostgreSQL and TimescaleDB migration
 
-Ein PostgreSQL-Major-Upgrade darf nicht durch simples Aendern des Images
-passieren. Dafuer ist ein eigener Migrationslauf vorgesehen.
+A PostgreSQL major upgrade must not happen just by swapping the image. Use the
+dedicated migration playbook.
 
-1. Backup erstellen:
+1. Create a backup:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-db-backup.yml
 ```
 
-2. Migration zuerst nur in Staging wiederherstellen:
+2. Restore into staging first:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-db-migrate.yml \
   -e oeds_apply_cutover=false
 ```
 
-3. Staging-Ergebnis pruefen, Logs ansehen, Smoke-Test gegen Ziel pruefen.
+3. Validate the staging result, review logs, and run smoke tests.
 
-4. Cutover erst danach aktivieren:
+4. Apply cutover only after validation:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-db-migrate.yml \
@@ -334,7 +328,7 @@ ansible-playbook -i inventory.yml oeds-db-migrate.yml \
   -e oeds_enable_crawlers_after_cutover=true
 ```
 
-5. Danach Smoke Test:
+5. Run the smoke test:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-smoke-test.yml \
@@ -343,8 +337,8 @@ ansible-playbook -i inventory.yml oeds-smoke-test.yml \
 
 ## Rollback
 
-Rollback setzt voraus, dass ein alter PostgreSQL-Datenordner als Quelle
-existiert, zum Beispiel aus dem Migrationsbackup.
+Rollback expects an older PostgreSQL data directory, for example from a
+migration backup:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-db-rollback.yml \
@@ -352,29 +346,26 @@ ansible-playbook -i inventory.yml oeds-db-rollback.yml \
   -e oeds_enable_crawlers_after_rollback=true
 ```
 
-## Deinstallation und Test-Reset
+## Uninstall and test reset
 
-Fuer eine vorsichtige Deinstallation ohne Datenverlust:
+Conservative uninstall without deleting data:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-uninstall.yml
 ```
 
-Das entfernt Container und Docker-Netzwerke, laesst aber Git-Checkout,
-Runtime-Dateien, Backups und Docker-Volumes stehen. Damit kann der Dienst
-sauber gestoppt werden, ohne Datenbankdaten oder lokale Config zu loeschen.
-Docker selbst, nginx, Firewall-Regeln und Zertifikate werden dabei nicht
-entfernt.
+This removes containers and Docker networks but keeps the repo checkout,
+runtime files, backups, and Docker volumes. Docker itself, nginx, firewall
+rules, and TLS assets are not removed.
 
-Fuer einen frischen Testlauf mit neuem Repo-Checkout:
+Fresh test run with a new repo checkout:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-uninstall.yml \
   -e oeds_uninstall_remove_repo=true
 ```
 
-Fuer einen kompletten Reset einer Test-VM inklusive Datenbank-Volumes,
-Runtime-Config und Repo:
+Full test-VM reset including database volumes, runtime config, and repo:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-uninstall.yml \
@@ -384,8 +375,7 @@ ansible-playbook -i inventory.yml oeds-uninstall.yml \
   -e oeds_uninstall_confirm=DELETE_OEDS_DATA
 ```
 
-Backups und gecachte Docker-Images bleiben auch dabei standardmaessig erhalten.
-Nur wenn sie ebenfalls entfernt werden sollen:
+To remove backups and cached Docker images as well:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-uninstall.yml \
@@ -397,55 +387,56 @@ ansible-playbook -i inventory.yml oeds-uninstall.yml \
   -e oeds_uninstall_confirm=DELETE_OEDS_DATA
 ```
 
-Danach kann die VM mit einem Installationslevel neu aufgebaut werden, zum
-Beispiel:
+After that, rebuild the VM with one of the installation levels, for example:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
-  -e oeds_repo_version=<branch-or-tag>
+  -e oeds_repo_version=<branch-tag-or-commit>
 ```
 
-## Playbook-Uebersicht
+## Playbook reference
 
-- `oeds-install-host-prep.yml`: Level-1-Wrapper fuer interne VM-Vorbereitung.
-- `oeds-install-core.yml`: Level-2-Wrapper fuer OEDS Core ohne Crawler-Services.
-- `oeds-install-crawlers.yml`: Level-3-Wrapper fuer Core plus Scheduler und
-  Crawler-Admin-UI.
-- `oeds-packages.yml`: installiert nginx und Docker/Compose-Pakete.
-- `oeds-docker-config.yml`: initialisiert Docker-Volumes, Runtime-Verzeichnisse,
-  Repo-Checkout und Compose-Stack.
-- `oeds-update.yml`: rollt eine neue Repo-/Compose-/Image-Version aus.
-- `oeds-db-backup.yml`: erstellt DB-, Extension-, Compose- und Runtime-Backups.
-- `oeds-db-migrate.yml`: migriert PostgreSQL/TimescaleDB per dump/restore in
-  einen neuen Zielcontainer und optionalem Cutover.
-- `oeds-db-rollback.yml`: setzt den live PostgreSQL-Datenpfad auf einen alten
-  Datenstand zurueck.
-- `oeds-uninstall.yml`: stoppt und entfernt OEDS-Container/Netzwerke; loescht
-  Daten, Runtime, Repo, Backups oder Images nur mit expliziten Flags.
-- `oeds-smoke-test.yml`: prueft PostgreSQL, PostgREST, Grafana, PgAdmin und
-  optional die Crawler-Admin-UI; HTTP-Endpunkte werden mit Retries geprueft,
-  damit frische Grafana-/PgAdmin-Starts nicht als Fehlalarm enden.
-- Reverse-Proxy-, TLS- und Firewall-Anpassungen sind bewusst nicht Teil des
-  oeffentlichen Standardpfads und sollten hostspezifisch ausserhalb dieses
-  Repositories gepflegt werden.
+- `oeds-install-host-prep.yml`: prepare a new host with packages and OS-level
+  dependencies.
+- `oeds-install-core.yml`: install the OEDS core stack without crawler
+  services.
+- `oeds-install-crawlers.yml`: install the core stack plus scheduler and
+  crawler admin UI.
+- `oeds-packages.yml`: install nginx and Docker/Compose packages.
+- `oeds-docker-config.yml`: initialize Docker volumes, runtime directories,
+  the repo checkout, and the Compose stack.
+- `oeds-update.yml`: roll out a new repo, Compose, or image version.
+- `oeds-db-backup.yml`: create database, extension, Compose, and runtime
+  backups.
+- `oeds-db-migrate.yml`: migrate PostgreSQL/TimescaleDB via dump/restore into
+  a new target container and optionally apply cutover.
+- `oeds-db-rollback.yml`: restore the live PostgreSQL data path from an older
+  data snapshot.
+- `oeds-uninstall.yml`: stop and remove OEDS containers and networks; delete
+  data, runtime, repo, backups, or images only when explicitly requested.
+- `oeds-smoke-test.yml`: verify PostgreSQL, PostgREST, Grafana, PgAdmin, and
+  optionally the crawler admin UI. HTTP endpoints are checked with retries to
+  avoid false alarms on fresh startups.
 
-## Repository-Einordnung
+Reverse proxy, TLS, and firewall customization are intentionally not part of
+the public default path and should be maintained outside this repository.
 
-Die Playbooks koennen im OEDS-Repo mitgefuehrt werden, solange diese Trennung
-eingehalten wird:
+## Repository boundary
 
-- generische Installation, Update, Backup, Migration und Rollback duerfen im
-  Repository liegen.
-- `inventory.yml`, `group_vars/oeds.yml`, Secrets und lokale Runtime-Dateien
-  bleiben unveroeffentlicht.
-- KIT-spezifische Playbooks bleiben klar als internes Level markiert.
-- Updates laufen ueber getestete Tags, Branches oder Commits, nicht ueber ein
-  unkontrolliertes `latest`.
+The public playbooks belong in the repository as long as this boundary is kept:
 
-## Validierter Betriebsstand
+- Generic install, update, backup, migration, rollback, and smoke-test logic
+  may stay in the repo.
+- `inventory.yml`, `group_vars/oeds.yml`, secrets, and runtime data remain
+  private.
+- Internal institution-specific deployment playbooks belong in private ops
+  overlays, not in the public branch.
+- Updates should use tested tags, branches, or commits, not uncontrolled
+  floating versions.
 
-Der aktuell dokumentierte und gegen eine externe Test-VM verifizierte Stand ist
-zusaetzlich in [../docs/source/deployment_validation.md](../docs/source/deployment_validation.md)
-beschrieben. Diese Doku deckt die getestete Kombination aus Uninstall,
-Neuinstallation, Smoke-Test, Admin-Konfigurationsaenderungen und erstem
-manuellen Crawler-Lauf ab.
+## Validated deployment state
+
+The externally validated install and test run is documented in
+[../docs/source/deployment_validation.md](../docs/source/deployment_validation.md).
+That document covers the tested sequence of uninstall, clean install, smoke
+test, admin configuration changes, and the first manual crawler run.
