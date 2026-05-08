@@ -18,6 +18,7 @@ config.py
 .venv
 git_server_token
 crawler/data/Waermebedarf_NRW.gdb/
+crawler/data/copernicus_cds/
 data/pgadmin
 /dashboard/node_modules
 crawler/data/energy_forecast_history.csv
