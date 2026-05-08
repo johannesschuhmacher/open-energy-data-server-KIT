@@ -61,7 +61,12 @@ ansible-galaxy collection install -r requirements.yml
 Wenn du WSL nutzt, clone das Repository moeglichst in das Linux-Dateisystem
 statt unter `/mnt/c/...`. In world-writable Mounts ignoriert Ansible `ansible.cfg`.
 Falls du trotzdem aus `/mnt/c/...` arbeitest, uebergib `-i inventory.yml`
-explizit bei jedem Aufruf.
+explizit bei jedem Aufruf. Fuer die Playbook-Statusmails muss `ansible.cfg`
+geladen werden; aus `/mnt/c/...` ist der robuste Weg:
+
+```bash
+ANSIBLE_CONFIG=playbooks/ansible.cfg ansible-playbook -i playbooks/inventory.yml playbooks/oeds-smoke-test.yml
+```
 
 Auf dem Zielhost:
 
@@ -135,6 +140,50 @@ Im Standardmodus `git` pruefen die Playbooks den Repo-Zugriff jetzt ausserdem
 vor jedem Downtime-Schritt mit `GIT_TERMINAL_PROMPT=0`. Fehlende Credentials
 fuehren damit zu einem schnellen, klaren Fehler statt zu einem haengenden
 `git fetch`.
+
+## Playbook-Statusmails
+
+Die Playbooks liefern einen Ansible-Callback `oeds_mail` mit. Wenn `ansible.cfg`
+geladen wird und SMTP-Host, Absender und Empfaenger konfiguriert sind, sendet
+der Callback am Ende jedes Playbooklaufs eine Statusmail. Runtime-Fehler und
+unerreichbare Hosts werden als `FAILED` gemeldet; erfolgreiche Laeufe als
+`SUCCESS`. Syntaxfehler, die passieren bevor Ansible Callback-Plugins laedt,
+koennen technisch keine Mail ausloesen.
+
+Der Callback kann dieselben lokalen Mail-Overrides wie die Crawler verwenden:
+
+```bash
+export OEDS_EMAIL_MAILHOST=smtp.example.com:25
+export OEDS_EMAIL_FROMADDR=oeds@example.com
+export OEDS_EMAIL_TOADDRS=person1@example.com,person2@example.com
+```
+
+Alternativ gibt es playbook-spezifische Variablen, die Vorrang haben:
+
+```bash
+export OEDS_ANSIBLE_EMAIL_MAILHOST=smtp.example.com:587
+export OEDS_ANSIBLE_EMAIL_FROMADDR=oeds-ansible@example.com
+export OEDS_ANSIBLE_EMAIL_TOADDRS=ops@example.com
+export OEDS_ANSIBLE_EMAIL_STARTTLS=true
+export OEDS_ANSIBLE_EMAIL_USERNAME=smtp-user
+export OEDS_ANSIBLE_EMAIL_PASSWORD='...'
+```
+
+Wenn `crawler/.env` auf dem Control Node existiert, wird es automatisch als
+Fallback fuer `OEDS_EMAIL_*` gelesen. Secrets gehoeren weiter nur in lokale
+Umgebungsvariablen oder unversionierte `.env`-Dateien, nicht ins Repository.
+
+Zum Testen ohne echten Mailversand:
+
+```bash
+ANSIBLE_CONFIG=playbooks/ansible.cfg \
+OEDS_ANSIBLE_EMAIL_DRY_RUN=true \
+OEDS_ANSIBLE_EMAIL_DRY_RUN_FILE=/tmp/oeds-ansible-status.eml \
+OEDS_ANSIBLE_EMAIL_MAILHOST=localhost \
+OEDS_ANSIBLE_EMAIL_FROMADDR=oeds@example.com \
+OEDS_ANSIBLE_EMAIL_TOADDRS=ops@example.com \
+ansible-playbook -i playbooks/inventory.yml playbooks/oeds-smoke-test.yml
+```
 
 ## Installationslevel
 

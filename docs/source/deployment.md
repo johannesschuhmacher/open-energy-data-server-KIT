@@ -199,6 +199,14 @@ If you drive Ansible from WSL, prefer cloning the repository inside the Linux
 filesystem instead of under `/mnt/c/...`; otherwise Ansible may ignore
 `ansible.cfg` because the working directory is world-writable.
 
+The playbooks include the `oeds_mail` Ansible callback for end-of-run status
+notifications. It sends a success or failure email when `ansible.cfg` is loaded
+and SMTP settings are provided via local environment variables, for example
+`OEDS_ANSIBLE_EMAIL_MAILHOST`, `OEDS_ANSIBLE_EMAIL_FROMADDR`, and
+`OEDS_ANSIBLE_EMAIL_TOADDRS`. If those playbook-specific variables are absent,
+the callback falls back to the existing crawler mail overrides
+`OEDS_EMAIL_MAILHOST`, `OEDS_EMAIL_FROMADDR`, and `OEDS_EMAIL_TOADDRS`.
+
 ## 6. Run initial crawler loads manually
 
 Before enabling unattended scheduling, run the important crawlers once by hand:
