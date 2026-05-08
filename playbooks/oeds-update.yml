@@ -117,7 +117,7 @@
       docker exec open-data pg_dump -U opendata -d opendata -Fc
       > {{ oeds_backup_run_dir }}/opendata.bak
     when:
-      - oeds_backup_database
+      - oeds_backup_database | bool
       - (oeds_open_data_running.stdout | trim) != ""
   - name: Check whether a legacy compose project exists
     ansible.builtin.stat:
