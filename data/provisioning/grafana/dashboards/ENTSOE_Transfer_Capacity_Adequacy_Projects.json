@@ -19,28 +19,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": false,
-      "targetBlank": true,
-      "title": "Impressum",
-      "type": "link",
-      "url": "https://www.iip.kit.edu/16.php"
-    },
-    {
-      "asDropdown": false,
-      "icon": "info",
-      "includeVars": false,
-      "keepTime": false,
-      "targetBlank": false,
-      "title": "Datenschutz",
-      "type": "link",
-      "url": "/d/oeds-datenschutz/oeds-datenschutz"
-    }
-  ],
+  "links": [],
   "liveNow": false,
   "panels": [
     {
@@ -1045,6 +1024,7 @@
   "timepicker": {},
   "timezone": "",
   "title": "ENTSOE Transfer Capacity, Adequacy & Projects",
+  "description": "Source: ENTSO-E Transparency Platform File Library. Combines transfer capacity, adequacy indicators, auction outcomes, and project metadata.",
   "uid": "entsoe-transfer-adequacy",
   "version": 1,
   "weekStart": ""

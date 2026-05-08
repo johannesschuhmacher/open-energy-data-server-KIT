@@ -18,18 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "info",
-      "includeVars": false,
-      "keepTime": false,
-      "targetBlank": false,
-      "title": "Datenschutz",
-      "type": "link",
-      "url": "/d/oeds-datenschutz/oeds-datenschutz"
-    }
-  ],
+  "links": [],
   "panels": [
     {
       "datasource": {
@@ -503,6 +492,7 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "OEDS Gapfilling Quality",
+  "description": "Source: derived OEDS gapfilling run tables and synthetic holdout tests based on previously imported upstream time series.",
   "uid": "oeds-gapfilling-quality",
   "version": 1,
   "weekStart": ""

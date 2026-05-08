@@ -53,28 +53,7 @@
     "editable":  true,
     "fiscalYearStartMonth":  0,
     "graphTooltip":  0,
-    "links":  [
-                  {
-                      "asDropdown":  false,
-                      "icon":  "external link",
-                      "includeVars":  false,
-                      "keepTime":  false,
-                      "targetBlank":  true,
-                      "title":  "Impressum",
-                      "type":  "link",
-                      "url":  "https://www.iip.kit.edu/16.php"
-                  },
-                  {
-                      "asDropdown":  false,
-                      "icon":  "info",
-                      "includeVars":  false,
-                      "keepTime":  false,
-                      "targetBlank":  false,
-                      "title":  "Datenschutz",
-                      "type":  "link",
-                      "url":  "/d/oeds-datenschutz/oeds-datenschutz"
-                  }
-              ],
+    "links":  [],
     "liveNow":  false,
     "panels":  [
                    {

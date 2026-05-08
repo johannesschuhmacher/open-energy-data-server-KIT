@@ -592,6 +592,7 @@
   "timepicker": {},
   "timezone": "",
   "title": "smard",
+  "description": "Source: SMARD. Covers German generation, consumption and price series imported by the smard crawler.",
   "uid": "d7e44e51-6f7f-4316-b9fb-1bb32c03fa18",
   "version": 1,
   "weekStart": ""

@@ -21,7 +21,7 @@
       }
     ]
   },
-  "description": "Dashboard visualizing the Data from the ENTSOG",
+  "description": "Source: ENTSOG Transparency Platform API. Covers operators, balancing zones, interconnections, allocations and capacities.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,

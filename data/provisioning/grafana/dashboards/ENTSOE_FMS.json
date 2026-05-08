@@ -19,28 +19,7 @@
     "fiscalYearStartMonth":  0,
     "graphTooltip":  0,
     "id":  13,
-    "links":  [
-                  {
-                      "asDropdown":  false,
-                      "icon":  "external link",
-                      "includeVars":  false,
-                      "keepTime":  false,
-                      "targetBlank":  true,
-                      "title":  "Impressum",
-                      "type":  "link",
-                      "url":  "https://www.iip.kit.edu/16.php"
-                  },
-                  {
-                      "asDropdown":  false,
-                      "icon":  "info",
-                      "includeVars":  false,
-                      "keepTime":  false,
-                      "targetBlank":  false,
-                      "title":  "Datenschutz",
-                      "type":  "link",
-                      "url":  "/d/oeds-datenschutz/oeds-datenschutz"
-                  }
-              ],
+    "links":  [],
     "panels":  [
                    {
                        "datasource":  {
@@ -2566,7 +2545,8 @@
 
                    },
     "timezone":  "browser",
-    "title":  "ENTSOE Copy",
+    "title":  "ENTSOE FMS Monitor",
+    "description":  "Source: ENTSO-E Transparency Platform File Library. Covers prices, load, generation, forecasts and availability data loaded by the entsoe_fms crawler.",
     "uid":  "df3iem9dh2ccgd",
     "version":  8,
     "weekStart":  "",

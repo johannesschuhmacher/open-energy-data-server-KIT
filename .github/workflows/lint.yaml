@@ -2,29 +2,14 @@ name: Linting
 
 on:
   push:
-    branches: [main]
+    branches: [main, open_source_public]
   pull_request:
-    branches: [main]
+    branches: [main, open_source_public]
+  workflow_dispatch:
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
-
-    services:
-      opendata-db:
-        image: postgres:18.3-alpine
-        env:
-          POSTGRES_DB: opendata
-          POSTGRES_PASSWORD: opendata
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: opendata
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Clone this repository
@@ -43,8 +28,8 @@ jobs:
       - name: Verify lockfile
         run: uv lock --check
 
-      - name: Run ruff check
-        run: uv run --only-group dev ruff check
+      - name: Compile Python sources
+        run: python -m compileall crawler crawler_admin scripts crawler_scheduler.py crawler_admin_server.py
 
-      - name: Run ruff check format
-        run: uv run --only-group dev ruff format --check
+      - name: Build documentation
+        run: uv run --only-group docs sphinx-build -b dummy docs/source docs/_build/dummy

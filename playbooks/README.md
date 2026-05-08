@@ -1,10 +1,9 @@
 # OEDS Ansible Playbooks
 
-Diese Playbooks sind der Betriebs- und Installationspfad fuer OEDS. Sie liegen
-im Repository, enthalten aber mehrere Level: generische OEDS-Installation,
-Update/Migration und zusaetzlich KIT-spezifische Produktionsschritte.
-Inventories, lokale Variablen, Secrets und Host-spezifische Overrides gehoeren
-nicht ins Repository.
+Diese Playbooks sind der oeffentliche Betriebs- und Installationspfad fuer
+OEDS. Sie decken generische OEDS-Installation, Update, Backup, Migration und
+Rollback ab. Inventories, lokale Variablen, Secrets und Host-spezifische
+Overrides gehoeren nicht ins Repository.
 
 ## Zielbild
 
@@ -68,7 +67,8 @@ Auf dem Zielhost:
 
 - RHEL/CentOS/Rocky/Alma-kompatibles System mit `dnf`.
 - Python fuer Ansible-Module.
-- Netzwerkzugang zu Docker-Repos, GitLab und Container-Registries.
+- Netzwerkzugang zu Docker-Repos, GitHub oder einem anderen erreichbaren
+  Git-Remote und Container-Registries.
 - Genug Speicherplatz fuer PostgreSQL-Daten und Backups.
 
 ## Inventory
@@ -127,7 +127,7 @@ Beispiel:
 ansible-playbook -i inventory.yml oeds-update.yml \
   -e oeds_repo_source_mode=local_archive \
   -e oeds_repo_local_src=/mnt/c/Users/js2644/PycharmProjects/oeds \
-  -e oeds_repo_version=OEDS_Johannes \
+  -e oeds_repo_version=open_source_public \
   -e oeds_enable_crawlers=true
 ```
 
@@ -165,7 +165,7 @@ Nur OS-Repos, SELinux-Policy und Pakete installieren:
 ansible-playbook -i inventory.yml oeds-install-host-prep.yml
 ```
 
-Dieses Level ist fuer neue interne VMs gedacht. Auf Hosts mit bereits
+Dieses Level ist fuer neue Linux-Hosts gedacht. Auf Hosts mit bereits
 funktionierendem Docker kann es uebersprungen werden.
 
 ### Level 2: OEDS Core
@@ -175,7 +175,7 @@ startet Datenbank, PostgREST, Grafana und PgAdmin:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-core.yml \
-  -e oeds_repo_version=OEDS_Johannes
+  -e oeds_repo_version=<branch-or-tag>
 ```
 
 Das ist der empfohlene Minimalpfad fuer einen Server ohne Scheduler und ohne
@@ -195,7 +195,7 @@ Wie Level 2, zusaetzlich mit Scheduler und Crawler-Admin-UI als Container:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
-  -e oeds_repo_version=OEDS_Johannes
+  -e oeds_repo_version=<branch-or-tag>
 ```
 
 Das ist der empfohlene Standardpfad fuer eine laenger laufende OEDS-Instanz.
@@ -223,19 +223,6 @@ Dashboard-Inhalte erst nach dem ersten erfolgreichen Crawler-Lauf. Fuer die
 Validierung wurde deshalb nach dem Installationslauf mindestens ein manueller
 `weather_forecast`-Run ueber die Crawler-Admin-UI ausgefuehrt.
 
-### Level 4: KIT-Production
-
-Wie Level 3, zusaetzlich mit interner Firewall-, Zertifikats- und nginx-Logik:
-
-```bash
-ansible-playbook -i inventory.yml oeds-install-kit-production.yml \
-  -e oeds_repo_version=OEDS_Johannes
-```
-
-Dieses Level ist bewusst intern: `oeds-certs.yml` und `oeds-nginx.yml`
-erwarten Ressourcen unter `/opt/ansible/resources` und KIT/NetDB-spezifische
-Konfiguration.
-
 Fuer Produktion sollte `oeds_repo_version` kein bewegliches `latest` sein,
 sondern ein Branch, Tag oder Commit, der vorher getestet wurde.
 
@@ -245,7 +232,7 @@ Fuer normale App-, Compose- und Container-Image-Updates:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-update.yml \
-  -e oeds_repo_version=OEDS_Johannes \
+  -e oeds_repo_version=<branch-or-tag> \
   -e oeds_enable_crawlers=true
 ```
 
@@ -366,7 +353,7 @@ Beispiel:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
-  -e oeds_repo_version=OEDS_Johannes
+  -e oeds_repo_version=<branch-or-tag>
 ```
 
 ## Playbook-Uebersicht
@@ -375,8 +362,6 @@ ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
 - `oeds-install-core.yml`: Level-2-Wrapper fuer OEDS Core ohne Crawler-Services.
 - `oeds-install-crawlers.yml`: Level-3-Wrapper fuer Core plus Scheduler und
   Crawler-Admin-UI.
-- `oeds-install-kit-production.yml`: Level-4-Wrapper fuer interne Produktion mit
-  Firewall, Zertifikaten und nginx.
 - `oeds-packages.yml`: installiert nginx und Docker/Compose-Pakete.
 - `oeds-docker-config.yml`: initialisiert Docker-Volumes, Runtime-Verzeichnisse,
   Repo-Checkout und Compose-Stack.
@@ -391,8 +376,9 @@ ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
 - `oeds-smoke-test.yml`: prueft PostgreSQL, PostgREST, Grafana, PgAdmin und
   optional die Crawler-Admin-UI; HTTP-Endpunkte werden mit Retries geprueft,
   damit frische Grafana-/PgAdmin-Starts nicht als Fehlalarm enden.
-- `oeds-firewalld.yml`, `oeds-certs.yml`, `oeds-nginx.yml`: host- und
-  organisationsspezifischer Edge-/TLS-/Firewall-Betrieb.
+- Reverse-Proxy-, TLS- und Firewall-Anpassungen sind bewusst nicht Teil des
+  oeffentlichen Standardpfads und sollten hostspezifisch ausserhalb dieses
+  Repositories gepflegt werden.
 
 ## Repository-Einordnung
 

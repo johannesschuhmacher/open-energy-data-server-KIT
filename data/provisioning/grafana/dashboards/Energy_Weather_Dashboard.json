@@ -475,6 +475,7 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "Energy Weather Dashboard",
+  "description": "Sources: Open-Meteo DWD weather forecasts and OEDS energy series, primarily from ENTSO-E based crawler outputs.",
   "uid": "energy-weather-dashboard",
   "version": 1,
   "weekStart": ""

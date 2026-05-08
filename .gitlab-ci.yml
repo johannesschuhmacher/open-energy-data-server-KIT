@@ -1,18 +1,17 @@
-default:
-  tags:
-    - shared
+image: python:3.14.4-slim
 
 stages:
-- build
-- deploy
+  - verify
 
-build-docker:
-  image: docker:dind
-  services:
-    - docker:dind
-  stage: build
-  before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+variables:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+before_script:
+  - python -m pip install --quiet uv==0.11.7
+
+verify:
+  stage: verify
   script:
-    - docker build -f Dockerfile_dwd  -t "$CI_REGISTRY_IMAGE/dwd_crawler:latest" .
-    - docker push $CI_REGISTRY_IMAGE/dwd_crawler:latest
+    - uv lock --check
+    - python -m compileall crawler crawler_admin scripts crawler_scheduler.py crawler_admin_server.py
+    - uv run --only-group docs sphinx-build -b dummy docs/source docs/_build/dummy

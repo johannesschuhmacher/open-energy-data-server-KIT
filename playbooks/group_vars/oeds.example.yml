@@ -5,8 +5,8 @@
 oeds_root: /open_energy_data_server
 # The target host must be able to clone this URL. For unpublished branches,
 # use a reachable mirror or a local bare repository on the target host.
-oeds_repo_url: https://gitlab.kit.edu/kit/iip/energyeconomics/sem-fec/josc/oeds.git
-oeds_repo_version: OEDS_Johannes
+oeds_repo_url: https://github.com/johannesschuhmacher/open-energy-data-server-KIT.git
+oeds_repo_version: open_source_public
 oeds_repo_source_mode: git
 # For private or not-yet-published refs, set oeds_repo_source_mode: local_archive
 # and point this to a local checkout on the control node, for example:

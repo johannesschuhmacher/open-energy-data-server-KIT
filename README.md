@@ -10,8 +10,10 @@ energy-system analysis. It combines data ingestion, PostgreSQL/TimescaleDB,
 PostgREST, and Grafana into one reusable stack for collecting, storing, and
 serving energy data.
 
-Interactive documentation is available on
-[Read the Docs](https://open-energy-data-server.readthedocs.io/en/latest/).
+Documentation lives in `docs/source/` and can be built locally with Sphinx.
+The repository already ships a `.readthedocs.yaml` for the future public
+Read the Docs project, but this README intentionally does not link to the old
+unrelated RTD instance.
 
 ![OEDS architecture](docs/source/media/oeds-architecture.png)
 

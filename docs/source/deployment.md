@@ -183,8 +183,8 @@ installations and updates. The recommended entry points are:
   the default core services.
 - `oeds-install-crawlers.yml` for the core stack plus scheduler and crawler
   admin UI through the Compose `crawlers` profile.
-- `oeds-install-kit-production.yml` for the internal KIT deployment path with
-  firewall, certificate, and nginx setup.
+- optional operator-specific edge playbooks for reverse proxy, TLS, or
+  firewalling, if you decide to maintain them outside the public repository.
 
 Operator-specific files such as `inventory.yml`, `group_vars/oeds.yml`, and
 secret-bearing crawler environment files should stay local and are ignored by

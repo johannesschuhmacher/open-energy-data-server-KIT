@@ -3,8 +3,8 @@
   remote_user: root
   vars:
     oeds_default_root: /open_energy_data_server
-    oeds_default_repo_url: https://gitlab.kit.edu/kit/iip/energyeconomics/sem-fec/josc/oeds.git
-    oeds_default_repo_version: OEDS_Johannes
+    oeds_default_repo_url: https://github.com/johannesschuhmacher/open-energy-data-server-KIT.git
+    oeds_default_repo_version: open_source_public
     oeds_default_compose_project_name: oeds
     oeds_default_repo_source_mode: git
     oeds_root_effective: "{{ oeds_root | default(oeds_default_root) }}"

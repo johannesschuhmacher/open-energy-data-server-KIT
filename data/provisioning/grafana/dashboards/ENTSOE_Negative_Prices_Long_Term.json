@@ -54,7 +54,7 @@
             }
         ]
     },
-    "description": "Long-term analysis of negative electricity prices, including market-segment comparison, residual load drivers, storage behaviour, cross-border response, forecast errors and revenue proxy.",
+    "description": "Sources: ENTSO-E Transparency Platform File Library, with optional EPEX Spot intraday context where available. Long-term analysis of negative electricity prices, including market-segment comparison, residual load drivers, storage behaviour, cross-border response, forecast errors and revenue proxy.",
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,

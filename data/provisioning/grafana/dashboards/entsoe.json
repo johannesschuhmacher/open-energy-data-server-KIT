@@ -21,7 +21,7 @@
       }
     ]
   },
-  "description": "Monitor of the open available Data from the ENTSOG",
+  "description": "Source: ENTSO-E transparency data already loaded into the entsoe schema. This legacy monitor focuses on power system and generation views.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,

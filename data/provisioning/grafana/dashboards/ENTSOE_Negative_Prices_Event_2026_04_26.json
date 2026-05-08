@@ -54,7 +54,7 @@
             }
         ]
     },
-    "description": "Focused analysis dashboard for negative electricity prices over Saturday and Sunday 2026-04-25/26, including prices, residual load, generation mix, storage, cross-border flows, forecasts, cross-border deltas and revenue proxy.",
+    "description": "Sources: ENTSO-E Transparency Platform File Library, with optional EPEX Spot intraday context where available. Focused analysis dashboard for negative electricity prices over Saturday and Sunday 2026-04-25/26, including prices, residual load, generation mix, storage, cross-border flows, forecasts, cross-border deltas and revenue proxy.",
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
