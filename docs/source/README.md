@@ -6,7 +6,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Open Energy Data Server
 
-DOI: [10.5281/zenodo.10607894](https://doi.org/10.5281/zenodo.10607894)
+This repository builds on the original
+[Open Energy Data Server](https://github.com/NOWUM/open-energy-data-server)
+and extends it for the workflows documented here.
 
 OEDS is a crawler-driven data platform for energy-system analysis. It combines
 data ingestion, PostgreSQL/TimescaleDB storage, HTTP export through PostgREST,
@@ -117,18 +119,13 @@ When adding a new crawler:
 3. document it under `docs/source/crawlers/`
 4. add any required bootstrap SQL to `init.sql` if fresh installs need it
 
-## Citation
-
-You can cite `open-energy-data-server` through the conference proceedings:
-
-> Maurer, F., Sejdija, J., & Sander, V. (2024, February 2). Decentralized energy data storages through an Open Energy Database Server. 1st NFDI4Energy Conference (NFDI4Energy), Hanover, Germany. https://doi.org/10.5281/zenodo.10607895
 
 ## Repository lineage
 
 This repository is a KIT-maintained derivative of the Open Energy Data Server
 project. The maintained tree keeps the upstream lineage visible through Git
-history, SPDX metadata, and the citation above, while legacy assets outside the
-current KIT deployment path are intentionally omitted.
+history, SPDX metadata, and the upstream link above, while legacy assets outside
+the current KIT deployment path are intentionally omitted.
 
 ## Notable crawler-backed dashboards
 

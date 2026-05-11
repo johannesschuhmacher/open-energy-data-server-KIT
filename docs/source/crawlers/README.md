@@ -42,4 +42,5 @@ Currently documented crawlers:
 Recommended next candidates:
 
 - `ninja`
-- `opsd_renewable_powerplants`
+- `dwd_cdc`
+- `open_meteo`

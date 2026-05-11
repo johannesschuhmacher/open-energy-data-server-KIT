@@ -4,16 +4,13 @@ version = 1
 path = [
     ".dockerignore",
     ".github/**",
-    ".gitlab-ci.yml",
-    ".pre-commit-config.yaml",
     ".python-version",
     ".readthedocs.yaml",
-    "compose*.yml",
+    "compose.yml",
     "CONTRIBUTING.md",
     "data/**",
     "docs/**",
     "Dockerfile*",
-    "package-lock.json",
     "playbooks/**",
     "pyproject.toml",
     "ruff.toml",
@@ -27,7 +24,6 @@ SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 [[annotations]]
 path = [
-    "credentials.env",
     "crawler/.env.example",
 ]
 precedence = "closest"

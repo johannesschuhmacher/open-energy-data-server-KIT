@@ -3,7 +3,9 @@
 
 # Open Energy Data Server
 
-DOI: [10.5281/zenodo.10607894](https://doi.org/10.5281/zenodo.10607894)
+This repository builds on the original
+[Open Energy Data Server](https://github.com/NOWUM/open-energy-data-server)
+and extends it for the workflows documented here.
 
 Open Energy Data Server (OEDS) is a crawler-driven data platform for
 energy-system analysis. It combines data ingestion, PostgreSQL/TimescaleDB,
@@ -298,18 +300,13 @@ When adding a crawler or a new derived dataset:
 5. add bootstrap SQL to `init.sql` if fresh installs need it
 6. run the relevant checks before opening a change
 
-## Citation
-
-You can cite `open-energy-data-server` through the conference proceedings:
-
-> Maurer, F., Sejdija, J., & Sander, V. (2024, February 2). Decentralized energy data storages through an Open Energy Database Server. 1st NFDI4Energy Conference (NFDI4Energy), Hanover, Germany. https://doi.org/10.5281/zenodo.10607895
 
 ## License
 
 This repository is a KIT-maintained derivative of the Open Energy Data Server
 project. It keeps the upstream lineage transparent through the Git history,
-SPDX metadata, and citation above while removing legacy assets that are not part
-of the maintained KIT deployment path.
+SPDX metadata, and the upstream link above while removing legacy assets that are
+not part of the maintained KIT deployment path.
 
 This project is licensed under `AGPL-3.0-or-later`. See
 [`LICENSES/AGPL-3.0-or-later.txt`](LICENSES/AGPL-3.0-or-later.txt).

@@ -36,9 +36,7 @@ analysis.
    :maxdepth: 1
    :caption: Guides and Examples
 
-   minimal_walkthrough/index
    examples/index
-   backup_restore_migration/index
 
 Architecture
 ------------

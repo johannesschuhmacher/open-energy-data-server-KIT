@@ -160,7 +160,8 @@ Default development credentials:
 - username: `opendata`
 - password: `opendata`
 
-Provisioned dashboards live under `data/provisioning/grafana/dashboards/`.
+Provisioned dashboards live under `data/provisioning/grafana/dashboards/` and
+are grouped into crawler-specific subfolders plus `shared/`.
 Many dashboards stay empty until their related crawlers have populated the
 target schemas. On a clean installation, that means the dashboard panels only
 become meaningful after the first successful crawler run.
@@ -170,5 +171,4 @@ become meaningful after the first successful crawler run.
 - crawler-specific notes: [Crawler Documentation](./crawlers/README.md)
 - deployment on a long-lived host: [Deployment Guide](./deployment.md)
 - scheduler options: [Crawler Configuration](./crawler_config.md)
-- minimal end-to-end example: [Minimal Walkthrough](./minimal_walkthrough/minimal_example_walkthrough.md)
-- export examples: [HTTP Export Examples](./examples/http_export_examples.md)
+- maintained examples: [Examples](examples/index)
