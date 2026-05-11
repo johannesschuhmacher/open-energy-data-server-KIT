@@ -87,6 +87,13 @@ Start the local services from the repository root:
 docker compose up -d
 ```
 
+> Warning
+> The public Compose defaults intentionally use insecure credentials such as
+> `opendata/opendata`, `readonly/readonly`, and `admin/admin`. This quick-start
+> path is only suitable for isolated local, internal, or disposable test
+> systems. Do not expose a host that still uses these defaults on a shared or
+> public network.
+
 If you already have a populated PostgreSQL/TimescaleDB data directory from an
 older major version, do not switch the image tags in place. Moving to
 PostgreSQL 18 requires a database migration such as `pg_upgrade` or
@@ -101,6 +108,11 @@ This starts the standard local development stack:
 
 If one of these ports is already occupied, override it with an environment
 variable such as `OEDS_POSTGRES_PORT=16432`.
+
+If you want different passwords even in the public Compose path, set the
+relevant environment variables before the first startup, for example
+`OEDS_DB_PASSWORD`, `OEDS_READONLY_PASSWORD`,
+`OEDS_GRAFANA_ADMIN_PASSWORD`, and `OEDS_PGADMIN_DEFAULT_PASSWORD`.
 
 Optional crawler services are available through the `crawlers` profile:
 

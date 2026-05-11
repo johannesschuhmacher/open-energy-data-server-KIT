@@ -1,7 +1,7 @@
 # Deployment Guide
 
-This guide describes a public, reusable deployment path for OEDS without the
-old internal VM notes.
+This guide describes a public, reusable deployment path for OEDS-KIT without
+the old internal VM notes.
 
 ## What gets deployed
 
@@ -79,14 +79,30 @@ Provisioning files are mounted directly from the repository:
 
 ## 2. Review service credentials before exposure
 
-The repository defaults in `compose.yml` are development-friendly, not
-production-hardened.
+The repository defaults in `compose.yml` are intentionally insecure. They exist
+so the public repository can still bootstrap isolated local, internal, or
+disposable test systems without a separate secret-management layer.
 
-Before exposing the services on a shared network:
+Do not expose a host that still uses these defaults on a shared or public
+network.
 
-- change PostgreSQL credentials
-- change Grafana admin credentials
-- change PgAdmin credentials
+Before the first startup of any shared or longer-lived host, set at least:
+
+- `OEDS_DB_PASSWORD`
+- `OEDS_READONLY_PASSWORD`
+- `OEDS_GRAFANA_ADMIN_PASSWORD`
+- `OEDS_PGADMIN_DEFAULT_PASSWORD`
+
+If you keep the public Compose defaults, treat the deployment as insecure and
+internal-only:
+
+- PostgreSQL stays on `opendata/opendata`
+- PostgREST and Grafana use `readonly/readonly` for database access
+- Grafana admin stays on `opendata/opendata`
+- PgAdmin stays on `admin@admin.admin` / `admin`
+
+On any non-disposable server, also:
+
 - review whether anonymous Grafana access should stay enabled
 - restrict network exposure for PgAdmin and PostgREST if they are not meant to
   be public

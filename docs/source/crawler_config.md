@@ -100,4 +100,7 @@ Crawler-specific behavior should be documented on the crawler page under
 - `CRAWLER_CONFIG.yml` is used by the scheduler and helper scripts.
 - Secret values should not be committed. Keep them in `crawler/.env` or another
   local environment mechanism.
+- In Docker-based OEDS runs, `OEDS_DB_PASSWORD` can override the password part
+  of the configured `database_uri` at runtime so the public example URIs can
+  stay generic.
 - The main scheduler entry point is `crawler_scheduler.py`.

@@ -3,6 +3,17 @@
 This guide covers the local development setup, crawler execution, and the main
 services that ship with OEDS.
 
+## Choose your path
+
+Pick the shortest path that matches your goal:
+
+| Goal | Fastest path | Continue with |
+| --- | --- | --- |
+| Explore the stack without scheduled crawlers | start the core Compose services | [Start the local services](#start-the-local-services) |
+| Run scheduler and admin UI in containers | start the `crawlers` Compose profile | [Start the local services](#start-the-local-services) |
+| Run crawlers directly on the host | prepare `uv`, sync Python dependencies, and use `uv run` | [Prepare the Python environment](#prepare-the-python-environment) |
+| Deploy a reproducible long-lived server | use the Ansible path instead of the local path | [Deployment Guide](./deployment.md) |
+
 ## Requirements
 
 For the local stack:
@@ -21,6 +32,12 @@ From the repository root:
 docker compose up -d
 ```
 
+> Warning
+> The public Compose defaults intentionally use insecure credentials such as
+> `opendata/opendata`, `readonly/readonly`, and `admin/admin`. They are only
+> meant for isolated local, internal, or disposable test systems. Do not
+> expose a host that still uses these defaults on a shared or public network.
+
 If you already have a populated PostgreSQL/TimescaleDB data directory from an
 older major version, do not treat this as an in-place image swap. Moving to
 PostgreSQL 18 requires a database migration such as `pg_upgrade` or
@@ -35,6 +52,17 @@ This starts the standard local stack:
 
 If a port is already used locally, override it before starting Compose, for
 example `OEDS_POSTGRES_PORT=16432 docker compose up -d`.
+
+If you want different passwords in this public quick-start path, set the
+environment variables before the first startup, for example:
+
+```bash
+export OEDS_DB_PASSWORD='replace-me'
+export OEDS_READONLY_PASSWORD='replace-me-too'
+export OEDS_GRAFANA_ADMIN_PASSWORD='replace-me-three'
+export OEDS_PGADMIN_DEFAULT_PASSWORD='replace-me-four'
+docker compose up -d
+```
 
 Optional crawler services are available through the `crawlers` profile:
 
@@ -91,6 +119,15 @@ Common secrets used in this repository include:
 - `ENTSOE_USERNAME`
 - `ENTSOE_PASSWORD`
 - `ENERGY_FORECAST_TOKEN`
+- `EPEX_SFTP_USERNAME`
+- `EPEX_SFTP_PASSWORD`
+
+If you plan to enable `entsoe_fms` on a clean install, narrow the initial scope
+before the first productive run. In practice that means reviewing:
+
+- `default_start_date`
+- enabled jobs under `entsoe_fms.jobs`
+- `gapfill.tables` and related post-run settings
 
 ## Run a single crawler
 
@@ -133,11 +170,16 @@ The same Compose file also supports `OEDS_RUNTIME_DIR` so deployments can keep
 `CRAWLER_CONFIG.yml`, `crawler/.env`, logs, and admin state outside the Git
 working tree.
 
+For productive control of gapfilling, use the crawler detail page in the admin
+UI. The separate `Gapfill QA` page is intended for synthetic validation and
+holdout checks, not for choosing which real source tables are processed after a
+crawler run.
+
 ## Local service access
 
 ### PgAdmin
 
-Default development credentials:
+Default insecure test credentials:
 
 - username: `admin@admin.admin`
 - password: `admin`
@@ -155,7 +197,7 @@ schema selection, depending on how the API consumer is configured.
 
 ### Grafana
 
-Default development credentials:
+Default insecure test credentials:
 
 - username: `opendata`
 - password: `opendata`
@@ -169,6 +211,8 @@ become meaningful after the first successful crawler run.
 
 - crawler-specific notes: [Crawler Documentation](./crawlers/README.md)
 - deployment on a long-lived host: [Deployment Guide](./deployment.md)
+- operations and manual runs: [Crawler Admin UI](./crawler_admin.md)
 - scheduler options: [Crawler Configuration](./crawler_config.md)
 - minimal end-to-end example: [Minimal Walkthrough](./minimal_walkthrough/minimal_example_walkthrough.md)
 - export examples: [HTTP Export Examples](./examples/http_export_examples.md)
+- maintained examples: [Examples](examples/index)

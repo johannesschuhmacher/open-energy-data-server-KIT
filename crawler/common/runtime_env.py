@@ -5,8 +5,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
 import os
+from urllib.parse import quote, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 
@@ -31,8 +31,11 @@ def resolve_database_uri(database_uri: str) -> str:
 
     host_override = os.getenv("OEDS_DB_HOST", "").strip()
     port_override = os.getenv("OEDS_DB_PORT", "").strip()
+    password_override = os.getenv("OEDS_DB_PASSWORD")
+    if password_override is not None:
+        password_override = password_override.strip() or None
 
-    if not host_override and not port_override:
+    if not host_override and not port_override and password_override is None:
         return database_uri
 
     split = urlsplit(database_uri)
@@ -46,6 +49,7 @@ def resolve_database_uri(database_uri: str) -> str:
 
     resolved_host = host_override or hostname
     resolved_port = int(port_override) if port_override else port
+    resolved_password = quote(password_override, safe="") if password_override is not None else password
 
     if ":" in resolved_host and not resolved_host.startswith("["):
         host_token = f"[{resolved_host}]"
@@ -55,8 +59,8 @@ def resolve_database_uri(database_uri: str) -> str:
     auth_token = ""
     if username:
         auth_token = username
-        if password is not None:
-            auth_token += f":{password}"
+        if resolved_password is not None:
+            auth_token += f":{resolved_password}"
         auth_token += "@"
 
     netloc = auth_token + host_token
