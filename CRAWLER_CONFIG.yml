@@ -117,6 +117,13 @@ energy_forecast_crawler:
   schema_name: "energy_forecast"
   description: "Crawls Energy Price Forecasts (Next 48h)"
   schedule: "0 4,16 * * *"
+
+power_system_data:
+  enable: true
+  schema_name: "power_system_data"
+  database_uri: "postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path="
+  description: "Crawls power system and power plant data from PyPSA"
+  schedule: "0 4 * * 0"
 epex_spot:
   enable: false
   schema_name: "epex_spot"
