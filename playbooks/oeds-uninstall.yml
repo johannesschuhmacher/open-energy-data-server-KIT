@@ -1,7 +1,7 @@
 ---
 - name: OEDS uninstall and reset
   hosts: oeds
-  remote_user: root
+  become: true
   vars:
     oeds_default_root: /open_energy_data_server
     oeds_default_compose_project_name: oeds

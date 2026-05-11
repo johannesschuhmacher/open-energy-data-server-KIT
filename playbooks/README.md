@@ -49,7 +49,9 @@ Control node:
 
 - Linux or WSL is recommended. Ansible is not a good native Windows control
   node.
-- SSH access as `root`. The current public playbooks use `remote_user: root`.
+- SSH access as a sudo-capable user.
+- For installs on the same Linux host, `inventory.example.yml` already uses
+  `ansible_connection: local` with `sudo`.
 - `ansible` plus the collections from `requirements.yml`.
 
 Install control-node dependencies:
@@ -84,15 +86,24 @@ cp inventory.example.yml inventory.yml
 ansible -i inventory.yml oeds -m ping
 ```
 
-Optional local variables:
+`inventory.example.yml` is ready for the simplest public case: install OEDS on
+the same Linux host where you run Ansible, with `sudo`, from the public GitHub
+`main` branch.
+
+For a remote host, replace the `localhost` entry with `ansible_host` and, when
+needed, `ansible_user`.
+
+Optional local overrides:
 
 ```bash
 mkdir -p group_vars
 cp group_vars/oeds.example.yml group_vars/oeds.yml
 ```
 
-`group_vars/oeds.yml` is intended for local host configuration and should stay
-unversioned.
+You do not need `group_vars/oeds.yml` for the public default rollout.
+`group_vars/oeds.yml` is only for local host configuration overrides such as a
+different git remote, branch/tag/commit, or custom target directories, and it
+should stay unversioned.
 
 ## Repository access and private rollouts
 
@@ -246,6 +257,13 @@ ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
 This is the recommended default path for a long-running OEDS instance. The
 selected `oeds_repo_version` must include the `crawlers` compose profile.
 
+For the public default install from GitHub `main`, no extra variables are
+required:
+
+```bash
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml
+```
+
 Example first run on a clean test VM:
 
 ```bash
@@ -277,6 +295,13 @@ Use this playbook for normal application, Compose, and container-image updates:
 ansible-playbook -i inventory.yml oeds-update.yml \
   -e oeds_repo_version=<branch-tag-or-commit> \
   -e oeds_enable_crawlers=true
+```
+
+If the instance uses the crawler profile and stays on the public GitHub
+defaults, the simpler wrapper is:
+
+```bash
+ansible-playbook -i inventory.yml oeds-update-crawlers.yml
 ```
 
 The update playbook:

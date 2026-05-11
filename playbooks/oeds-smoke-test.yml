@@ -1,6 +1,6 @@
 - name: OEDS smoke test
   hosts: oeds
-  remote_user: root
+  become: true
   vars:
     oeds_default_db_container_name: open-data
     oeds_default_db_name: opendata

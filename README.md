@@ -142,6 +142,20 @@ rebuilds.
 For host deployments you can point these runtime paths at a separate directory
 by setting `OEDS_RUNTIME_DIR` before running Compose.
 
+For a reproducible host install through Ansible, the public defaults already
+point to the GitHub `main` branch:
+
+```bash
+cd playbooks
+cp inventory.example.yml inventory.yml
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml
+```
+
+The example inventory is prefilled for a same-host Linux install with `sudo`.
+For a remote host, replace the `localhost` entry with `ansible_host` and, when
+needed, `ansible_user`. The full deployment workflow is documented in
+[`playbooks/README.md`](playbooks/README.md).
+
 Sync the Python environment:
 
 ```bash
@@ -243,7 +257,8 @@ operator notes as environment-specific material rather than repository content.
 
 ## Notable dashboards
 
-Provisioned dashboards live under `data/provisioning/grafana/dashboards/`.
+Provisioned dashboards live under `data/provisioning/grafana/dashboards/` and
+are grouped into crawler-specific subfolders plus `shared/`.
 Examples include:
 
 - `Weather Dashboard`
@@ -290,6 +305,11 @@ You can cite `open-energy-data-server` through the conference proceedings:
 > Maurer, F., Sejdija, J., & Sander, V. (2024, February 2). Decentralized energy data storages through an Open Energy Database Server. 1st NFDI4Energy Conference (NFDI4Energy), Hanover, Germany. https://doi.org/10.5281/zenodo.10607895
 
 ## License
+
+This repository is a KIT-maintained derivative of the Open Energy Data Server
+project. It keeps the upstream lineage transparent through the Git history,
+SPDX metadata, and citation above while removing legacy assets that are not part
+of the maintained KIT deployment path.
 
 This project is licensed under `AGPL-3.0-or-later`. See
 [`LICENSES/AGPL-3.0-or-later.txt`](LICENSES/AGPL-3.0-or-later.txt).

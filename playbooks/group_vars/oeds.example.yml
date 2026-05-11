@@ -1,5 +1,7 @@
 ---
-# Copy this file to group_vars/oeds.yml and adjust it for the target host.
+# Optional overrides for public installs.
+# The playbooks already default to the public GitHub repository and `main`.
+# Copy this file only if you want to pin a different ref or adjust host paths.
 # Do not store secrets here.
 
 oeds_root: /open_energy_data_server

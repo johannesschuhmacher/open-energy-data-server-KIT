@@ -48,6 +48,11 @@ Pick the shortest path that matches your goal:
 If you are unsure, start with the local Compose path and only move to the
 deployment playbooks once the crawler scope and operating model are clear.
 
+The public Ansible defaults already point to the GitHub `main` branch. For a
+same-host Linux install, `playbooks/inventory.example.yml` is prefilled for
+`sudo`, so the minimal path is to copy it to `inventory.yml` and run
+`oeds-install-crawlers.yml`.
+
 ## Supported crawler functions
 
 The current maintained baseline in this repository covers these data functions:
@@ -118,11 +123,19 @@ You can cite `open-energy-data-server` through the conference proceedings:
 
 > Maurer, F., Sejdija, J., & Sander, V. (2024, February 2). Decentralized energy data storages through an Open Energy Database Server. 1st NFDI4Energy Conference (NFDI4Energy), Hanover, Germany. https://doi.org/10.5281/zenodo.10607895
 
+## Repository lineage
+
+This repository is a KIT-maintained derivative of the Open Energy Data Server
+project. The maintained tree keeps the upstream lineage visible through Git
+history, SPDX metadata, and the citation above, while legacy assets outside the
+current KIT deployment path are intentionally omitted.
+
 ## Notable crawler-backed dashboards
 
 - `Weather Dashboard`
 - `Energy Weather Dashboard`
 - `ENTSOE Transfer Capacity, Adequacy & Projects`
 
-These dashboards are provisioned from `data/provisioning/grafana/dashboards/`
+These dashboards are provisioned from `data/provisioning/grafana/dashboards/`,
+grouped by crawler subfolder plus `shared/`,
 and depend on their related crawler schemas being populated.

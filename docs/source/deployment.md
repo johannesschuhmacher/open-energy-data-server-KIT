@@ -183,12 +183,21 @@ installations and updates. The recommended entry points are:
   the default core services.
 - `oeds-install-crawlers.yml` for the core stack plus scheduler and crawler
   admin UI through the Compose `crawlers` profile.
+- `oeds-update-crawlers.yml` for updates on installations that run the crawler
+  profile and stay on the public defaults.
 - optional operator-specific edge playbooks for reverse proxy, TLS, or
   firewalling, if you decide to maintain them outside the public repository.
 
 Operator-specific files such as `inventory.yml`, `group_vars/oeds.yml`, and
 secret-bearing crawler environment files should stay local and are ignored by
 the playbook folder's `.gitignore`.
+
+For the simplest public install, copy `playbooks/inventory.example.yml` to
+`playbooks/inventory.yml` and run `oeds-install-crawlers.yml` without extra
+overrides. The playbooks already default to the public GitHub repository on
+`main`, and the example inventory is prefilled for a same-host install with
+`sudo`. Create `group_vars/oeds.yml` only when you need to override the git
+remote, ref, or target directories.
 
 The target host must also be able to clone `oeds_repo_url` itself. For
 unpublished or internal test branches, either give the host Git access to the

@@ -3,8 +3,13 @@ all:
   children:
     oeds:
       hosts:
-        oeds-prod:
-          ansible_host: oeds.example.org
-          ansible_user: root
+        localhost:
+          ansible_connection: local
+          ansible_become: true
+          ansible_become_method: sudo
           ansible_python_interpreter: /usr/bin/python3
-
+          # For a remote host, replace the localhost defaults above with:
+          # ansible_host: your-server.example.org
+          # ansible_user: your-ssh-user
+          # ansible_become: true
+          # ansible_become_method: sudo

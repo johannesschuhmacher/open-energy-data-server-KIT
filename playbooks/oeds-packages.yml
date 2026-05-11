@@ -1,6 +1,6 @@
 - name: OEDS package installation
   hosts: oeds
-  remote_user: root
+  become: true
   vars:
     oeds_package_state: present
   tasks:

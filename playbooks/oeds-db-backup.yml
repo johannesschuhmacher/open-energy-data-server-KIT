@@ -1,6 +1,6 @@
 - name: OEDS database backup
   hosts: oeds
-  remote_user: root
+  become: true
   vars:
     oeds_root: /open_energy_data_server
     oeds_repo_dir: "{{ oeds_root }}/repo"

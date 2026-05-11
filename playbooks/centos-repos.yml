@@ -1,6 +1,6 @@
 - name: Update repositories
   hosts: all
-  remote_user: root
+  become: true
   tasks:
   - name: Add EPEL repository
     ansible.builtin.yum_repository:
@@ -50,4 +50,3 @@
       gpgcheck: true
       gpgkey: "https://mirror.netcologne.de/mariadb/yum/RPM-GPG-KEY-MariaDB"
       enabled: true
-

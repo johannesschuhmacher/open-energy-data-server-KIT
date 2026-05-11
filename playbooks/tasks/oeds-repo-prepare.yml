@@ -24,6 +24,7 @@
       - rev-parse
       - --is-inside-work-tree
   delegate_to: localhost
+  become: false
   run_once: true
   changed_when: false
   when: oeds_repo_source_mode_effective == "local_archive"
@@ -38,6 +39,7 @@
       - --verify
       - "{{ oeds_repo_version_effective }}^{commit}"
   delegate_to: localhost
+  become: false
   run_once: true
   changed_when: false
   when: oeds_repo_source_mode_effective == "local_archive"
@@ -47,6 +49,7 @@
     state: file
     suffix: .tar
   delegate_to: localhost
+  become: false
   run_once: true
   register: oeds_repo_archive
   when: oeds_repo_source_mode_effective == "local_archive"
@@ -64,6 +67,7 @@
       - "{{ oeds_repo_archive.path }}"
       - "{{ oeds_repo_version_effective }}"
   delegate_to: localhost
+  become: false
   run_once: true
   when: oeds_repo_source_mode_effective == "local_archive"
 

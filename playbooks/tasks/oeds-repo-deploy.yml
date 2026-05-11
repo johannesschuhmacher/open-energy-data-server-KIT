@@ -37,6 +37,7 @@
     path: "{{ oeds_repo_archive.path }}"
     state: absent
   delegate_to: localhost
+  become: false
   run_once: true
   when:
     - oeds_repo_source_mode_effective == "local_archive"

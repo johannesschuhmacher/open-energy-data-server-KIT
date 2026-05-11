@@ -1,6 +1,6 @@
 - name: OEDS version update
   hosts: oeds
-  remote_user: root
+  become: true
   vars:
     oeds_default_root: /open_energy_data_server
     oeds_default_repo_url: https://github.com/johannesschuhmacher/open-energy-data-server-KIT.git
