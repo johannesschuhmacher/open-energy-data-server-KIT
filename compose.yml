@@ -4,6 +4,11 @@ networks:
     driver_opts:
       com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
 
+# Warning: the fallback credentials in this public Compose file are intentionally
+# insecure. They only exist for isolated local, internal, or disposable test
+# systems. Do not expose an OEDS host that still uses these defaults on a
+# shared or public network.
+
 x-oeds-python-service: &oeds-python-service
   build:
     context: .
@@ -13,6 +18,7 @@ x-oeds-python-service: &oeds-python-service
   environment:
     OEDS_DB_HOST: open-data
     OEDS_DB_PORT: "5432"
+    OEDS_DB_PASSWORD: ${OEDS_DB_PASSWORD:-opendata}
   env_file:
     - ${OEDS_RUNTIME_DIR:-.}/crawler/.env
   volumes:
@@ -52,10 +58,11 @@ services:
     command: postgres -c 'max_connections=6000' -c 'timescaledb.max_background_workers=32' -c 'timescaledb.telemetry_level=off'
     environment:
       POSTGRES_USER: opendata
-      POSTGRES_PASSWORD: opendata
+      POSTGRES_PASSWORD: ${OEDS_DB_PASSWORD:-opendata}
       POSTGRES_DB: opendata
     volumes:
       - postgres-home:/home/postgres/pgdata/data
+      - ./docker/initdb/09-bootstrap-roles.sh:/docker-entrypoint-initdb.d/09-bootstrap-roles.sh:ro
       - ./init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
       - ./scripts/lib/postgres_functions.sql:/docker-entrypoint-initdb.d/postgres_functions.sql:ro
     networks:
@@ -75,7 +82,7 @@ services:
     restart: always
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.admin
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_PASSWORD: ${OEDS_PGADMIN_DEFAULT_PASSWORD:-admin}
       PGADMIN_LISTEN_PORT: 80
       PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED: "False"
       PGADMIN_SERVER_JSON_FILE: /pgadmin-etc/servers.json
@@ -96,7 +103,7 @@ services:
     container_name: postgrest
     restart: always
     environment:
-      PGRST_DB_URI: postgres://readonly:readonly@open-data:5432/opendata
+      PGRST_DB_URI: "host=open-data port=5432 dbname=opendata user=readonly password=${OEDS_READONLY_PASSWORD:-readonly}"
       PGRST_DB_ANON_ROLE: readonly
       PGRST_DB_AGGREGATES_ENABLED: "true"
     networks:
@@ -119,7 +126,8 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_PLUGINS_PREINSTALL: "marcusolsson-dynamictext-panel,orchestracities-map-panel"
       GF_SECURITY_ADMIN_USER: opendata
-      GF_SECURITY_ADMIN_PASSWORD: "opendata"
+      GF_SECURITY_ADMIN_PASSWORD: ${OEDS_GRAFANA_ADMIN_PASSWORD:-opendata}
+      OEDS_READONLY_PASSWORD: ${OEDS_READONLY_PASSWORD:-readonly}
     volumes:
       - grafana-varlib:/var/lib/grafana
       - ./data/provisioning/grafana/dashboardproviders:/etc/grafana/provisioning/dashboards:ro
@@ -180,6 +188,7 @@ services:
       OEDS_ADMIN_STATE_DIR: /var/lib/oeds-admin
       OEDS_DB_HOST: open-data
       OEDS_DB_PORT: "5432"
+      OEDS_DB_PASSWORD: ${OEDS_DB_PASSWORD:-opendata}
     volumes:
       - type: bind
         source: ${OEDS_RUNTIME_DIR:-.}/CRAWLER_CONFIG.yml

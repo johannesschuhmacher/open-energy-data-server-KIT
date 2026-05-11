@@ -28,6 +28,11 @@ Runtime extraction means that `CRAWLER_CONFIG.yml`, `crawler/.env`,
 checkout. This allows repo updates or fresh checkouts without overwriting local
 configuration, secrets, logs, or admin state.
 
+The public playbooks still bootstrap the same intentionally insecure fallback
+service passwords as the public `compose.yml`. That is acceptable for isolated
+local, internal, or disposable test systems, but not for shared or public
+hosts.
+
 Crawler containers read `crawler/.env` via Compose `env_file`. The file must
 exist on the host, but it is not mounted into the container as a readable bind
 mount.
@@ -205,6 +210,10 @@ Without Ansible, directly from the repository:
 docker compose up -d
 ```
 
+This quick-start path uses intentionally insecure fallback credentials from the
+public repository and is only suitable for isolated local, internal, or
+disposable test systems.
+
 With crawler containers:
 
 ```bash
@@ -237,6 +246,10 @@ ansible-playbook -i inventory.yml oeds-install-core.yml \
 This is the recommended minimal path for a server without the scheduler and
 without the crawler admin UI.
 
+If the target host is not a throwaway internal test system, set
+`OEDS_DB_PASSWORD`, `OEDS_READONLY_PASSWORD`, `OEDS_GRAFANA_ADMIN_PASSWORD`,
+and `OEDS_PGADMIN_DEFAULT_PASSWORD` before the first startup.
+
 Portainer is intentionally optional. If you want it, start it explicitly as an
 ops profile after the core install:
 
@@ -263,6 +276,10 @@ required:
 ```bash
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml
 ```
+
+That public default install remains intentionally insecure and is only meant
+for internal or disposable test hosts unless you override the service
+passwords before first startup.
 
 Example first run on a clean test VM:
 

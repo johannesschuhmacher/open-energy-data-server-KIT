@@ -19,7 +19,7 @@ datasources:
   url: open-data:5432
   user: readonly
   secureJsonData:
-    password: readonly
+    password: $OEDS_READONLY_PASSWORD
   jsonData:
     database: opendata
     sslmode: "disable"

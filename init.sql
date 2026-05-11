@@ -3,7 +3,8 @@
 -- SPDX-License-Identifier: AGPL-3.0-or-later
 CREATE EXTENSION postgis;
 CREATE SCHEMA postgrest;
-CREATE ROLE readonly WITH LOGIN PASSWORD 'readonly' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION VALID UNTIL 'infinity';
+-- The readonly login is created by docker/initdb/09-bootstrap-roles.sh so the
+-- password can be overridden without editing repository SQL.
 GRANT pg_read_all_data TO readonly;
 ALTER ROLE readonly SET search_path TO public;
 ALTER ROLE opendata SET search_path TO public;
