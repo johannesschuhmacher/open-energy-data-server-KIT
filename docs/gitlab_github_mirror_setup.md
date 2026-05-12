@@ -15,6 +15,12 @@ Important:
 - If GitLab `main` still carries earlier internal-only history, GitHub push
   protection can reject mirror pushes even when the current tree looks public.
 
+Prepared reference branch on GitLab:
+
+- `cutover/public-main-clean-20260512`
+- current target commit: `fe081e3cdcba1fd41de1914b12e5a4da8356a9c3`
+- current GitLab `main` commit before rewrite: `01048e4cf2eec96c05a9637a3ddd40d7de3684bb`
+
 This does not change the internal branch model:
 
 - `OEDS_Johannes` stays the internal development branch.
@@ -88,3 +94,44 @@ Recommended setup for GitHub `main`:
 3. Add the GitLab CI/CD variables listed above.
 4. Push to GitLab `main` and let the mirror job update GitHub `main`.
 5. After validation, remove `open_source_public` on both remotes when no longer needed.
+
+## Exact rewrite checklist
+
+1. In GitLab project settings, temporarily allow a maintainer force-push on
+   protected branch `main`, or briefly unprotect `main`.
+2. In the public worktree, fetch and confirm the expected hashes:
+
+   ```powershell
+   git fetch origin --prune
+   git rev-parse origin/main
+   git rev-parse origin/cutover/public-main-clean-20260512
+   ```
+
+   Expected values:
+
+   - `origin/main` = `01048e4cf2eec96c05a9637a3ddd40d7de3684bb`
+   - `origin/cutover/public-main-clean-20260512` = `fe081e3cdcba1fd41de1914b12e5a4da8356a9c3`
+
+3. Rewrite GitLab `main` to the clean public branch:
+
+   ```powershell
+   git push origin refs/heads/cutover/public-main-clean-20260512:refs/heads/main --force-with-lease=refs/heads/main:01048e4cf2eec96c05a9637a3ddd40d7de3684bb
+   ```
+
+4. Verify the rewrite:
+
+   ```powershell
+   git fetch origin --prune
+   git rev-parse origin/main
+   git rev-parse origin/open_source_public
+   git rev-parse github/main
+   ```
+
+   After success, all three public refs should resolve to:
+
+   - `fe081e3cdcba1fd41de1914b12e5a4da8356a9c3`
+
+5. Re-enable the desired protection on GitLab `main`.
+6. Add the GitLab CI/CD mirror variables.
+7. Rerun the latest `main` pipeline in GitLab, or trigger a new `main` pipeline,
+   so `mirror_github_main` can take over ongoing synchronization.
