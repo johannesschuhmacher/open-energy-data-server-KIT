@@ -26,6 +26,5 @@ mirror_github_main:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && $GITHUB_MIRROR_REPO && $GITHUB_MIRROR_USER && $GITHUB_MIRROR_TOKEN'
   script:
-    - 'export GITHUB_AUTH="$(printf ''%s'' \"${GITHUB_MIRROR_USER}:${GITHUB_MIRROR_TOKEN}\" | base64 | tr -d ''\n'')"'
-    - 'git remote add github-mirror "https://github.com/${GITHUB_MIRROR_REPO}.git"'
-    - 'git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${GITHUB_AUTH}" push github-mirror HEAD:refs/heads/main'
+    - 'git remote add github-mirror "https://${GITHUB_MIRROR_USER}:${GITHUB_MIRROR_TOKEN}@github.com/${GITHUB_MIRROR_REPO}.git"'
+    - 'git push github-mirror HEAD:refs/heads/main'
