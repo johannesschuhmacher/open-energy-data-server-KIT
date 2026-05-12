@@ -2,9 +2,9 @@ name: Linting
 
 on:
   push:
-    branches: [main, open_source_public]
+    branches: [main]
   pull_request:
-    branches: [main, open_source_public]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
