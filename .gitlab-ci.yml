@@ -2,9 +2,11 @@ image: python:3.14.4-slim
 
 stages:
   - verify
+  - mirror
 
 variables:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  GIT_DEPTH: "0"
 
 before_script:
   - python -m pip install --quiet uv==0.11.7
@@ -15,3 +17,15 @@ verify:
     - uv lock --check
     - python -m compileall crawler crawler_admin scripts crawler_scheduler.py crawler_admin_server.py
     - uv run --only-group docs sphinx-build -b dummy docs/source docs/_build/dummy
+
+mirror_github_main:
+  stage: mirror
+  image: alpine:3.20
+  before_script:
+    - apk add --no-cache git
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $GITHUB_MIRROR_REPO && $GITHUB_MIRROR_USER && $GITHUB_MIRROR_TOKEN'
+  script:
+    - export GITHUB_AUTH="$(printf '%s' "${GITHUB_MIRROR_USER}:${GITHUB_MIRROR_TOKEN}" | base64 | tr -d '\n')"
+    - git remote add github-mirror "https://github.com/${GITHUB_MIRROR_REPO}.git"
+    - git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${GITHUB_AUTH}" push github-mirror HEAD:refs/heads/main
