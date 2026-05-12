@@ -8,6 +8,13 @@ Status: prepared in-repo. Project settings still need to be configured in GitLab
 - GitHub `main` is the downstream mirror.
 - `open_source_public` is only a transition branch until GitLab `main` is cut over.
 
+Important:
+
+- Do not enable the mirror job variables until GitLab `main` itself points to the
+  public-clean history.
+- If GitLab `main` still carries earlier internal-only history, GitHub push
+  protection can reject mirror pushes even when the current tree looks public.
+
 This does not change the internal branch model:
 
 - `OEDS_Johannes` stays the internal development branch.
@@ -76,6 +83,8 @@ Recommended setup for GitHub `main`:
 
 1. Reconcile the current GitHub-only public commit back into GitLab public history.
 2. Move GitLab `main` onto the public history currently represented by `open_source_public`.
+   If `main` is protected and cannot be rewritten cleanly, fix that first in
+   GitLab project settings before enabling the mirror variables.
 3. Add the GitLab CI/CD variables listed above.
 4. Push to GitLab `main` and let the mirror job update GitHub `main`.
 5. After validation, remove `open_source_public` on both remotes when no longer needed.
