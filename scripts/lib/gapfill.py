@@ -7,7 +7,7 @@ from pandas import Timestamp, Timedelta
 from datetime import datetime, timedelta
 import logging
 
-from crawler.common.runtime_env import resolve_database_uri
+from crawler_core.runtime_env import resolve_database_uri
 
 # this function fills gaps for a given table
 # by coping the original data into a new table named <table_name>_gapfilled

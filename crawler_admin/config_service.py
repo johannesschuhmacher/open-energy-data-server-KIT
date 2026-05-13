@@ -19,6 +19,7 @@ from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
 CONFIG_FILENAME = "CRAWLER_CONFIG.yml"
 EXCLUDED_CRAWLER_MODULES = {"__init__"}
+GAPFILL_POSTRUN_SCRIPT = "scripts/gapfill_timeseries.py"
 WINDOWS_TIMEZONE_ABBREVIATIONS = {
     "W. Europe Standard Time": "CET",
     "W. Europe Daylight Time": "CEST",
@@ -846,6 +847,80 @@ def update_crawler_schedule_config_text(
     buffer = StringIO()
     yaml_rt.dump(config_data, buffer)
     return buffer.getvalue(), created_section
+
+
+def update_gapfill_config_text(
+    crawler_name: str,
+    *,
+    enabled: bool,
+    script_enabled: bool,
+    selected_tables: list[str],
+    target_schema: str,
+    method: str,
+    candidate_periods: list[str],
+    donor_context_periods: int,
+    donor_search_radius: str,
+    refinement_periods: int,
+    max_gap_periods: int,
+    lookback: str,
+    fail_on_table_error: bool,
+    repo_root: Path | None = None,
+) -> str:
+    root = repo_root or get_repo_root()
+    yaml_text = read_config_text(root)
+    yaml_rt = _create_roundtrip_yaml()
+    config_data = yaml_rt.load(yaml_text)
+
+    if config_data is None:
+        raise ValueError("CRAWLER_CONFIG.yml is empty.")
+
+    if not isinstance(config_data, dict):
+        raise ValueError("The top-level YAML document must be a mapping.")
+
+    crawler_config = config_data.get(crawler_name)
+    if crawler_config is None:
+        crawler_config = CommentedMap()
+        config_data[crawler_name] = crawler_config
+        crawler_config["enable"] = False
+        crawler_config["schema_name"] = DoubleQuotedScalarString(crawler_name)
+    elif not isinstance(crawler_config, dict):
+        raise ValueError(f"Crawler section '{crawler_name}' must be a mapping before it can be edited.")
+
+    post_run_scripts = crawler_config.get("post_run_scripts")
+    if post_run_scripts is None:
+        post_run_list: list[str] = []
+    elif isinstance(post_run_scripts, list):
+        post_run_list = [str(item) for item in post_run_scripts]
+    else:
+        raise ValueError("The crawler 'post_run_scripts' value must be a list before gapfill can be edited.")
+
+    post_run_list = [script for script in post_run_list if script != GAPFILL_POSTRUN_SCRIPT]
+    if script_enabled:
+        post_run_list.insert(0, GAPFILL_POSTRUN_SCRIPT)
+    crawler_config["post_run_scripts"] = [DoubleQuotedScalarString(script) for script in post_run_list]
+
+    gapfill_config = crawler_config.get("gapfill")
+    if gapfill_config is None:
+        gapfill_config = CommentedMap()
+        crawler_config["gapfill"] = gapfill_config
+    elif not isinstance(gapfill_config, dict):
+        raise ValueError("The crawler 'gapfill' value must be a mapping before it can be edited.")
+
+    gapfill_config["enable"] = enabled
+    gapfill_config["target_schema"] = DoubleQuotedScalarString(target_schema)
+    gapfill_config["method"] = DoubleQuotedScalarString(method)
+    gapfill_config["candidate_periods"] = [DoubleQuotedScalarString(value) for value in candidate_periods]
+    gapfill_config["donor_context_periods"] = donor_context_periods
+    gapfill_config["donor_search_radius"] = DoubleQuotedScalarString(donor_search_radius)
+    gapfill_config["refinement_periods"] = refinement_periods
+    gapfill_config["max_gap_periods"] = max_gap_periods
+    gapfill_config["lookback"] = DoubleQuotedScalarString(lookback)
+    gapfill_config["fail_on_table_error"] = fail_on_table_error
+    gapfill_config["tables"] = [DoubleQuotedScalarString(table_name) for table_name in selected_tables]
+
+    buffer = StringIO()
+    yaml_rt.dump(config_data, buffer)
+    return buffer.getvalue()
 
 
 def _determine_card_state(

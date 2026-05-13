@@ -7,8 +7,7 @@ from __future__ import annotations
 import os
 
 import uvicorn
-
-from crawler.common.runtime_env import load_local_crawler_env
+from crawler_core.runtime_env import load_local_crawler_env
 
 
 def main() -> None:

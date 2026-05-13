@@ -224,7 +224,8 @@ This is the fastest path for local testing, but not a full server setup.
 
 ### Option 2: Prepare a new host
 
-Install OS repositories, SELinux policy, and packages:
+Install OS repositories, a generic SELinux policy adjustment, and Docker
+packages:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-host-prep.yml
@@ -335,9 +336,7 @@ Optional OS package updates:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-update.yml \
-  -e oeds_update_docker_packages=true \
-  -e oeds_update_nginx=true \
-  -e oeds_update_certbot=true
+  -e oeds_update_docker_packages=true
 ```
 
 Set these flags deliberately rather than leaving them enabled by default.
@@ -397,8 +396,8 @@ ansible-playbook -i inventory.yml oeds-uninstall.yml
 ```
 
 This removes containers and Docker networks but keeps the repo checkout,
-runtime files, backups, and Docker volumes. Docker itself, nginx, firewall
-rules, and TLS assets are not removed.
+runtime files, backups, and Docker volumes. Docker itself and generic
+host-level OS settings are not removed.
 
 Fresh test run with a new repo checkout:
 
@@ -444,7 +443,7 @@ ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
   services.
 - `oeds-install-crawlers.yml`: install the core stack plus scheduler and
   crawler admin UI.
-- `oeds-packages.yml`: install nginx and Docker/Compose packages.
+- `oeds-packages.yml`: install Docker/Compose packages.
 - `oeds-docker-config.yml`: initialize Docker volumes, runtime directories,
   the repo checkout, and the Compose stack.
 - `oeds-update.yml`: roll out a new repo, Compose, or image version.
@@ -460,8 +459,9 @@ ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
   optionally the crawler admin UI. HTTP endpoints are checked with retries to
   avoid false alarms on fresh startups.
 
-Reverse proxy, TLS, and firewall customization are intentionally not part of
-the public default path and should be maintained outside this repository.
+Reverse proxy, TLS, firewall customization, and other institution-specific edge
+integration are intentionally not part of the public default path and should be
+maintained outside this repository.
 
 ## Repository boundary
 

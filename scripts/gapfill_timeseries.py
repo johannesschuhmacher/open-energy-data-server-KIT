@@ -21,16 +21,16 @@ CONFIG_FILE = ROOT / "CRAWLER_CONFIG.yml"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from crawler.common.runtime_env import load_local_crawler_env  # noqa: E402
-from scripts.lib.gapfiller.config import (
+from crawler_core.runtime_env import load_local_crawler_env  # noqa: E402
+from oeds_gapfill.config import (
     ENTSOE_FMS_TABLES,
     load_job_from_crawler_config,
     select_tables,
 )  # noqa: E402
-from scripts.lib.gapfiller.core import GAPFILL_METHODS  # noqa: E402
+from oeds_gapfill.core import GAPFILL_METHODS  # noqa: E402
+from oeds_gapfill.selftest import write_self_test_results  # noqa: E402
 from scripts.lib.gapfiller.db import run_gapfill_job  # noqa: E402
 from scripts.lib.gapfiller.holdout import run_database_holdout_test  # noqa: E402
-from scripts.lib.gapfiller.selftest import write_self_test_results  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -150,8 +150,14 @@ def main() -> int:
         return 0
 
     load_local_crawler_env(ROOT)
-    table_names = [args.holdout_table] if args.holdout_test and args.holdout_table else _split_tables(args.tables)
-    job = load_job_from_crawler_config(args.config, job_name=args.job, table_names=table_names)
+    table_names = (
+        [args.holdout_table]
+        if args.holdout_test and args.holdout_table
+        else _split_tables(args.tables)
+    )
+    job = load_job_from_crawler_config(
+        args.config, job_name=args.job, table_names=table_names
+    )
     job = _apply_overrides(job, args)
 
     engine = create_engine(job.database_uri)
@@ -222,8 +228,16 @@ def _apply_overrides(job, args: argparse.Namespace):
     tables = list(job.tables)
     if args.method is not None or args.max_gap_periods is not None:
         method = args.method or tables[0].method
-        max_gap_periods = args.max_gap_periods if args.max_gap_periods is not None else tables[0].max_gap_periods
-        tables = select_tables([table.table_name for table in tables], method=method, max_gap_periods=max_gap_periods)
+        max_gap_periods = (
+            args.max_gap_periods
+            if args.max_gap_periods is not None
+            else tables[0].max_gap_periods
+        )
+        tables = select_tables(
+            [table.table_name for table in tables],
+            method=method,
+            max_gap_periods=max_gap_periods,
+        )
 
     target_schema = args.target_schema or job.target_schema
     return replace(job, tables=tuple(tables), target_schema=target_schema)

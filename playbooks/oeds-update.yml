@@ -18,20 +18,12 @@
     oeds_repo_local_src_effective: "{{ oeds_repo_local_src | default('') }}"
     oeds_default_enable_crawlers: false
     oeds_enable_crawlers_effective: "{{ oeds_enable_crawlers | default(oeds_default_enable_crawlers) }}"
-    oeds_update_nginx: false
     oeds_update_docker_packages: false
-    oeds_update_certbot: false
     oeds_backup_database: true
     oeds_allow_pg_major_upgrade: false
     oeds_target_pg_major: 18
     oeds_backup_run_dir: "{{ oeds_root_effective }}/backups/{{ ansible_date_time.iso8601_basic_short }}"
   tasks:
-  - name: Update nginx when explicitly requested
-    ansible.builtin.dnf:
-      name:
-        - nginx
-      state: latest
-    when: oeds_update_nginx
   - name: Update Docker packages when explicitly requested
     ansible.builtin.dnf:
       name:
@@ -43,12 +35,6 @@
         - docker-compose-plugin
       state: latest
     when: oeds_update_docker_packages
-  - name: Update certbot when explicitly requested
-    ansible.builtin.dnf:
-      name:
-        - certbot
-      state: latest
-    when: oeds_update_certbot
   - name: Create update directories
     ansible.builtin.file:
       path: "{{ item }}"

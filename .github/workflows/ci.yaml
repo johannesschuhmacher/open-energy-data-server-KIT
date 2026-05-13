@@ -1,0 +1,99 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+env:
+  OEDS_LINT_TARGETS: >-
+    crawler_admin/gapfill_service.py
+    crawler_admin/runtime_service.py
+    crawler_admin_server.py
+    crawler_core
+    crawler_scheduler.py
+    oeds_gapfill
+    scripts/gapfill_timeseries.py
+    scripts/refresh_entsoe_availability_map.py
+    tests/test_gapfill_config.py
+    tests/test_gapfiller_core.py
+    tests/test_public_facades.py
+    tests/test_runtime_env.py
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.7"
+
+      - name: Verify lockfile
+        run: uv lock --check
+
+      - name: Run ruff check
+        run: uv run --only-group dev ruff check ${{ env.OEDS_LINT_TARGETS }}
+
+      - name: Run ruff format check
+        run: uv run --only-group dev ruff format --check ${{ env.OEDS_LINT_TARGETS }}
+
+      - name: Run pre-commit hooks
+        run: uv tool run pre-commit run --all-files
+
+  tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.7"
+
+      - name: Run unit tests
+        run: uv run --with pytest python -m pytest tests
+
+  docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.7"
+
+      - name: Build docs
+        run: uv run --only-group docs sphinx-build -b dummy docs/source docs/_build/dummy

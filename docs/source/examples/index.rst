@@ -1,8 +1,8 @@
 Examples
 ========
 
-This section collects practical usage examples around SQL export, HTTP export,
-and derived ENTSO-E use cases.
+This section collects maintained walkthroughs for first-time contributors,
+operator-oriented examples, export examples, and derived ENTSO-E views.
 
 .. toctree::
    :maxdepth: 1
@@ -10,6 +10,9 @@ and derived ENTSO-E use cases.
    application_examples
    client_export_examples
    http_export_examples
+   local_stack_first_query
+   first_crawler_change
+   gapfill_qa_walkthrough
    entsoe_live_availability_map
    gapfilling
 

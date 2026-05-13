@@ -12,10 +12,8 @@ energy-system analysis. It combines data ingestion, PostgreSQL/TimescaleDB,
 PostgREST, and Grafana into one reusable stack for collecting, storing, and
 serving energy data.
 
-Documentation lives in `docs/source/` and can be built locally with Sphinx.
-The repository already ships a `.readthedocs.yaml` for the future public
-Read the Docs project, but this README intentionally does not link to the old
-unrelated RTD instance.
+Interactive documentation is available on
+[Read the Docs](https://open-energy-data-server-kit.readthedocs.io/en/latest/).
 
 ![OEDS architecture overview](docs/source/media/oeds-architecture.png)
 
@@ -26,6 +24,25 @@ unrelated RTD instance.
 - PostGIS for spatial extensions
 - PostgREST for HTTP access to database objects
 - provisioned Grafana dashboards
+
+## Repository layout
+
+The root directory intentionally keeps only the operator entry points and the
+files that Docker Compose or contributors need immediately:
+
+- `compose.yml`: the local and server Compose stack entry point
+- `CRAWLER_CONFIG.yml`: the versioned default crawler configuration
+- `crawler_scheduler.py` and `crawler_admin_server.py`: runtime entry points
+- `docker/`: container build files and database bootstrap assets
+- `crawler/`, `crawler_admin/`: source-specific crawlers and the admin UI
+- `crawler_core/`, `oeds_gapfill/`: stable import surfaces for shared runtime
+  and gapfill logic
+- `playbooks/`: reproducible host install, update, backup, and smoke-test
+  playbooks
+- `docs/`: Sphinx source and operator/developer documentation
+
+Some top-level files stay on purpose because moving them deeper into the tree
+would make Compose, documentation, and operator workflows harder to follow.
 
 Typical source areas already covered in the repository include:
 
@@ -47,37 +64,6 @@ That means a successful deployment depends not only on OEDS itself, but also on
 your rights to access, store, and republish the upstream data. Always review
 source-specific terms, rate limits, and license conditions before enabling a
 crawler in a public environment.
-
-## Choose your setup path
-
-Pick the shortest path that matches your goal:
-
-| Goal | Recommended path | Use this when |
-| --- | --- | --- |
-| Explore the stack locally | `docker compose up -d` | you want PostgreSQL, PgAdmin, PostgREST, and Grafana without scheduled crawlers |
-| Run crawlers locally or on a small VM | `docker compose --profile crawlers up -d scheduler crawler-admin` | you want the core stack plus the scheduler and admin UI in containers |
-| Install or update a long-lived server reproducibly | `ansible-playbook -i inventory.yml oeds-install-core.yml` or `oeds-install-crawlers.yml` | you want repeatable host preparation, repo rollout, runtime directories, and update playbooks |
-
-If you are unsure, start with the local Compose path and only move to the
-Ansible playbooks once the stack and crawler scope are clear.
-
-## Supported crawler functions
-
-The current maintained baseline in this repository covers these data functions:
-
-| Crawler | Source | Auth | Schema | Main outputs | Typical consumers |
-| --- | --- | --- | --- | --- | --- |
-| `weather_forecast` | Open-Meteo DWD | none | `weather` | hourly forecasts, location views, country views | `Weather Dashboard`, `Energy Weather Dashboard` |
-| `entsoe_fms` | ENTSO-E File Library | `ENTSOE_USERNAME`, `ENTSOE_PASSWORD` | `entsoe_fms` | prices, load, generation, outages, transfer capacities, asset lookups | ENTSO-E dashboards, availability map, gapfilling, `Energy Weather Dashboard` |
-| `entsog` | ENTSOG transparency API | none | `entsog` | gas operators, points, physical flow, allocation, firm technical capacity | `ENTSOG-Monitor` |
-| `smard` | SMARD | none | `smard` | German generation, consumption, and price series | SQL analysis, custom dashboards, SMARD gapfilling |
-| `eurostat_crawler` | Eurostat | none | `eurostat` | annual European energy statistics | SQL analysis, country comparison workflows |
-| `mastr` | Marktstammdatenregister | none | `mastr` | registry and asset master data | enrichment joins, asset lookups |
-| `energy_forecast_crawler` | `energyforecast.de` | `ENERGY_FORECAST_TOKEN` | `energy_forecast` | next-48h quarter-hourly price forecasts | custom dashboards and forecast analysis |
-| `epex_spot` | EPEX SPOT SFTP | `EPEX_SFTP_USERNAME`, `EPEX_SFTP_PASSWORD` | `epex_spot` | intraday auctions, trades, indices, and statistics | intraday market analysis and custom dashboards |
-
-For crawler-specific configuration, run modes, output tables, and downstream
-dependencies, start with [Crawler Documentation](docs/source/crawlers/README.md).
 
 ## Quick start
 
@@ -206,28 +192,6 @@ uv run python crawler_admin_server.py
 `uv` creates the local `.venv/`, respects `.python-version`, and both entry
 points still load `crawler/.env` automatically when the file exists.
 
-## How to access the data
-
-Once the stack is running, there are four main ways to inspect or use the data:
-
-| Access path | What you get | How to use it |
-| --- | --- | --- |
-| Grafana | ready-made dashboards and exploratory charts | open `http://localhost:3006/` and use the provisioned dashboards under `data/provisioning/grafana/dashboards/` |
-| PgAdmin / SQL | direct schema, table, and query access | open `http://localhost:8080/` and connect to PostgreSQL for ad-hoc SQL |
-| PostgREST | HTTP access to tables, views, and RPC-style database objects | call `http://localhost:3001/` from scripts, notebooks, or external services |
-| Python / notebooks | programmatic access and custom analysis | run `uv run python ...` against the local database or use the example scripts under `docs/source/examples/` and `scripts/` |
-
-The Crawler Admin UI at `http://localhost:3010/admin` is the operational
-surface for schedules, manual runs, YAML editing, logs, and run history. It is
-not the primary data browser, but it is the fastest way to see which crawlers
-exist, which ones are enabled, and whether recent runs succeeded.
-
-If you want to know where a specific dataset ends up:
-
-- check the crawler page under [docs/source/crawlers/](docs/source/crawlers/README.md)
-- inspect the crawler section in [CRAWLER_CONFIG.yml](CRAWLER_CONFIG.yml)
-- query `public.metadata` in PostgreSQL after the first successful crawler run
-
 ## Configuration
 
 The scheduler and helper scripts read crawler settings from `CRAWLER_CONFIG.yml`.
@@ -297,11 +261,39 @@ For local and published documentation, start here:
 - [Crawler Admin UI](docs/source/crawler_admin.md)
 - [Deployment Validation](docs/source/deployment_validation.md)
 - [Examples](docs/source/examples/index.rst)
+- [Open-Source Roadmap](docs/source/open_source_maturity.md)
 - [Ansible Playbooks](playbooks/README.md)
 
 ## Contributing
 
 Contribution guidelines live in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+For a first contribution, the recommended local loop is:
+
+```bash
+uv sync --locked
+uv tool run pre-commit install
+uv run --with pytest python -m pytest tests
+uv run --only-group docs sphinx-build -b dummy docs/source docs/_build/dummy
+```
+
+Current maintained lint scope:
+
+```bash
+uv run --only-group dev ruff check crawler_admin/gapfill_service.py crawler_admin/runtime_service.py crawler_admin_server.py crawler_core crawler_scheduler.py oeds_gapfill scripts/gapfill_timeseries.py scripts/refresh_entsoe_availability_map.py tests/test_gapfill_config.py tests/test_gapfiller_core.py tests/test_public_facades.py tests/test_runtime_env.py
+uv run --only-group dev ruff format --check crawler_admin/gapfill_service.py crawler_admin/runtime_service.py crawler_admin_server.py crawler_core crawler_scheduler.py oeds_gapfill scripts/gapfill_timeseries.py scripts/refresh_entsoe_availability_map.py tests/test_gapfill_config.py tests/test_gapfiller_core.py tests/test_public_facades.py tests/test_runtime_env.py
+uv tool run pre-commit run --all-files
+```
+
+This scoped lint list is the current "lint baseline": these files must stay
+clean under `ruff` on every pull request, while older untouched areas are
+cleaned up incrementally instead of blocking every change at once.
+
+If you want a guided path through the stack before changing code, start with:
+
+- [Local stack to first query](docs/source/examples/local_stack_first_query.md)
+- [First crawler change](docs/source/examples/first_crawler_change.md)
+- [Gapfill QA walkthrough](docs/source/examples/gapfill_qa_walkthrough.md)
 
 When adding a crawler or a new derived dataset:
 
@@ -309,7 +301,7 @@ When adding a crawler or a new derived dataset:
 2. register its scheduler entry in `CRAWLER_CONFIG.yml`
 3. document it under `docs/source/crawlers/`
 4. document authentication, source license, and downstream dependencies
-5. add bootstrap SQL to `init.sql` if fresh installs need it
+5. add bootstrap SQL to `docker/initdb/10-init.sql` if fresh installs need it
 6. run the relevant checks before opening a change
 
 ## License

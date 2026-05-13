@@ -15,7 +15,7 @@ Each crawler should:
 Minimal example:
 
 ```python
-from crawler.common.base_crawler import BaseCrawler
+from crawler_core.base import BaseCrawler
 
 
 class ExampleCrawler(BaseCrawler):
@@ -48,6 +48,8 @@ python crawler_scheduler.py
 - Use `self.set_metadata(...)` when the crawler writes a dataset that should be
   described in `public.metadata`.
 - Use critical logging only for failures that should trigger operator attention.
+- Prefer shared helpers from `crawler_core` for new reusable runtime code
+  instead of adding more cross-imports directly under `crawler/` or `scripts/`.
 
 ## Database and schema design
 
@@ -56,7 +58,7 @@ python crawler_scheduler.py
 - Add derived views or post-run scripts when dashboards need cleaned or
   aggregated tables.
 - If fresh installs need helper functions or base objects, add them to
-  `init.sql`.
+  `docker/initdb/10-init.sql`.
 
 ## Documentation expectation
 

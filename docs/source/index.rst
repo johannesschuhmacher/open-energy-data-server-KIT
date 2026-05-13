@@ -16,6 +16,8 @@ analysis.
    crawler_admin
    crawler_config
    post_run_scripts
+   open_source_maturity
+   troubleshooting
    crawler_development
 
 .. toctree::

@@ -1,4 +1,4 @@
-- name: EnData SELinux config
+- name: OEDS SELinux config
   hosts: oeds
   become: true
   tasks:

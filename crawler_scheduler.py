@@ -22,9 +22,9 @@ from threading import Event, Lock, Thread
 from typing import Any
 
 import yaml
-from crawler.common.base_crawler import BaseCrawler
 from crawler.common.local_env import apply_email_env_overrides
-from crawler.common.runtime_env import load_local_crawler_env
+from crawler_core.base import BaseCrawler
+from crawler_core.runtime_env import load_local_crawler_env
 from cron_converter import Cron
 from watchdog.events import (
     EVENT_TYPE_CREATED,
@@ -92,8 +92,13 @@ class ScheduledCrawlerJob:
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, ScheduledCrawlerJob):
-            raise NotImplementedError("Comparison is only supported between ScheduledCrawlerJob instances.")
-        return (self.next_run_time, self.display_name) < (other.next_run_time, other.display_name)
+            raise NotImplementedError(
+                "Comparison is only supported between ScheduledCrawlerJob instances."
+            )
+        return (self.next_run_time, self.display_name) < (
+            other.next_run_time,
+            other.display_name,
+        )
 
 
 @dataclass(frozen=True)
@@ -114,8 +119,13 @@ class CrawlerJobQueue:
 
     def enqueue(self, job: ScheduledCrawlerJob, scheduled_for: datetime) -> bool:
         with self._lock:
-            if job.job_id in self._pending_job_ids or job.job_id in self._active_job_ids:
-                logging.info("Skipping duplicate queued/running job: %s", job.display_name)
+            if (
+                job.job_id in self._pending_job_ids
+                or job.job_id in self._active_job_ids
+            ):
+                logging.info(
+                    "Skipping duplicate queued/running job: %s", job.display_name
+                )
                 return False
 
             self._pending.append(
@@ -126,7 +136,11 @@ class CrawlerJobQueue:
                 )
             )
             self._pending_job_ids.add(job.job_id)
-            logging.info("Queued crawler job: %s scheduled for %s", job.display_name, scheduled_for)
+            logging.info(
+                "Queued crawler job: %s scheduled for %s",
+                job.display_name,
+                scheduled_for,
+            )
             return True
 
     def pop_ready_jobs(self) -> list[QueuedCrawlerJob]:
@@ -163,7 +177,11 @@ class CrawlerJobQueue:
 # WATCHDOG
 class ConfigEventHandler(FileSystemEventHandler):
     def on_any_event(self, event):
-        if event.event_type in (EVENT_TYPE_CREATED, EVENT_TYPE_MODIFIED, EVENT_TYPE_MOVED):
+        if event.event_type in (
+            EVENT_TYPE_CREATED,
+            EVENT_TYPE_MODIFIED,
+            EVENT_TYPE_MOVED,
+        ):
             logging.debug("Event %s occurred on %s", event.event_type, event.src_path)
             global configChanged
             configChanged = True
@@ -196,10 +214,16 @@ class SchedulerThread(Thread):
                     for job in self.scheduled_jobs
                     if job.next_run_time == next_run_time
                 ]
-                logging.info("Next crawler jobs to run: %s at %s", ", ".join(jobs_next_up), next_run_time)
+                logging.info(
+                    "Next crawler jobs to run: %s at %s",
+                    ", ".join(jobs_next_up),
+                    next_run_time,
+                )
                 seconds_till_nextrun = (next_run_time - datetime.now()).total_seconds()
             else:
-                logging.info("No crawler jobs scheduled to run. Waiting for configuration changes.")
+                logging.info(
+                    "No crawler jobs scheduled to run. Waiting for configuration changes."
+                )
                 seconds_till_nextrun = 4 * 60 * 60
 
             while seconds_till_nextrun > 0:
@@ -246,8 +270,12 @@ def get_crawler_config_with_defaults(default_config, crawler_config):
     for key, value in crawler_config.items():
         if key not in merged_crawler_config:
             merged_crawler_config[key] = value
-        elif isinstance(value, dict) and isinstance(merged_crawler_config.get(key), dict):
-            merged_crawler_config[key] = get_crawler_config_with_defaults(merged_crawler_config[key], value)
+        elif isinstance(value, dict) and isinstance(
+            merged_crawler_config.get(key), dict
+        ):
+            merged_crawler_config[key] = get_crawler_config_with_defaults(
+                merged_crawler_config[key], value
+            )
         else:
             merged_crawler_config[key] = value
 
@@ -263,7 +291,9 @@ def load_config():
         config = yaml.safe_load(file)
 
     if not isinstance(config, dict):
-        logging.error("Configuration file %s must contain a YAML mapping.", CONFIG_FILENAME)
+        logging.error(
+            "Configuration file %s must contain a YAML mapping.", CONFIG_FILENAME
+        )
         sys.exit(1)
 
     config = apply_email_env_overrides(config)
@@ -277,10 +307,14 @@ def load_config():
         if crawler_name == "default":
             continue
         if not isinstance(crawler_config, dict):
-            logging.error("Crawler config for %s must be a mapping. Skipping.", crawler_name)
+            logging.error(
+                "Crawler config for %s must be a mapping. Skipping.", crawler_name
+            )
             continue
 
-        crawler_base = {key: value for key, value in crawler_config.items() if key != "jobs"}
+        crawler_base = {
+            key: value for key, value in crawler_config.items() if key != "jobs"
+        }
         merged_crawler = get_crawler_config_with_defaults(default_config, crawler_base)
         if "jobs" in crawler_config:
             merged_crawler["jobs"] = crawler_config["jobs"]
@@ -289,21 +323,33 @@ def load_config():
     return merged_config
 
 
-def expand_crawler_job_configs(crawler_name: str, crawler_config: dict[str, Any]) -> list[CrawlerJobConfig]:
+def expand_crawler_job_configs(
+    crawler_name: str, crawler_config: dict[str, Any]
+) -> list[CrawlerJobConfig]:
     jobs = crawler_config.get("jobs")
     if isinstance(jobs, dict) and jobs:
-        base_config = {key: deepcopy(value) for key, value in crawler_config.items() if key != "jobs"}
+        base_config = {
+            key: deepcopy(value)
+            for key, value in crawler_config.items()
+            if key != "jobs"
+        }
         job_configs = []
 
         for job_name, job_config in jobs.items():
             if not isinstance(job_config, dict):
-                logging.error("Job config for %s:%s must be a mapping. Skipping.", crawler_name, job_name)
+                logging.error(
+                    "Job config for %s:%s must be a mapping. Skipping.",
+                    crawler_name,
+                    job_name,
+                )
                 continue
 
             effective_config = get_crawler_config_with_defaults(base_config, job_config)
             effective_config["_scheduler_job_name"] = str(job_name)
             effective_config["_scheduler_job_id"] = f"{crawler_name}:{job_name}"
-            parsed_schedule = _parse_job_schedule(crawler_name, str(job_name), effective_config)
+            parsed_schedule = _parse_job_schedule(
+                crawler_name, str(job_name), effective_config
+            )
             if parsed_schedule is None:
                 continue
 
@@ -336,17 +382,28 @@ def expand_crawler_job_configs(crawler_name: str, crawler_config: dict[str, Any]
     ]
 
 
-def _parse_job_schedule(crawler_name: str, job_name: str, config: dict[str, Any]) -> Cron | None:
+def _parse_job_schedule(
+    crawler_name: str, job_name: str, config: dict[str, Any]
+) -> Cron | None:
     schedule = config.get("schedule")
     try:
         return Cron(schedule)
     except Exception as exc:
-        logging.error("%s in %s, crawler job %s:%s: %r", exc, CONFIG_FILENAME, crawler_name, job_name, schedule)
+        logging.error(
+            "%s in %s, crawler job %s:%s: %r",
+            exc,
+            CONFIG_FILENAME,
+            crawler_name,
+            job_name,
+            schedule,
+        )
         config["enable"] = False
         return None
 
 
-def start_crawler_job_thread(job: ScheduledCrawlerJob, on_finish: Callable[[ScheduledCrawlerJob], None]) -> None:
+def start_crawler_job_thread(
+    job: ScheduledCrawlerJob, on_finish: Callable[[ScheduledCrawlerJob], None]
+) -> None:
     def thread_func():
         print(f"\n>>>>>>> [START] {job.display_name} <<<<<<<")
         start_time = time.time()
@@ -365,7 +422,9 @@ def start_crawler_job_thread(job: ScheduledCrawlerJob, on_finish: Callable[[Sche
         if success and job.run_post_scripts:
             post_run_scripts = job.config.get("post_run_scripts")
             if isinstance(post_run_scripts, list) and post_run_scripts:
-                print(f"   [SCRIPT] Executing {len(post_run_scripts)} post-run scripts...")
+                print(
+                    f"   [SCRIPT] Executing {len(post_run_scripts)} post-run scripts..."
+                )
                 for script in post_run_scripts:
                     logging.info("   -> Running for %s: %s", job.display_name, script)
                     completed = subprocess.run([sys.executable, script], check=False)
@@ -414,7 +473,9 @@ def get_scheduled_jobs(config):
             failed_imports.append((crawler_name, str(exc)))
             continue
 
-        for job_config in expand_crawler_job_configs(crawler_name, config[crawler_name]):
+        for job_config in expand_crawler_job_configs(
+            crawler_name, config[crawler_name]
+        ):
             if not job_config.enabled:
                 disabled_jobs.append(job_config.display_name)
                 continue
@@ -426,7 +487,9 @@ def get_scheduled_jobs(config):
                     crawler_class=crawler_class,
                     config=job_config.config,
                     schedule=job_config.schedule,
-                    lock_keys=get_job_lock_keys(job_config.crawler_name, job_config.config, crawler_class),
+                    lock_keys=get_job_lock_keys(
+                        job_config.crawler_name, job_config.config, crawler_class
+                    ),
                 )
             )
 
@@ -442,7 +505,9 @@ def get_scheduled_jobs(config):
             print("   " + ", ".join(disabled_jobs[index : index + 4]))
 
     if failed_imports:
-        logging.warning("Failed crawler imports: %s", ", ".join(name for name, _ in failed_imports))
+        logging.warning(
+            "Failed crawler imports: %s", ", ".join(name for name, _ in failed_imports)
+        )
 
     print("-" * 65 + "\n")
     return scheduled_jobs
@@ -466,7 +531,9 @@ def _load_crawler_class(crawler_name: str) -> type[BaseCrawler]:
         ):
             return crawler_class
 
-    raise RuntimeError(f"No BaseCrawler subclass found in crawler module '{crawler_name}'.")
+    raise RuntimeError(
+        f"No BaseCrawler subclass found in crawler module '{crawler_name}'."
+    )
 
 
 def get_job_lock_keys(
@@ -475,7 +542,9 @@ def get_job_lock_keys(
     crawler_class: type[BaseCrawler] | None = None,
 ) -> frozenset[str]:
     if crawler_name == "entsoe_fms":
-        data_item_table_map = getattr(crawler_class, "DATA_ITEM_TABLE_MAP", {}) if crawler_class else {}
+        data_item_table_map = (
+            getattr(crawler_class, "DATA_ITEM_TABLE_MAP", {}) if crawler_class else {}
+        )
         target_data_items = config.get("target_data_items")
 
         if isinstance(target_data_items, list) and target_data_items:
@@ -485,7 +554,10 @@ def get_job_lock_keys(
             )
 
         if isinstance(data_item_table_map, dict) and data_item_table_map:
-            return frozenset(f"{crawler_name}:{table_name}" for table_name in data_item_table_map.values())
+            return frozenset(
+                f"{crawler_name}:{table_name}"
+                for table_name in data_item_table_map.values()
+            )
 
     return frozenset({f"crawler:{crawler_name}"})
 

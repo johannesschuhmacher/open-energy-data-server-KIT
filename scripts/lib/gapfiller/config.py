@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from pathlib import Path
+import re
 from typing import Any
 
 import pandas as pd
@@ -154,6 +155,10 @@ DEFAULT_POSTRUN_TABLES = (
     "PhysicalFlows",
 )
 
+BUILTIN_GAPFILL_TABLES_BY_JOB: dict[str, tuple[TimeSeriesTableConfig, ...]] = {
+    "entsoe_fms": ENTSOE_FMS_TABLES,
+}
+
 
 def load_job_from_crawler_config(
     config_path: Path,
@@ -180,7 +185,12 @@ def load_job_from_crawler_config(
     lookback = _parse_timedelta(gapfill_config.get("lookback", "7d"))
     fail_on_table_error = bool(gapfill_config.get("fail_on_table_error", True))
 
-    selected = table_names or gapfill_config.get("tables") or list(DEFAULT_POSTRUN_TABLES)
+    if table_names is not None:
+        selected = table_names
+    elif "tables" in gapfill_config:
+        selected = list(gapfill_config.get("tables") or [])
+    else:
+        selected = list(DEFAULT_POSTRUN_TABLES)
     tables = select_tables(
         selected,
         method=method,
@@ -245,7 +255,12 @@ def _parse_timedelta(value: object) -> pd.Timedelta:
         return value
     if isinstance(value, int | float):
         return pd.Timedelta(hours=float(value))
-    return pd.Timedelta(str(value))
+    return pd.Timedelta(_normalize_timedelta_text(str(value)))
+
+
+def _normalize_timedelta_text(value: str) -> str:
+    """Normalize user-facing duration strings before passing them to pandas."""
+    return re.sub(r"(?<=\d)\s*d\b", "D", value.strip(), flags=re.IGNORECASE)
 
 
 def _parse_timedelta_tuple(value: object) -> tuple[pd.Timedelta, ...] | None:

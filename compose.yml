@@ -12,7 +12,7 @@ networks:
 x-oeds-python-service: &oeds-python-service
   build:
     context: .
-    dockerfile: Dockerfile.crawler
+    dockerfile: docker/Dockerfile.crawler
   restart: unless-stopped
   working_dir: /app
   environment:
@@ -63,7 +63,7 @@ services:
     volumes:
       - postgres-home:/home/postgres/pgdata/data
       - ./docker/initdb/09-bootstrap-roles.sh:/docker-entrypoint-initdb.d/09-bootstrap-roles.sh:ro
-      - ./init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+      - ./docker/initdb/10-init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
       - ./scripts/lib/postgres_functions.sql:/docker-entrypoint-initdb.d/postgres_functions.sql:ro
     networks:
       - netlocalhost

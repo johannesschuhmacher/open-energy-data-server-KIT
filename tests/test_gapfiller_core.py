@@ -8,8 +8,8 @@ import unittest
 
 import numpy as np
 import pandas as pd
-from scripts.lib.gapfiller.core import SeriesFillConfig, fill_table, infer_frequency
-from scripts.lib.gapfiller.selftest import (
+from oeds_gapfill.core import SeriesFillConfig, fill_table, infer_frequency
+from oeds_gapfill.selftest import (
     list_holdout_datasets,
     list_self_test_cases,
     run_holdout_test,
@@ -19,21 +19,25 @@ from scripts.lib.gapfiller.selftest import (
 
 class GapfillerCoreTest(unittest.TestCase):
     def test_infer_frequency_uses_median_delta(self) -> None:
-        index = pd.DatetimeIndex([
-            "2026-01-01T00:00:00Z",
-            "2026-01-01T01:00:00Z",
-            "2026-01-01T02:00:00Z",
-            "2026-01-01T05:00:00Z",
-        ])
+        index = pd.DatetimeIndex(
+            [
+                "2026-01-01T00:00:00Z",
+                "2026-01-01T01:00:00Z",
+                "2026-01-01T02:00:00Z",
+                "2026-01-01T05:00:00Z",
+            ]
+        )
 
         self.assertEqual(infer_frequency(index), pd.Timedelta(hours=1))
 
     def test_linear_gap_fill_fills_short_internal_nan_gap(self) -> None:
-        dataframe = pd.DataFrame({
-            "DateTime": pd.date_range("2026-01-01", periods=8, freq="h", tz="UTC"),
-            "Value": [0.0, 1.0, np.nan, np.nan, 4.0, 5.0, 6.0, 7.0],
-            "Area": "DE",
-        })
+        dataframe = pd.DataFrame(
+            {
+                "DateTime": pd.date_range("2026-01-01", periods=8, freq="h", tz="UTC"),
+                "Value": [0.0, 1.0, np.nan, np.nan, 4.0, 5.0, 6.0, 7.0],
+                "Area": "DE",
+            }
+        )
         config = SeriesFillConfig(
             table_name="Example",
             time_column="DateTime",
@@ -43,7 +47,9 @@ class GapfillerCoreTest(unittest.TestCase):
             max_gap_periods=4,
         )
 
-        result = fill_table(dataframe, config, "run-1", pd.Timestamp("2026-01-02T00:00:00Z"))
+        result = fill_table(
+            dataframe, config, "run-1", pd.Timestamp("2026-01-02T00:00:00Z")
+        )
 
         self.assertEqual(result.metrics[0].filled_values, 2)
         self.assertEqual(result.metrics[0].missing_after, 0)
@@ -53,11 +59,13 @@ class GapfillerCoreTest(unittest.TestCase):
 
     def test_missing_timestamps_are_created_and_filled(self) -> None:
         full_index = pd.date_range("2026-01-01", periods=8, freq="h", tz="UTC")
-        dataframe = pd.DataFrame({
-            "DateTime": full_index.delete([3, 4]),
-            "Value": np.delete(np.arange(8, dtype=float), [3, 4]),
-            "Area": "DE",
-        })
+        dataframe = pd.DataFrame(
+            {
+                "DateTime": full_index.delete([3, 4]),
+                "Value": np.delete(np.arange(8, dtype=float), [3, 4]),
+                "Area": "DE",
+            }
+        )
         config = SeriesFillConfig(
             table_name="Example",
             time_column="DateTime",
@@ -67,7 +75,9 @@ class GapfillerCoreTest(unittest.TestCase):
             max_gap_periods=4,
         )
 
-        result = fill_table(dataframe, config, "run-1", pd.Timestamp("2026-01-02T00:00:00Z"))
+        result = fill_table(
+            dataframe, config, "run-1", pd.Timestamp("2026-01-02T00:00:00Z")
+        )
 
         self.assertEqual(len(result.dataframe), 8)
         self.assertEqual(result.metrics[0].created_gap_rows, 2)
@@ -75,11 +85,13 @@ class GapfillerCoreTest(unittest.TestCase):
         self.assertEqual(int(result.dataframe["gapfill_created_row"].sum()), 2)
 
     def test_large_gap_above_limit_is_left_unfilled(self) -> None:
-        dataframe = pd.DataFrame({
-            "DateTime": pd.date_range("2026-01-01", periods=10, freq="h", tz="UTC"),
-            "Value": [0.0, 1.0, np.nan, np.nan, np.nan, np.nan, 6.0, 7.0, 8.0, 9.0],
-            "Area": "DE",
-        })
+        dataframe = pd.DataFrame(
+            {
+                "DateTime": pd.date_range("2026-01-01", periods=10, freq="h", tz="UTC"),
+                "Value": [0.0, 1.0, np.nan, np.nan, np.nan, np.nan, 6.0, 7.0, 8.0, 9.0],
+                "Area": "DE",
+            }
+        )
         config = SeriesFillConfig(
             table_name="Example",
             time_column="DateTime",
@@ -89,18 +101,22 @@ class GapfillerCoreTest(unittest.TestCase):
             max_gap_periods=3,
         )
 
-        result = fill_table(dataframe, config, "run-1", pd.Timestamp("2026-01-02T00:00:00Z"))
+        result = fill_table(
+            dataframe, config, "run-1", pd.Timestamp("2026-01-02T00:00:00Z")
+        )
 
         self.assertEqual(result.metrics[0].filled_values, 0)
         self.assertEqual(result.metrics[0].missing_after, 4)
 
     def test_multi_value_table_is_filled_in_one_output(self) -> None:
-        dataframe = pd.DataFrame({
-            "DateTime": pd.date_range("2026-01-01", periods=8, freq="h", tz="UTC"),
-            "Generation": [0.0, 1.0, np.nan, 3.0, 4.0, 5.0, 6.0, 7.0],
-            "Consumption": [10.0, 11.0, 12.0, 13.0, np.nan, np.nan, 16.0, 17.0],
-            "Area": "DE",
-        })
+        dataframe = pd.DataFrame(
+            {
+                "DateTime": pd.date_range("2026-01-01", periods=8, freq="h", tz="UTC"),
+                "Generation": [0.0, 1.0, np.nan, 3.0, 4.0, 5.0, 6.0, 7.0],
+                "Consumption": [10.0, 11.0, 12.0, 13.0, np.nan, np.nan, 16.0, 17.0],
+                "Area": "DE",
+            }
+        )
         config = SeriesFillConfig(
             table_name="Example",
             time_column="DateTime",
@@ -110,7 +126,9 @@ class GapfillerCoreTest(unittest.TestCase):
             max_gap_periods=4,
         )
 
-        result = fill_table(dataframe, config, "run-1", pd.Timestamp("2026-01-02T00:00:00Z"))
+        result = fill_table(
+            dataframe, config, "run-1", pd.Timestamp("2026-01-02T00:00:00Z")
+        )
 
         metrics = {metric.value_column: metric for metric in result.metrics}
         self.assertEqual(metrics["Generation"].filled_values, 1)
@@ -122,11 +140,13 @@ class GapfillerCoreTest(unittest.TestCase):
         index = pd.date_range("2026-01-01", periods=48, freq="h", tz="UTC")
         values = np.arange(48, dtype=float)
         values[30] = np.nan
-        dataframe = pd.DataFrame({
-            "DateTime": index,
-            "Value": values,
-            "Area": "DE",
-        })
+        dataframe = pd.DataFrame(
+            {
+                "DateTime": index,
+                "Value": values,
+                "Area": "DE",
+            }
+        )
         config = SeriesFillConfig(
             table_name="Example",
             time_column="DateTime",
@@ -137,7 +157,9 @@ class GapfillerCoreTest(unittest.TestCase):
             max_gap_periods=2,
         )
 
-        result = fill_table(dataframe, config, "run-1", pd.Timestamp("2026-01-03T00:00:00Z"))
+        result = fill_table(
+            dataframe, config, "run-1", pd.Timestamp("2026-01-03T00:00:00Z")
+        )
         filled = result.dataframe.set_index("DateTime")
 
         self.assertEqual(filled.loc[index[30], "Value"], 6.0)
@@ -149,11 +171,13 @@ class GapfillerCoreTest(unittest.TestCase):
         values[30:33] = [500.0, 500.0, 500.0]
         expected = values[6:9].copy()
         values[54:57] = np.nan
-        dataframe = pd.DataFrame({
-            "DateTime": index,
-            "Value": values,
-            "Area": "DE",
-        })
+        dataframe = pd.DataFrame(
+            {
+                "DateTime": index,
+                "Value": values,
+                "Area": "DE",
+            }
+        )
         config = SeriesFillConfig(
             table_name="Example",
             time_column="DateTime",
@@ -166,7 +190,9 @@ class GapfillerCoreTest(unittest.TestCase):
             max_gap_periods=6,
         )
 
-        result = fill_table(dataframe, config, "run-1", pd.Timestamp("2026-01-05T00:00:00Z"))
+        result = fill_table(
+            dataframe, config, "run-1", pd.Timestamp("2026-01-05T00:00:00Z")
+        )
         filled = result.dataframe.set_index("DateTime")
         actual = filled.loc[index[54:57], "Value"].to_numpy(dtype="float64")
 
@@ -181,11 +207,13 @@ class GapfillerCoreTest(unittest.TestCase):
         values[30:33] = [13.0, 14.0, 15.0]
         values[47:50] = [8.0, 9.0, 10.0]
         values[54:57] = [13.0, 14.0, 15.0]
-        dataframe = pd.DataFrame({
-            "DateTime": index,
-            "Value": values,
-            "Area": "DE",
-        })
+        dataframe = pd.DataFrame(
+            {
+                "DateTime": index,
+                "Value": values,
+                "Area": "DE",
+            }
+        )
         base_config = dict(
             table_name="Example",
             time_column="DateTime",
@@ -253,7 +281,10 @@ class GapfillerCoreTest(unittest.TestCase):
 
         self.assertIn("linear_hourly", datasets)
         self.assertIn("daily_seasonal", datasets)
-        self.assertGreaterEqual(datasets["linear_hourly"].max_gap_length, datasets["linear_hourly"].recommended_gap_length)
+        self.assertGreaterEqual(
+            datasets["linear_hourly"].max_gap_length,
+            datasets["linear_hourly"].recommended_gap_length,
+        )
         self.assertEqual(datasets["daily_seasonal"].method, "donor_refined")
 
     def test_holdout_test_removes_selected_length_and_calculates_error(self) -> None:

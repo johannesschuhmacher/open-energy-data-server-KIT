@@ -72,7 +72,7 @@ Persistent named volumes from the current file:
 
 Provisioning files are mounted directly from the repository:
 
-- `init.sql`
+- `docker/initdb/10-init.sql`
 - `scripts/lib/postgres_functions.sql`
 - `data/provisioning/grafana/...`
 - `data/provisioning/pgadmin/servers.json`

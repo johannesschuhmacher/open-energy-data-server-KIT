@@ -4,11 +4,6 @@
   vars:
     oeds_package_state: present
   tasks:
-  - name: Install nginx
-    ansible.builtin.dnf:
-      name:
-        - nginx
-      state: "{{ oeds_package_state }}"
   - name: Install Docker packages
     ansible.builtin.dnf:
       name:

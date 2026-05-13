@@ -117,7 +117,7 @@ When adding a new crawler:
 1. create a module in `crawler/`
 2. add its scheduler entry to `CRAWLER_CONFIG.yml`
 3. document it under `docs/source/crawlers/`
-4. add any required bootstrap SQL to `init.sql` if fresh installs need it
+4. add any required bootstrap SQL to `docker/initdb/10-init.sql` if fresh installs need it
 
 ## Repository lineage
 

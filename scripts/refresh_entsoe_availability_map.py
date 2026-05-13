@@ -2,14 +2,12 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-from pathlib import Path
 import logging
+from pathlib import Path
 
 import yaml
+from crawler_core.runtime_env import resolve_database_uri
 from sqlalchemy import create_engine
-
-from crawler.common.runtime_env import resolve_database_uri
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SQL_FILE = ROOT / "scripts" / "lib" / "entsoe_availability_map.sql"

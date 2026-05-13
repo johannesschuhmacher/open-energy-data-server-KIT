@@ -12,7 +12,7 @@ dotenv_stub = types.ModuleType("dotenv")
 dotenv_stub.load_dotenv = lambda *args, **kwargs: None
 sys.modules.setdefault("dotenv", dotenv_stub)
 
-from crawler.common.runtime_env import resolve_database_uri
+from crawler_core.runtime_env import resolve_database_uri  # noqa: E402
 
 
 class ResolveDatabaseUriTest(unittest.TestCase):

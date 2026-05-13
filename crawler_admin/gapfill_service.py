@@ -5,8 +5,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 import pandas as pd
-from scripts.lib.gapfiller.core import GAPFILL_METHODS
-from scripts.lib.gapfiller.selftest import (
+from oeds_gapfill.config import BUILTIN_GAPFILL_TABLES_BY_JOB, DEFAULT_POSTRUN_TABLES
+from oeds_gapfill.core import GAPFILL_METHODS
+from oeds_gapfill.selftest import (
     HoldoutTestResult,
     SelfTestResult,
     list_holdout_datasets,
@@ -14,6 +15,9 @@ from scripts.lib.gapfiller.selftest import (
     run_holdout_test,
     run_self_tests,
 )
+
+GAPFILL_POSTRUN_SCRIPT = "scripts/gapfill_timeseries.py"
+GAPFILL_DASHBOARD_NAME = "OEDS Gapfilling Quality"
 
 
 @dataclass(frozen=True)
@@ -71,7 +75,9 @@ class GapfillChart:
 
     @property
     def has_data(self) -> bool:
-        return bool(self.truth_segments or self.source_segments or self.gapfilled_segments)
+        return bool(
+            self.truth_segments or self.source_segments or self.gapfilled_segments
+        )
 
 
 @dataclass(frozen=True)
@@ -104,6 +110,47 @@ class GapfillHoldoutView:
         return self.result.status == "passed"
 
 
+@dataclass(frozen=True)
+class GapfillRuntimeTableItem:
+    table_name: str
+    value_columns_label: str
+    groupby_columns_label: str
+    selected: bool
+
+
+@dataclass(frozen=True)
+class GapfillRuntimeView:
+    crawler_name: str
+    supported: bool
+    source_schema: str
+    target_schema: str
+    script_enabled: bool
+    gapfill_enabled: bool
+    method: str
+    candidate_periods_label: str
+    donor_context_periods: int
+    donor_search_radius_label: str
+    refinement_periods: int
+    max_gap_periods: int
+    lookback_label: str
+    fail_on_table_error: bool
+    tables: list[GapfillRuntimeTableItem]
+    post_run_scripts: list[str]
+    dashboard_name: str | None
+
+    @property
+    def selected_table_count(self) -> int:
+        return sum(1 for item in self.tables if item.selected)
+
+    @property
+    def has_gapfill_script(self) -> bool:
+        return self.script_enabled
+
+    @property
+    def writes_to_separate_schema(self) -> bool:
+        return self.target_schema != self.source_schema
+
+
 def build_gapfill_selftest_catalog() -> list[GapfillSelfTestCatalogItem]:
     catalog = []
     for test_case in list_self_test_cases():
@@ -117,7 +164,9 @@ def build_gapfill_selftest_catalog() -> list[GapfillSelfTestCatalogItem]:
                 source_rows=test_case.source_rows,
                 value_columns=", ".join(test_case.config.value_columns),
                 period_label=_format_timedelta(test_case.config.period),
-                candidate_periods_label=_format_candidate_periods(test_case.config.candidate_periods),
+                candidate_periods_label=_format_candidate_periods(
+                    test_case.config.candidate_periods
+                ),
             )
         )
     return catalog
@@ -137,13 +186,17 @@ def build_gapfill_holdout_catalog() -> list[GapfillHoldoutDatasetItem]:
                 recommended_gap_start=dataset.recommended_gap_start,
                 recommended_gap_length=dataset.recommended_gap_length,
                 period_label=_format_timedelta(dataset.config.period),
-                candidate_periods_label=_format_candidate_periods(dataset.config.candidate_periods),
+                candidate_periods_label=_format_candidate_periods(
+                    dataset.config.candidate_periods
+                ),
             )
         )
     return catalog
 
 
-def build_gapfill_selftest_view(selected_names: Sequence[str] | None = None) -> GapfillSelfTestView:
+def build_gapfill_selftest_view(
+    selected_names: Sequence[str] | None = None,
+) -> GapfillSelfTestView:
     run_id, results, series = run_self_tests(selected_names)
     charts = _build_charts(series)
     passed_count = sum(1 for result in results if result.status == "passed")
@@ -189,13 +242,90 @@ def gapfill_method_options() -> list[str]:
     return list(GAPFILL_METHODS)
 
 
+def build_gapfill_runtime_view(
+    crawler_name: str,
+    raw_config: dict[str, object] | None,
+    effective_config: dict[str, object] | None,
+) -> GapfillRuntimeView:
+    raw = raw_config if isinstance(raw_config, dict) else {}
+    effective = effective_config if isinstance(effective_config, dict) else {}
+    raw_gapfill = raw.get("gapfill") if isinstance(raw.get("gapfill"), dict) else {}
+    effective_gapfill = (
+        effective.get("gapfill") if isinstance(effective.get("gapfill"), dict) else {}
+    )
+    source_schema = str(effective.get("schema_name") or crawler_name)
+    target_schema = str(
+        effective_gapfill.get("target_schema") or f"{source_schema}_gapfilled"
+    )
+    scripts = (
+        list(effective.get("post_run_scripts") or [])
+        if isinstance(effective.get("post_run_scripts"), list)
+        else []
+    )
+    supported_tables = BUILTIN_GAPFILL_TABLES_BY_JOB.get(crawler_name, ())
+
+    if isinstance(raw_gapfill, dict) and "tables" in raw_gapfill:
+        selected_names = {str(name) for name in (raw_gapfill.get("tables") or [])}
+    elif isinstance(effective_gapfill, dict) and "tables" in effective_gapfill:
+        selected_names = {str(name) for name in (effective_gapfill.get("tables") or [])}
+    else:
+        selected_names = set(
+            DEFAULT_POSTRUN_TABLES if crawler_name == "entsoe_fms" else []
+        )
+
+    tables = [
+        GapfillRuntimeTableItem(
+            table_name=table.table_name,
+            value_columns_label=", ".join(table.value_columns),
+            groupby_columns_label=", ".join(table.groupby_columns),
+            selected=table.table_name in selected_names,
+        )
+        for table in supported_tables
+    ]
+
+    return GapfillRuntimeView(
+        crawler_name=crawler_name,
+        supported=bool(supported_tables),
+        source_schema=source_schema,
+        target_schema=target_schema,
+        script_enabled=GAPFILL_POSTRUN_SCRIPT in scripts,
+        gapfill_enabled=bool(
+            effective_gapfill.get("enable", False) if effective_gapfill else False
+        ),
+        method=str(effective_gapfill.get("method") or "donor_refined"),
+        candidate_periods_label=_format_period_config(
+            effective_gapfill.get("candidate_periods"), fallback="24h, 7d"
+        ),
+        donor_context_periods=int(effective_gapfill.get("donor_context_periods", 6)),
+        donor_search_radius_label=str(
+            effective_gapfill.get("donor_search_radius") or "28d"
+        ),
+        refinement_periods=int(effective_gapfill.get("refinement_periods", 3)),
+        max_gap_periods=int(effective_gapfill.get("max_gap_periods", 24)),
+        lookback_label=str(effective_gapfill.get("lookback") or "7d"),
+        fail_on_table_error=bool(effective_gapfill.get("fail_on_table_error", True)),
+        tables=tables,
+        post_run_scripts=scripts,
+        dashboard_name=GAPFILL_DASHBOARD_NAME if supported_tables else None,
+    )
+
+
 def _build_error_metrics(result: HoldoutTestResult) -> list[GapfillErrorMetric]:
     return [
         GapfillErrorMetric("MAE", _format_optional_number(result.mean_absolute_error)),
-        GapfillErrorMetric("RMSE", _format_optional_number(result.root_mean_squared_error)),
-        GapfillErrorMetric("Max abs.", _format_optional_number(result.max_absolute_error)),
-        GapfillErrorMetric("MAPE", _format_optional_number(result.mean_absolute_percentage_error, suffix="%")),
-        GapfillErrorMetric("Compared", f"{result.compared_points} / {result.expected_points}"),
+        GapfillErrorMetric(
+            "RMSE", _format_optional_number(result.root_mean_squared_error)
+        ),
+        GapfillErrorMetric(
+            "Max abs.", _format_optional_number(result.max_absolute_error)
+        ),
+        GapfillErrorMetric(
+            "MAPE",
+            _format_optional_number(result.mean_absolute_percentage_error, suffix="%"),
+        ),
+        GapfillErrorMetric(
+            "Compared", f"{result.compared_points} / {result.expected_points}"
+        ),
         GapfillErrorMetric("Filled", str(result.actual_filled)),
     ]
 
@@ -229,10 +359,18 @@ def _build_charts(series: pd.DataFrame) -> list[GapfillChart]:
         charts.append(
             GapfillChart(
                 test_name=test_name,
-                truth_segments=_build_segments(truth_frame, start_time, end_time, y_min, y_span),
-                source_segments=_build_segments(source_frame, start_time, end_time, y_min, y_span),
-                gapfilled_segments=_build_segments(gapfilled_frame, start_time, end_time, y_min, y_span),
-                filled_markers=_build_markers(filled_frame, start_time, end_time, y_min, y_span),
+                truth_segments=_build_segments(
+                    truth_frame, start_time, end_time, y_min, y_span
+                ),
+                source_segments=_build_segments(
+                    source_frame, start_time, end_time, y_min, y_span
+                ),
+                gapfilled_segments=_build_segments(
+                    gapfilled_frame, start_time, end_time, y_min, y_span
+                ),
+                filled_markers=_build_markers(
+                    filled_frame, start_time, end_time, y_min, y_span
+                ),
                 start_label=_format_timestamp(start_time),
                 end_label=_format_timestamp(end_time),
                 y_min_label=_format_number(y_min),
@@ -261,7 +399,16 @@ def _build_segments(
                 segments.append(" ".join(current_points))
             current_points = []
             continue
-        current_points.append(_point_string(pd.Timestamp(row["time"]), float(value), start_time, end_time, y_min, y_span))
+        current_points.append(
+            _point_string(
+                pd.Timestamp(row["time"]),
+                float(value),
+                start_time,
+                end_time,
+                y_min,
+                y_span,
+            )
+        )
 
     if len(current_points) > 1:
         segments.append(" ".join(current_points))
@@ -331,6 +478,17 @@ def _format_candidate_periods(periods: tuple[pd.Timedelta, ...] | None) -> str:
     if not periods:
         return "-"
     return ", ".join(_format_timedelta(period) for period in periods)
+
+
+def _format_period_config(value: object, *, fallback: str = "-") -> str:
+    if value is None:
+        return fallback
+    if isinstance(value, str | int | float):
+        return str(value)
+    if isinstance(value, tuple | list):
+        parts = [str(item).strip() for item in value if str(item).strip()]
+        return ", ".join(parts) if parts else fallback
+    return str(value)
 
 
 def _format_timedelta(value: pd.Timedelta) -> str:

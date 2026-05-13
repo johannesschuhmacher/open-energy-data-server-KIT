@@ -1,12 +1,5 @@
 from __future__ import annotations
 
-from contextlib import redirect_stderr, redirect_stdout
-from dataclasses import dataclass, field
-from datetime import datetime
-from importlib import import_module
-from inspect import isclass
-from pathlib import Path
-from typing import Any, Callable
 import io
 import json
 import logging
@@ -16,33 +9,66 @@ import subprocess
 import sys
 import threading
 import traceback
+from collections.abc import Callable
+from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import dataclass, field
+from datetime import datetime
+from importlib import import_module
+from inspect import isclass
+from pathlib import Path
+from typing import Any
 
-from crawler_admin.config_service import CrawlerOverview, get_crawler_overview, get_repo_root
+from crawler_admin.config_service import (
+    CrawlerOverview,
+    get_crawler_overview,
+    get_repo_root,
+)
 
 FMS_ACTIVE_DATA_ITEMS = (
-    ("AggregatedFillingRateOfWaterReservoirsAndHydroStoragePlants_16.1.D_r3", "AggregatedFillingRateOfWaterReservoirsAndHydroStoragePlants"),
+    (
+        "AggregatedFillingRateOfWaterReservoirsAndHydroStoragePlants_16.1.D_r3",
+        "AggregatedFillingRateOfWaterReservoirsAndHydroStoragePlants",
+    ),
     ("ActualTotalLoad_6.1.A_r3", "ActualTotalLoad"),
     ("DayAheadTotalLoadForecast_6.1.B_r3", "DayAheadTotalLoadForecast"),
-    ("ActualGenerationOutputPerGenerationUnit_16.1.A_r3", "ActualGenerationOutputPerGenerationUnit"),
+    (
+        "ActualGenerationOutputPerGenerationUnit_16.1.A_r3",
+        "ActualGenerationOutputPerGenerationUnit",
+    ),
     ("AggregatedGenerationPerType_16.1.B_C_r3", "AggregatedGenerationPerType"),
     ("CommercialSchedulesNetPositions_12.1.F_r3", "CommercialSchedulesNetPositions"),
     ("DayAheadAggregatedGeneration_14.1.C_r3", "DayAheadAggregatedGeneration"),
-    ("GenerationForecastsForWindAndSolar_14.1.D_r3", "GenerationForecastsForWindAndSolar"),
+    (
+        "GenerationForecastsForWindAndSolar_14.1.D_r3",
+        "GenerationForecastsForWindAndSolar",
+    ),
     ("EnergyPrices_12.1.D_r3", "EnergyPrices"),
     ("ExpansionAndDismantlingProjects_9.1_r3", "ExpansionAndDismantlingProjects"),
     ("ForecastedTransferCapacities_11.1_r3", "ForecastedTransferCapacities"),
-    ("InstalledGenerationCapacityPerProductionUnit_14.1.B_r3", "InstalledGenerationCapacityPerProductionUnit"),
-    ("InstalledGenerationCapacityAggregated_14.1.A_r3", "InstalledGenerationCapacityAggregated"),
+    (
+        "InstalledGenerationCapacityPerProductionUnit_14.1.B_r3",
+        "InstalledGenerationCapacityPerProductionUnit",
+    ),
+    (
+        "InstalledGenerationCapacityAggregated_14.1.A_r3",
+        "InstalledGenerationCapacityAggregated",
+    ),
     ("PhysicalFlows_12.1.G_r3", "PhysicalFlows"),
     ("ProductionAndGenerationUnits_r3", "ProductionAndGenerationUnits"),
     ("TotalCapacityAlreadyAllocated_12.1.C_r3", "TotalCapacityAlreadyAllocated"),
     ("TotalCapacityNominated_12.1.B_r3", "TotalCapacityNominated"),
     ("TotalLoadForecast_6.1.C_D_E_r3", "TotalLoadForecast"),
     ("TransmissionAssets_r3", "TransmissionAssets"),
-    ("UnavailabilityInTheTransmissionGrid_10.1.A_B_r3", "UnavailabilityInTheTransmissionGrid"),
+    (
+        "UnavailabilityInTheTransmissionGrid_10.1.A_B_r3",
+        "UnavailabilityInTheTransmissionGrid",
+    ),
     ("UnavailabilityOfConsumptionUnits_7.1.A_B_r3", "UnavailabilityOfConsumptionUnits"),
     ("UnavailabilityOfOffshoreGrid_10.1.C_r3", "UnavailabilityOfOffshoreGrid"),
-    ("UnavailabilityOfProductionAndGenerationUnits_15.1.A_B_C_D_r3", "UnavailabilityOfProductionAndGenerationUnits"),
+    (
+        "UnavailabilityOfProductionAndGenerationUnits_15.1.A_B_C_D_r3",
+        "UnavailabilityOfProductionAndGenerationUnits",
+    ),
     ("UseOfTransferCapacity_12.1.A_r3", "UseOfTransferCapacity"),
     ("YearAheadForecastMargin_8.1_r3", "YearAheadForecastMargin"),
 )
@@ -232,7 +258,9 @@ class CrawlerRunService:
             )
             connection.commit()
 
-    def list_runs(self, crawler_name: str | None = None, limit: int = 20) -> list[RunRecord]:
+    def list_runs(
+        self, crawler_name: str | None = None, limit: int = 20
+    ) -> list[RunRecord]:
         query = """
             SELECT *
             FROM crawler_runs
@@ -318,13 +346,20 @@ class CrawlerRunService:
 
         if not overview.raw_config:
             raise ActionValidationError(
-                [f"Crawler '{crawler_name}' has no section in CRAWLER_CONFIG.yml and cannot be started from the admin UI."]
+                [
+                    f"Crawler '{crawler_name}' has no section in CRAWLER_CONFIG.yml and cannot be started from the admin UI."
+                ]
             )
 
-        definitions = {definition.action_id: definition for definition in self.get_action_definitions(overview)}
+        definitions = {
+            definition.action_id: definition
+            for definition in self.get_action_definitions(overview)
+        }
         definition = definitions.get(action_id)
         if definition is None:
-            raise ActionValidationError([f"Unknown action '{action_id}' for crawler '{crawler_name}'."])
+            raise ActionValidationError(
+                [f"Unknown action '{action_id}' for crawler '{crawler_name}'."]
+            )
 
         effective_config = dict(overview.effective_config)
 
@@ -377,11 +412,25 @@ class CrawlerRunService:
             )
 
         if action_id == "eurostat_range":
-            dataset_id = self._require_text(action_payload.get("dataset_id"), "Dataset id")
-            start_year = self._parse_int(action_payload.get("start_year"), field_label="Start year", minimum=1990, maximum=2100)
-            end_year = self._parse_int(action_payload.get("end_year"), field_label="End year", minimum=1990, maximum=2100)
+            dataset_id = self._require_text(
+                action_payload.get("dataset_id"), "Dataset id"
+            )
+            start_year = self._parse_int(
+                action_payload.get("start_year"),
+                field_label="Start year",
+                minimum=1990,
+                maximum=2100,
+            )
+            end_year = self._parse_int(
+                action_payload.get("end_year"),
+                field_label="End year",
+                minimum=1990,
+                maximum=2100,
+            )
             if end_year < start_year:
-                raise ActionValidationError(["End year must not be earlier than start year."])
+                raise ActionValidationError(
+                    ["End year must not be earlier than start year."]
+                )
 
             config_overrides = {
                 "dataset_id": dataset_id,
@@ -403,7 +452,9 @@ class CrawlerRunService:
 
         if action_id == "entsoe_targeted":
             target_items = self._ensure_list(action_payload.get("target_data_items"))
-            invalid_items = sorted(set(target_items) - {item for item, _ in FMS_ACTIVE_DATA_ITEMS})
+            invalid_items = sorted(
+                set(target_items) - {item for item, _ in FMS_ACTIVE_DATA_ITEMS}
+            )
             if invalid_items:
                 raise ActionValidationError(
                     [f"Unknown FMS data item(s): {', '.join(invalid_items)}."]
@@ -414,7 +465,11 @@ class CrawlerRunService:
                 config_overrides["target_data_items"] = target_items
                 effective_config["target_data_items"] = list(target_items)
 
-            selection_label = f"{len(target_items)} selected item(s)" if target_items else "all active items"
+            selection_label = (
+                f"{len(target_items)} selected item(s)"
+                if target_items
+                else "all active items"
+            )
             return PreparedAction(
                 crawler_name=crawler_name,
                 action_id=action_id,
@@ -439,13 +494,21 @@ class CrawlerRunService:
 
             if cadence != "single":
                 if not start_value or not end_value:
-                    raise ActionValidationError(["Backfill start and end are required for monthly and annual files."])
+                    raise ActionValidationError(
+                        [
+                            "Backfill start and end are required for monthly and annual files."
+                        ]
+                    )
                 self._validate_entsoe_backfill_range(data_item, start_value, end_value)
             else:
                 start_value = ""
                 end_value = ""
 
-            target_index = next(index for index, item in enumerate(name for name, _ in FMS_ACTIVE_DATA_ITEMS) if item == data_item)
+            target_index = next(
+                index
+                for index, item in enumerate(name for name, _ in FMS_ACTIVE_DATA_ITEMS)
+                if item == data_item
+            )
             payload = {
                 "data_item": data_item,
                 "start": start_value,
@@ -469,9 +532,13 @@ class CrawlerRunService:
                 executor=lambda crawler: self._run_entsoe_backfill(crawler, payload),
             )
 
-        raise ActionValidationError([f"No runtime handler registered for action '{action_id}'."])
+        raise ActionValidationError(
+            [f"No runtime handler registered for action '{action_id}'."]
+        )
 
-    def get_action_definitions(self, overview: CrawlerOverview) -> list[ActionDefinition]:
+    def get_action_definitions(
+        self, overview: CrawlerOverview
+    ) -> list[ActionDefinition]:
         effective_config = overview.effective_config
         actions = [
             ActionDefinition(
@@ -533,7 +600,9 @@ class CrawlerRunService:
                             label="Dataset id",
                             input_type="text",
                             required=True,
-                            default_value=effective_config.get("dataset_id", "nrg_inf_epcrw"),
+                            default_value=effective_config.get(
+                                "dataset_id", "nrg_inf_epcrw"
+                            ),
                         ),
                         ActionField(
                             name="start_year",
@@ -551,7 +620,9 @@ class CrawlerRunService:
                             required=True,
                             min_value=1990,
                             max_value=2100,
-                            default_value=effective_config.get("end_year", datetime.now().year),
+                            default_value=effective_config.get(
+                                "end_year", datetime.now().year
+                            ),
                         ),
                     ],
                 )
@@ -574,7 +645,9 @@ class CrawlerRunService:
                             label="Target data items",
                             input_type="multiselect",
                             options=[
-                                ActionOption(value=item_name, label=f"{table_name} ({item_name})")
+                                ActionOption(
+                                    value=item_name, label=f"{table_name} ({item_name})"
+                                )
                                 for item_name, table_name in FMS_ACTIVE_DATA_ITEMS
                             ],
                             help_text="Leave the selection empty to process the full active item list.",
@@ -628,7 +701,13 @@ class CrawlerRunService:
     def get_run_log_tail(self, run_id: int, lines: int = 200) -> dict[str, Any]:
         record = self.get_run(run_id)
         if record is None:
-            return {"text": "", "line_count": 0, "status": "missing", "summary": None, "error_message": "Run not found."}
+            return {
+                "text": "",
+                "line_count": 0,
+                "status": "missing",
+                "summary": None,
+                "error_message": "Run not found.",
+            }
 
         log_path = Path(record.log_path)
         if not log_path.exists():
@@ -650,7 +729,9 @@ class CrawlerRunService:
             "error_message": record.error_message,
         }
 
-    def _create_run_record(self, prepared: PreparedAction, *, trigger_source: str) -> int:
+    def _create_run_record(
+        self, prepared: PreparedAction, *, trigger_source: str
+    ) -> int:
         created_at = self._utc_now()
         placeholder_name = f"run-pending-{prepared.crawler_name}-{created_at.replace(':', '').replace('-', '')}.log"
         placeholder_path = str((self.logs_dir / placeholder_name).resolve())
@@ -683,7 +764,9 @@ class CrawlerRunService:
                 ),
             )
             run_id = int(cursor.lastrowid)
-            final_log_path = str((self.logs_dir / f"{prepared.crawler_name}-{run_id}.log").resolve())
+            final_log_path = str(
+                (self.logs_dir / f"{prepared.crawler_name}-{run_id}.log").resolve()
+            )
             connection.execute(
                 "UPDATE crawler_runs SET log_path = ? WHERE run_id = ?",
                 (final_log_path, run_id),
@@ -705,8 +788,12 @@ class CrawlerRunService:
             connection.commit()
 
         root_logger = logging.getLogger()
-        root_handler = logging.StreamHandler(log_path.open("a", encoding="utf-8", newline=""))
-        formatter = logging.Formatter("[%(asctime)s] %(levelname)-8s %(message)s", "%Y-%m-%d %H:%M:%S")
+        root_handler = logging.StreamHandler(
+            log_path.open("a", encoding="utf-8", newline="")
+        )
+        formatter = logging.Formatter(
+            "[%(asctime)s] %(levelname)-8s %(message)s", "%Y-%m-%d %H:%M:%S"
+        )
         root_handler.setFormatter(formatter)
         previous_level = root_logger.level
         if previous_level == logging.NOTSET or previous_level > logging.INFO:
@@ -726,11 +813,23 @@ class CrawlerRunService:
                     print(f"[CRAWLER] {prepared.crawler_name}")
                     print(f"[STARTED] {started_at}")
                     if prepared.config_overrides:
-                        print("[OVERRIDES] " + json.dumps(prepared.config_overrides, ensure_ascii=True, indent=2))
+                        print(
+                            "[OVERRIDES] "
+                            + json.dumps(
+                                prepared.config_overrides, ensure_ascii=True, indent=2
+                            )
+                        )
                     if prepared.action_payload:
-                        print("[PAYLOAD] " + json.dumps(prepared.action_payload, ensure_ascii=True, indent=2))
+                        print(
+                            "[PAYLOAD] "
+                            + json.dumps(
+                                prepared.action_payload, ensure_ascii=True, indent=2
+                            )
+                        )
 
-                    crawler = self._build_crawler_instance(prepared.crawler_name, prepared.effective_config)
+                    crawler = self._build_crawler_instance(
+                        prepared.crawler_name, prepared.effective_config
+                    )
                     result_summary = prepared.executor(crawler)
                     if prepared.run_post_scripts:
                         self._run_post_scripts(prepared.effective_config, handle)
@@ -764,7 +863,14 @@ class CrawlerRunService:
                         error_message = ?
                     WHERE run_id = ?
                     """,
-                    (status, finished_at, duration_seconds, summary, error_message, run_id),
+                    (
+                        status,
+                        finished_at,
+                        duration_seconds,
+                        summary,
+                        error_message,
+                        run_id,
+                    ),
                 )
                 connection.commit()
 
@@ -789,7 +895,9 @@ class CrawlerRunService:
             return f"Backfill completed for {payload['data_item']}."
         return f"Backfill completed for {payload['data_item']} from {payload['start']} to {payload['end']}."
 
-    def _run_post_scripts(self, effective_config: dict[str, Any], handle: io.TextIOBase) -> None:
+    def _run_post_scripts(
+        self, effective_config: dict[str, Any], handle: io.TextIOBase
+    ) -> None:
         scripts = effective_config.get("post_run_scripts")
         if not isinstance(scripts, list) or not scripts:
             return
@@ -806,19 +914,29 @@ class CrawlerRunService:
                 check=False,
             )
             if completed.returncode != 0:
-                raise RuntimeError(f"Post-run script '{script}' exited with code {completed.returncode}.")
+                raise RuntimeError(
+                    f"Post-run script '{script}' exited with code {completed.returncode}."
+                )
 
-    def _build_crawler_instance(self, crawler_name: str, effective_config: dict[str, Any]) -> Any:
-        from crawler.common.base_crawler import BaseCrawler
+    def _build_crawler_instance(
+        self, crawler_name: str, effective_config: dict[str, Any]
+    ) -> Any:
+        from crawler_core.base import BaseCrawler
 
         crawler_module = import_module(f"crawler.{crawler_name}")
 
         for module_element_name in dir(crawler_module):
             crawler_class = getattr(crawler_module, module_element_name)
-            if isclass(crawler_class) and issubclass(crawler_class, BaseCrawler) and crawler_class is not BaseCrawler:
+            if (
+                isclass(crawler_class)
+                and issubclass(crawler_class, BaseCrawler)
+                and crawler_class is not BaseCrawler
+            ):
                 return crawler_class(crawler_name, effective_config)
 
-        raise RuntimeError(f"No BaseCrawler subclass found in crawler module '{crawler_name}'.")
+        raise RuntimeError(
+            f"No BaseCrawler subclass found in crawler module '{crawler_name}'."
+        )
 
     def _row_to_record(self, row: sqlite3.Row) -> RunRecord:
         return RunRecord(
@@ -831,7 +949,9 @@ class CrawlerRunService:
             created_at=str(row["created_at"]),
             started_at=row["started_at"],
             finished_at=row["finished_at"],
-            duration_seconds=float(row["duration_seconds"]) if row["duration_seconds"] is not None else None,
+            duration_seconds=float(row["duration_seconds"])
+            if row["duration_seconds"] is not None
+            else None,
             log_path=str(row["log_path"]),
             summary=row["summary"],
             error_message=row["error_message"],
@@ -889,12 +1009,16 @@ class CrawlerRunService:
                 parts.append(candidate)
         return parts
 
-    def _filter_weather_locations(self, overview: CrawlerOverview, location_ids: list[str]) -> list[dict[str, Any]]:
+    def _filter_weather_locations(
+        self, overview: CrawlerOverview, location_ids: list[str]
+    ) -> list[dict[str, Any]]:
         try:
             from crawler.weather_forecast import WeatherForecastCrawler
         except Exception as exc:
             raise ActionValidationError(
-                [f"Weather location filtering is unavailable because the weather module could not be imported: {exc}."]
+                [
+                    f"Weather location filtering is unavailable because the weather module could not be imported: {exc}."
+                ]
             ) from exc
 
         available_locations = overview.effective_config.get("locations")
@@ -908,7 +1032,8 @@ class CrawlerRunService:
                 (
                     location
                     for location in available_locations
-                    if isinstance(location, dict) and str(location.get("location_id")) == location_id
+                    if isinstance(location, dict)
+                    and str(location.get("location_id")) == location_id
                 ),
                 None,
             )
@@ -923,7 +1048,9 @@ class CrawlerRunService:
             )
 
         if not selected_locations:
-            raise ActionValidationError(["At least one weather location must be selected."])
+            raise ActionValidationError(
+                ["At least one weather location must be selected."]
+            )
 
         return selected_locations
 
@@ -934,7 +1061,9 @@ class CrawlerRunService:
             return "annual"
         return "monthly"
 
-    def _validate_entsoe_backfill_range(self, data_item: str, start_value: str, end_value: str) -> None:
+    def _validate_entsoe_backfill_range(
+        self, data_item: str, start_value: str, end_value: str
+    ) -> None:
         from datetime import datetime as dt
 
         cadence = self._get_entsoe_backfill_cadence(data_item)
@@ -950,7 +1079,9 @@ class CrawlerRunService:
             ) from exc
 
         if end_dt < start_dt:
-            raise ActionValidationError(["Backfill end must not be earlier than start."])
+            raise ActionValidationError(
+                ["Backfill end must not be earlier than start."]
+            )
 
     def _duration_seconds(self, started_at: str, finished_at: str) -> float:
         start_dt = datetime.fromisoformat(started_at)
