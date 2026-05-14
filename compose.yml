@@ -154,7 +154,7 @@ services:
       - "${OEDS_PORTAINER_HTTPS_PORT:-9443}:9443"
 
   portainer_agent:
-    image: portainer/agent:2.39.1
+    image: portainer/agent:2.39.2
     container_name: portainer_agent
     profiles:
       - ops
