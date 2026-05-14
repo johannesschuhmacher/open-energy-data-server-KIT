@@ -99,7 +99,7 @@ services:
         condition: service_healthy
 
   open-postgrest:
-    image: postgrest/postgrest:v14.10
+    image: postgrest/postgrest:v14.11
     container_name: postgrest
     restart: always
     environment:
