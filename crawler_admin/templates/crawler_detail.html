@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}{{ overview.crawler_name }} | OEDS Crawler Control{% endblock %}
 
@@ -296,7 +296,7 @@
             <input type="hidden" name="base_hash" value="{{ base_hash }}" />
 
             <div class="studio-form-grid">
-              <label class="field-block">
+              <label class="field-block field-block--toggle">
                 <span class="field-label-row">
                   <span class="field-label">Run gapfill after crawler</span>
                   <span class="help-tip" tabindex="0" data-tip="Controls whether scripts/gapfill_timeseries.py is attached to the crawler's post_run_scripts. If this is off, no productive gapfill script runs after a crawler run, regardless of the table selection.">?</span>
@@ -304,7 +304,7 @@
                 <input type="checkbox" name="script_enabled" value="1" {% if gapfill_values.script_enabled == "true" %}checked{% endif %} />
               </label>
 
-              <label class="field-block">
+              <label class="field-block field-block--toggle">
                 <span class="field-label-row">
                   <span class="field-label">Enable table processing</span>
                   <span class="help-tip" tabindex="0" data-tip="Controls gapfill.enable. If this is off while the post-run script stays on, the script starts but records the gapfill job as disabled and does not process or write selected tables.">?</span>
@@ -385,7 +385,7 @@
                   <input type="number" name="refinement_periods" min="0" value="{{ gapfill_values.refinement_periods }}" />
                 </label>
 
-                <label class="field-block">
+                <label class="field-block field-block--toggle">
                   <span class="field-label-row">
                     <span class="field-label">Fail on table error</span>
                     <span class="help-tip" tabindex="0" data-tip="If enabled, any table error makes the gapfill run fail. If disabled, other selected tables can still complete and the run is marked partial.">?</span>
@@ -420,11 +420,11 @@
                       />
                       <span class="sr-only">Include {{ item.table_name }}</span>
                     </label>
-                    <span class="gapfill-table-option__body">
-                      <span class="gapfill-table-option__head">
+                    <div class="gapfill-table-option__body">
+                      <div class="gapfill-table-option__head">
                         <strong>{{ item.table_name }}</strong>
                         <span class="gapfill-table-status gapfill-table-status--{{ item.database_status }}">{{ item.database_status_label }}</span>
-                      </span>
+                      </div>
                       <span>Values: {{ item.value_columns_label }}</span>
                       <span>Groups: {{ item.groupby_columns_label }}</span>
                       <label class="gapfill-table-method" for="gapfill-table-method-{{ loop.index }}">
@@ -439,7 +439,7 @@
                           {% endfor %}
                         </select>
                       </label>
-                    </span>
+                    </div>
                   </article>
                 {% endfor %}
               </div>

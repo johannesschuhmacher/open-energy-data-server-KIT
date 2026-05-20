@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #eef2f7;
   --bg-strong: #d9e2ee;
   --surface: rgba(255, 255, 255, 0.98);
@@ -2063,6 +2063,27 @@ button {
   margin-bottom: 14px;
 }
 
+.studio-form-grid > .field-block {
+  margin-bottom: 0;
+}
+
+.field-block--toggle {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid rgba(71, 85, 105, 0.16);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.field-block--toggle input[type="checkbox"] {
+  justify-self: end;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
 .field-help {
   font-size: 0.84rem;
   color: var(--muted);
@@ -2250,15 +2271,32 @@ select[multiple] {
 .gapfill-table-selector {
   display: grid;
   gap: 14px;
+  min-width: 0;
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.55);
 }
 
+.gapfill-table-selector .panel-heading {
+  align-items: start;
+  margin-bottom: 0;
+}
+
+.gapfill-table-selector .panel-heading h4,
+.gapfill-table-selector .panel-heading .eyebrow,
+.gapfill-table-selector > .subtle-note {
+  margin-bottom: 0;
+}
+
+.gapfill-table-selector .panel-heading h4 {
+  margin-top: 4px;
+}
+
 .gapfill-table-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
   gap: 12px;
 }
 
@@ -2267,6 +2305,8 @@ select[multiple] {
   grid-template-columns: auto 1fr;
   gap: 12px;
   align-items: start;
+  min-width: 0;
+  width: 100%;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -2284,29 +2324,35 @@ select[multiple] {
 .gapfill-table-option__body {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .gapfill-table-option__head {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
 
 .gapfill-table-option__body strong {
+  min-width: 0;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .gapfill-table-option__body span {
   color: var(--muted);
   font-size: 0.84rem;
   line-height: 1.4;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .gapfill-table-status {
   display: inline-flex;
   align-items: center;
+  justify-self: end;
+  white-space: nowrap;
   min-height: 24px;
   padding: 4px 8px;
   border-radius: 999px;
@@ -2333,7 +2379,13 @@ select[multiple] {
 .gapfill-table-method {
   display: grid;
   gap: 6px;
+  min-width: 0;
   margin-top: 4px;
+}
+
+.gapfill-table-method select {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .gapfill-table-method .field-label {
@@ -2490,12 +2542,21 @@ input[type="search"] {
   .studio-panel {
     position: static;
   }
+
+  .gapfill-table-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
   .app-shell {
-    width: min(100% - 18px, 1440px);
+    width: min(100% - 32px, 1440px);
     margin: 12px auto 24px;
+  }
+
+  .panel,
+  .crawler-card {
+    padding: 16px;
   }
 
   .topbar {
@@ -2531,6 +2592,51 @@ input[type="search"] {
   .notice-bar {
     flex-direction: column;
     align-items: start;
+  }
+
+  .gapfill-table-selector {
+    max-width: 100%;
+    overflow: hidden;
+    padding: 12px;
+  }
+
+  .gapfill-table-selector .panel-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gapfill-table-selector .panel-heading .button {
+    width: fit-content;
+  }
+
+  .gapfill-table-option {
+    position: relative;
+    display: block;
+    gap: 10px;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 12px;
+  }
+
+  .gapfill-table-option__check {
+    position: absolute;
+    top: 14px;
+    left: 12px;
+    margin: 0;
+  }
+
+  .gapfill-table-option__body {
+    padding-left: 28px;
+    max-width: 100%;
+  }
+
+  .gapfill-table-option__head {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .gapfill-table-status {
+    justify-self: start;
   }
 
   .stat-grid,
