@@ -40,6 +40,7 @@ Important options:
 - `schema_name`
 - `database_uri`
 - `dataset_id`
+- `table_name` (optional explicit override)
 - `start_year`
 - `end_year`
 
@@ -58,9 +59,13 @@ eurostat_crawler:
 
 The crawler writes to schema `eurostat`.
 
-Current table:
+Current default table:
 
 - `eurostat`
+
+If `dataset_id` is changed away from the legacy default `nrg_inf_epcrw`, the
+crawler writes to `eurostat_<dataset_id>` after identifier sanitization, unless
+`table_name` is set explicitly.
 
 The table is keyed by a unique constraint across:
 
@@ -84,8 +89,10 @@ Typical uses are:
 
 ## Operational notes
 
-- The table name is currently fixed to `eurostat`, even though the crawler can
-  target different datasets through `dataset_id`.
+- The legacy default dataset `nrg_inf_epcrw` keeps the historical table name
+  `eurostat` so existing downstream SQL does not break.
+- Alternative compatible dataset ids are isolated into dataset-specific table
+  names unless `table_name` overrides that behavior.
 - The crawler reshapes wide year columns into a long format before writing to
   PostgreSQL.
 - The requested `start_year` and `end_year` window is intersected with the year

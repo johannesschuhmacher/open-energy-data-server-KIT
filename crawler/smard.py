@@ -13,7 +13,8 @@ from datetime import timedelta
 
 import pandas as pd
 import requests
-from sqlalchemy import text
+from sqlalchemy import MetaData, Table, text
+from sqlalchemy.dialects.postgresql import insert
 
 from crawler.common.base_crawler import BaseCrawler
 
@@ -37,6 +38,8 @@ metadata_info = {
 class SmardCrawler(BaseCrawler):
     def __init__(self, crawler_name, config):
         super().__init__(crawler_name, config)
+        self.schema_name = self.get("schema_name")
+        self._table_cache: dict[str, Table] = {}
         configured_start = self.config.get("default_start_date", DEFAULT_START_DATE)
         self.default_start_date = pd.Timestamp(configured_start)
         if self.default_start_date.tzinfo is None:
@@ -79,6 +82,49 @@ class SmardCrawler(BaseCrawler):
             log.info("created hypertable prices")
         except Exception as e:
             log.error(f"could not create hypertable: {e}")
+
+    def _get_table(self, table_name: str) -> Table:
+        if table_name not in self._table_cache:
+            self._table_cache[table_name] = Table(
+                table_name,
+                MetaData(),
+                schema=self.schema_name,
+                autoload_with=self.engine,
+            )
+        return self._table_cache[table_name]
+
+    @staticmethod
+    def _build_upsert_statement(
+        table: Table,
+        rows: list[dict],
+        update_columns: tuple[str, ...],
+    ):
+        statement = insert(table).values(rows)
+        return statement.on_conflict_do_update(
+            index_elements=["timestamp", "commodity_id"],
+            set_={
+                column_name: statement.excluded[column_name]
+                for column_name in update_columns
+            },
+        )
+
+    def _write_rows(
+        self,
+        table_name: str,
+        data_to_write: pd.DataFrame,
+        update_columns: tuple[str, ...],
+    ) -> None:
+        rows = data_to_write.to_dict(orient="records")
+        if not rows:
+            return
+
+        statement = self._build_upsert_statement(
+            self._get_table(table_name),
+            rows,
+            update_columns,
+        )
+        with self.engine.begin() as conn:
+            conn.execute(statement)
 
     def get_data_per_commodity(self):
         keys = {
@@ -187,13 +233,9 @@ class SmardCrawler(BaseCrawler):
             # log.debug(df_for_commodity)
             # check if commodity_id is == 4169 then it isprice data
             if df_for_commodity.index.get_level_values("commodity_id")[0] == 4169:
-                with self.engine.begin() as conn:
-                    # TODO: find a not to append the data multiple times
-                    # eg use unque constraint on timestamp and commodity_id and use on_conflict_do_nothing or do update
-                    data_to_write.to_sql("prices", con=conn, if_exists="append", schema=self.get('schema_name'), index=False)
+                self._write_rows("prices", data_to_write, ("price",))
             else:
-                with self.engine.begin() as conn:
-                    data_to_write.to_sql("smard", con=conn, if_exists="append", schema=self.get('schema_name'), index=False)
+                self._write_rows("smard", data_to_write, ("commodity_name", "mwh"))
 
     def run(self):
         self.logger.info("SMARD crawler started.")
@@ -204,18 +246,21 @@ class SmardCrawler(BaseCrawler):
 
 
 def main(schema_name):
-    ec = SmardCrawler('smard', {
-        'database_uri': 'postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path=',
-        'schema_name': schema_name,
-    })
+    ec = SmardCrawler(
+        "smard",
+        {
+            "database_uri": "postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path=",
+            "schema_name": schema_name,
+        },
+    )
     ec.run()
 
 
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.DEBUG,
-        format='[%(asctime)s] %(levelname)-8s [%(filename)s:%(lineno)d] :: %(message)s',
-        datefmt='%Y-%m-%dT%H:%M:%S',
+        format="[%(asctime)s] %(levelname)-8s [%(filename)s:%(lineno)d] :: %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
     )
     # db_uri = 'sqlite:///./data/smard.db'
     main("smard")

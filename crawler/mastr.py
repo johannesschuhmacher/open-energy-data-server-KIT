@@ -2,16 +2,15 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+import logging
 from io import BytesIO
 from zipfile import ZipFile
 
 import pandas as pd
 import requests
 from sqlalchemy import text
-import logging
 
 from crawler.common.base_crawler import BaseCrawler
-
 
 metadata_info = {
     "schema_name": "mastr",
@@ -37,18 +36,6 @@ id_fields = [
 class MastrCrawler(BaseCrawler):
     def __init__(self, crawler_name, config):
         super().__init__(crawler_name, config)
-        # self.init_database() #TODO: what is database argument?
-
-    # in the original mastr crawler this method is never called
-    # def init_database(self, database):
-    #     with self.engine.begin() as conn:
-    #         query = text(f"DROP DATABASE IF EXISTS {database}")
-    #         conn.execution_options(isolation_level="AUTOCOMMIT").execute(query)
-
-    #         query = text(f"CREATE DATABASE {database}")
-    #         conn.execution_options(isolation_level="AUTOCOMMIT").execute(query)
-
-    #     self.logger.info("initialize database")
 
     def get_data_from_mastr(self, data_url):
         response = requests.get(data_url)
@@ -66,7 +53,7 @@ class MastrCrawler(BaseCrawler):
         # https://www.marktstammdatenregister.de/MaStRHilfe/files/webdienst/Funktionen_MaStR_Webdienste_V23.2.112.html
         # Dynamische Katalogwerte sind in Tabelle "Katalogkategorien" und "Katalogwerte"
         # base_url = "https://download.marktstammdatenregister.de/Gesamtdatenexport"
-        base_url = self.get('base_download_url')
+        base_url = self.get("base_download_url")
 
         response = requests.get(
             "https://www.marktstammdatenregister.de/MaStR/Datendownload"
@@ -131,7 +118,9 @@ class MastrCrawler(BaseCrawler):
 
         for table_name, pk in tables.items():
             if str(self.engine.url).startswith("sqlite:/"):
-                query = f"CREATE UNIQUE INDEX idx_{table_name}_{pk} ON {table_name}({pk});"
+                query = (
+                    f"CREATE UNIQUE INDEX idx_{table_name}_{pk} ON {table_name}({pk});"
+                )
             else:
                 query = f'ALTER TABLE "{table_name}" ADD PRIMARY KEY ("{pk}");'
             try:
@@ -148,17 +137,17 @@ class MastrCrawler(BaseCrawler):
 
 def main():
     config = {
-        'schema_name': 'mastr',
-        'base_download_url': "https://download.marktstammdatenregister.de/Gesamtdatenexport",
-        'database_uri': "postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path=",
+        "schema_name": "mastr",
+        "base_download_url": "https://download.marktstammdatenregister.de/Gesamtdatenexport",
+        "database_uri": "postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path=",
     }
-    crawler = MastrCrawler('mastr', config)
+    crawler = MastrCrawler("mastr", config)
     crawler.run()
 
 
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.DEBUG,
-        format='[%(asctime)s]:%(name)s:%(levelname)s :: %(message)s'
+        format="[%(asctime)s]:%(name)s:%(levelname)s :: %(message)s",
     )
     main()
