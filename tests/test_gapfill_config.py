@@ -65,6 +65,35 @@ entsoe_fms:
         self.assertEqual(job.tables[0].donor_search_radius.components.days, 7)
         self.assertEqual(caught, [])
 
+    def test_load_job_applies_table_specific_methods(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "CRAWLER_CONFIG.yml"
+            config_path.write_text(
+                """
+default:
+  database_uri: "postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path="
+entsoe_fms:
+  schema_name: "entsoe_fms"
+  gapfill:
+    enable: true
+    method: "donor_refined"
+    tables:
+      - "ActualTotalLoad"
+      - "EnergyPrices"
+    table_methods:
+      ActualTotalLoad: "linear"
+      EnergyPrices: "donor_match"
+""".strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            job = load_job_from_crawler_config(config_path, job_name="entsoe_fms")
+
+        methods = {table.table_name: table.method for table in job.tables}
+        self.assertEqual(methods["ActualTotalLoad"], "linear")
+        self.assertEqual(methods["EnergyPrices"], "donor_match")
+
     def test_update_gapfill_config_text_updates_script_and_tables(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
@@ -100,6 +129,10 @@ entsoe_fms:
                 enabled=True,
                 script_enabled=True,
                 selected_tables=["EnergyPrices", "PhysicalFlows"],
+                table_methods={
+                    "EnergyPrices": "linear",
+                    "PhysicalFlows": "donor_refined",
+                },
                 target_schema="entsoe_fms_gapfilled",
                 method="donor_refined",
                 candidate_periods=["24h", "7d"],
@@ -119,6 +152,9 @@ entsoe_fms:
         self.assertIn('method: "donor_refined"', updated)
         self.assertIn('      - "EnergyPrices"', updated)
         self.assertIn('      - "PhysicalFlows"', updated)
+        self.assertIn('table_methods:', updated)
+        self.assertIn('    "EnergyPrices": "linear"', updated)
+        self.assertIn('    "PhysicalFlows": "donor_refined"', updated)
 
     def test_runtime_view_marks_selected_tables(self) -> None:
         view = build_gapfill_runtime_view(
@@ -144,6 +180,10 @@ entsoe_fms:
                     "method": "donor_refined",
                     "candidate_periods": ["24h", "7d"],
                     "tables": ["ActualTotalLoad", "EnergyPrices"],
+                    "table_methods": {
+                        "ActualTotalLoad": "linear",
+                        "EnergyPrices": "donor_refined",
+                    },
                 },
             },
         )
@@ -154,6 +194,9 @@ entsoe_fms:
         self.assertEqual(view.selected_table_count, 2)
         selected_names = {item.table_name for item in view.tables if item.selected}
         self.assertEqual(selected_names, {"ActualTotalLoad", "EnergyPrices"})
+        methods = {item.table_name: item.method for item in view.tables}
+        self.assertEqual(methods["ActualTotalLoad"], "linear")
+        self.assertEqual(methods["EnergyPrices"], "donor_refined")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}{{ overview.crawler_name }} | OEDS Crawler Control{% endblock %}
 
@@ -207,6 +207,255 @@
           </dl>
         </article>
       </div>
+
+      {% if gapfill_errors %}
+        <section class="flash flash--error">
+          <strong>The gapfill settings could not be saved.</strong>
+          <ul class="stack-list">
+            {% for error in gapfill_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+
+      <section class="panel gapfill-ops-panel" id="gapfill-operations">
+        <div class="panel-heading panel-heading--stack">
+          <div>
+            <p class="eyebrow">Derived data</p>
+            <h3>Gapfill Operations</h3>
+          </div>
+          <p class="subtle-note">
+            Raw tables stay in <code>{{ gapfill_view.source_schema }}</code>. Gapfilled copies, run metrics, self-test results, and holdout QA data are written to <code>{{ gapfill_view.target_schema }}</code>.
+            {% if gapfill_view.dashboard_name %}
+              Grafana reads that derived schema in the dashboard <strong>{{ gapfill_view.dashboard_name }}</strong>.
+            {% endif %}
+          </p>
+        </div>
+
+        {% if gapfill_view.supported %}
+          <div class="settings-grid">
+            <article class="settings-card">
+              <span class="fleet-summary__label">Runtime</span>
+              <strong>
+                {% if gapfill_view.script_enabled %}
+                  Post-run gapfill active
+                {% else %}
+                  Gapfill script disabled
+                {% endif %}
+              </strong>
+              <dl class="detail-list detail-list--compact">
+                <div>
+                  <dt>Source schema</dt>
+                  <dd><code>{{ gapfill_view.source_schema }}</code></dd>
+                </div>
+                <div>
+                  <dt>Target schema</dt>
+                  <dd><code>{{ gapfill_view.target_schema }}</code></dd>
+                </div>
+                <div>
+                  <dt>Selected tables</dt>
+                  <dd>{{ gapfill_view.selected_table_count }} / {{ gapfill_view.tables|length }}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="settings-card">
+              <span class="fleet-summary__label">Default method</span>
+              <strong>{{ gapfill_view.method }}</strong>
+              <dl class="detail-list detail-list--compact">
+                <div>
+                  <dt>Candidate periods</dt>
+                  <dd>{{ gapfill_view.candidate_periods_label }}</dd>
+                </div>
+                <div>
+                  <dt>Search radius</dt>
+                  <dd>{{ gapfill_view.donor_search_radius_label }}</dd>
+                </div>
+                <div>
+                  <dt>Max gap periods</dt>
+                  <dd>{{ gapfill_view.max_gap_periods }}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="settings-card">
+              <span class="fleet-summary__label">QA and visibility</span>
+              <strong>Algorithm tests are separate</strong>
+              <p class="subtle-note">
+                Use Gapfill Tests for synthetic self-tests and holdout checks. Use the form below for the productive tables that should be gapfilled after crawler runs.
+              </p>
+              <div class="settings-card__actions">
+                <a href="/admin/gapfill" class="button button--secondary button--small">Open Gapfill Tests</a>
+              </div>
+            </article>
+          </div>
+
+          <form method="post" action="/admin/crawlers/{{ overview.crawler_name }}/gapfill" class="gapfill-config-form">
+            <input type="hidden" name="redirect_to" value="/admin/crawlers/{{ overview.crawler_name }}" />
+            <input type="hidden" name="base_hash" value="{{ base_hash }}" />
+
+            <div class="studio-form-grid">
+              <label class="field-block">
+                <span class="field-label-row">
+                  <span class="field-label">Run gapfill after crawler</span>
+                  <span class="help-tip" tabindex="0" data-tip="Controls whether scripts/gapfill_timeseries.py is attached to the crawler's post_run_scripts. If this is off, no productive gapfill script runs after a crawler run, regardless of the table selection.">?</span>
+                </span>
+                <input type="checkbox" name="script_enabled" value="1" {% if gapfill_values.script_enabled == "true" %}checked{% endif %} />
+              </label>
+
+              <label class="field-block">
+                <span class="field-label-row">
+                  <span class="field-label">Enable table processing</span>
+                  <span class="help-tip" tabindex="0" data-tip="Controls gapfill.enable. If this is off while the post-run script stays on, the script starts but records the gapfill job as disabled and does not process or write selected tables.">?</span>
+                </span>
+                <input type="checkbox" name="gapfill_enabled" value="1" {% if gapfill_values.gapfill_enabled == "true" %}checked{% endif %} />
+              </label>
+
+              <label class="field-block">
+                <span class="field-label-row">
+                  <span class="field-label">Target schema</span>
+                  <span class="help-tip" tabindex="0" data-tip="PostgreSQL schema for derived gapfilled copies and gapfill metrics. Raw source tables remain unchanged in the source schema.">?</span>
+                </span>
+                <input type="text" name="target_schema" value="{{ gapfill_values.target_schema }}" />
+              </label>
+
+              <label class="field-block">
+                <span class="field-label-row">
+                  <span class="field-label">Default method</span>
+                  <span class="help-tip" tabindex="0" data-tip="Fallback gapfill algorithm used for tables that do not override their method in the table list below.">?</span>
+                </span>
+                <select name="method">
+                  {% for method in gapfill_methods %}
+                    <option value="{{ method }}" {% if gapfill_values.method == method %}selected{% endif %}>{{ method }}</option>
+                  {% endfor %}
+                </select>
+                <span class="field-help">Used as the default for supported tables. Individual tables can override it below.</span>
+              </label>
+
+              <label class="field-block">
+                <span class="field-label-row">
+                  <span class="field-label">Max gap periods</span>
+                  <span class="help-tip" tabindex="0" data-tip="Maximum consecutive missing timestamps or values to fill. A period is one inferred table interval, for example one hour for hourly data. Longer gaps are left open.">?</span>
+                </span>
+                <input type="number" name="max_gap_periods" min="1" value="{{ gapfill_values.max_gap_periods }}" />
+              </label>
+
+              <label class="field-block">
+                <span class="field-label-row">
+                  <span class="field-label">Lookback</span>
+                  <span class="help-tip" tabindex="0" data-tip="Extra history read before newly changed source rows on incremental runs. Larger values can repair context around updates but make post-run processing heavier. Use duration values such as 24h, 7d, or 28d.">?</span>
+                </span>
+                <input type="text" name="lookback" value="{{ gapfill_values.lookback }}" />
+              </label>
+            </div>
+
+            <details class="config-drawer">
+              <summary>Advanced gapfill settings</summary>
+              <div class="studio-form-grid">
+                <label class="field-block">
+                  <span class="field-label-row">
+                    <span class="field-label">Candidate periods</span>
+                    <span class="help-tip" tabindex="0" data-tip="Seasonal offsets used to search for comparable donor values, for example 24h for yesterday and 7d for the same time last week.">?</span>
+                  </span>
+                  <input type="text" name="candidate_periods" value="{{ gapfill_values.candidate_periods }}" />
+                </label>
+
+                <label class="field-block">
+                  <span class="field-label-row">
+                    <span class="field-label">Donor context periods</span>
+                    <span class="help-tip" tabindex="0" data-tip="Number of periods around a gap used to compare local shape when matching donor segments. Higher values need more surrounding valid data.">?</span>
+                  </span>
+                  <input type="number" name="donor_context_periods" min="1" value="{{ gapfill_values.donor_context_periods }}" />
+                </label>
+
+                <label class="field-block">
+                  <span class="field-label-row">
+                    <span class="field-label">Donor search radius</span>
+                    <span class="help-tip" tabindex="0" data-tip="Maximum distance around candidate periods for donor matching. Example: 28d allows donor search in a wider seasonal neighborhood.">?</span>
+                  </span>
+                  <input type="text" name="donor_search_radius" value="{{ gapfill_values.donor_search_radius }}" />
+                </label>
+
+                <label class="field-block">
+                  <span class="field-label-row">
+                    <span class="field-label">Refinement periods</span>
+                    <span class="help-tip" tabindex="0" data-tip="Number of edge periods used by donor_refined to smooth or adjust filled segments after donor matching.">?</span>
+                  </span>
+                  <input type="number" name="refinement_periods" min="0" value="{{ gapfill_values.refinement_periods }}" />
+                </label>
+
+                <label class="field-block">
+                  <span class="field-label-row">
+                    <span class="field-label">Fail on table error</span>
+                    <span class="help-tip" tabindex="0" data-tip="If enabled, any table error makes the gapfill run fail. If disabled, other selected tables can still complete and the run is marked partial.">?</span>
+                  </span>
+                  <input type="checkbox" name="fail_on_table_error" value="1" {% if gapfill_values.fail_on_table_error == "true" %}checked{% endif %} />
+                </label>
+              </div>
+            </details>
+
+            <div class="gapfill-table-selector">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Per time-series table</p>
+                  <h4>Tables included in the productive gapfill run</h4>
+                </div>
+                <a href="/admin/crawlers/{{ overview.crawler_name }}?check_gapfill_db=1#gapfill-operations" class="button button--secondary button--small" title="Checks whether the supported tables shown below currently exist in the configured source schema. It does not discover arbitrary database tables.">Check DB table status</a>
+              </div>
+              <p class="subtle-note">
+                The table list comes from <strong>{{ gapfill_view.metadata_source_label }}</strong>. {{ gapfill_view.database_status_note }}
+                Each checkbox controls whether the post-run gapfill processes that supported source table and writes a derived copy into <code>{{ gapfill_view.target_schema }}</code>.
+              </p>
+              <div class="gapfill-table-grid">
+                {% for item in gapfill_view.tables %}
+                  <article class="gapfill-table-option">
+                    <label class="gapfill-table-option__check" for="gapfill-table-{{ loop.index }}">
+                      <input
+                        id="gapfill-table-{{ loop.index }}"
+                        type="checkbox"
+                        name="gapfill_tables"
+                        value="{{ item.table_name }}"
+                        {% if item.table_name in gapfill_values.selected_tables %}checked{% endif %}
+                      />
+                      <span class="sr-only">Include {{ item.table_name }}</span>
+                    </label>
+                    <span class="gapfill-table-option__body">
+                      <span class="gapfill-table-option__head">
+                        <strong>{{ item.table_name }}</strong>
+                        <span class="gapfill-table-status gapfill-table-status--{{ item.database_status }}">{{ item.database_status_label }}</span>
+                      </span>
+                      <span>Values: {{ item.value_columns_label }}</span>
+                      <span>Groups: {{ item.groupby_columns_label }}</span>
+                      <label class="gapfill-table-method" for="gapfill-table-method-{{ loop.index }}">
+                        <span class="field-label-row">
+                          <span class="field-label">Method for this table</span>
+                          <span class="help-tip" tabindex="0" data-tip="Overrides the default method only for this selected table. If the table checkbox is off, this method is saved as a preference but not processed.">?</span>
+                        </span>
+                        {% set table_method = gapfill_values.table_methods.get(item.table_name, gapfill_values.method) %}
+                        <select id="gapfill-table-method-{{ loop.index }}" name="gapfill_table_method__{{ item.table_name }}">
+                          {% for method in gapfill_methods %}
+                            <option value="{{ method }}" {% if table_method == method %}selected{% endif %}>{{ method }}</option>
+                          {% endfor %}
+                        </select>
+                      </label>
+                    </span>
+                  </article>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="action-row">
+              <button type="submit" class="button button--primary">Save gapfill settings</button>
+              <a href="/admin/editor" class="button button--secondary">Open YAML Editor</a>
+            </div>
+          </form>
+        {% else %}
+          <p class="empty-state">
+            This crawler does not expose built-in gapfill table metadata yet. Use the YAML editor for now.
+          </p>
+        {% endif %}
+      </section>
 
       {% if overview.issues %}
         <div class="issue-cluster">

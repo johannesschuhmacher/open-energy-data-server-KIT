@@ -1,11 +1,11 @@
-# Gapfill QA Walkthrough
+# Gapfill Tests Walkthrough
 
 This walkthrough demonstrates one of the stronger OEDS features: gapfill logic
 with synthetic QA and holdout validation.
 
 ## Goal
 
-Run the built-in gapfill QA path without relying on external source systems.
+Run the built-in gapfill test path without relying on external source systems.
 
 ## Steps
 
@@ -22,7 +22,7 @@ Run the built-in gapfill QA path without relying on external source systems.
    uv run python crawler_admin_server.py
    ```
 
-3. Open the gapfill QA page:
+3. Open the Gapfill Tests page:
 
    - `http://127.0.0.1:3010/admin/gapfill`
 

@@ -25,7 +25,6 @@ from crawler_core.runtime_env import load_local_crawler_env  # noqa: E402
 from oeds_gapfill.config import (
     ENTSOE_FMS_TABLES,
     load_job_from_crawler_config,
-    select_tables,
 )  # noqa: E402
 from oeds_gapfill.core import GAPFILL_METHODS  # noqa: E402
 from oeds_gapfill.selftest import write_self_test_results  # noqa: E402
@@ -227,17 +226,18 @@ def main() -> int:
 def _apply_overrides(job, args: argparse.Namespace):
     tables = list(job.tables)
     if args.method is not None or args.max_gap_periods is not None:
-        method = args.method or tables[0].method
-        max_gap_periods = (
-            args.max_gap_periods
-            if args.max_gap_periods is not None
-            else tables[0].max_gap_periods
-        )
-        tables = select_tables(
-            [table.table_name for table in tables],
-            method=method,
-            max_gap_periods=max_gap_periods,
-        )
+        tables = [
+            replace(
+                table,
+                method=args.method or table.method,
+                max_gap_periods=(
+                    args.max_gap_periods
+                    if args.max_gap_periods is not None
+                    else table.max_gap_periods
+                ),
+            )
+            for table in tables
+        ]
 
     target_schema = args.target_schema or job.target_schema
     return replace(job, tables=tuple(tables), target_schema=target_schema)

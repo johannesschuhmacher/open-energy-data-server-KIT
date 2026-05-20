@@ -1,4 +1,4 @@
-# Crawler Admin UI
+﻿# Crawler Admin UI
 
 The crawler admin UI is a local control surface for `CRAWLER_CONFIG.yml` and
 manual crawler operations.
@@ -18,7 +18,7 @@ Implemented phases:
 - run history with persistent status tracking
 - live log tailing for active and completed runs
 - in-process locking so the same crawler cannot be started twice at once
-- separate Gapfill QA page for synthetic fault injection, gapfill self-tests,
+- separate Gapfill Tests page for synthetic fault injection, gapfill self-tests,
   and source-versus-filled series previews
 - crawler-specific operation forms for:
   - `weather_forecast`
@@ -122,11 +122,21 @@ Cards intentionally distinguish between:
 - crawler sections that are configured but disabled
 - sections that need attention because validation found issues
 
-## Gapfill QA
+## Gapfill Tests
 
-The `Gapfill QA` navigation item opens `/admin/gapfill`. Operators can run the
+The `Gapfill Tests` navigation item opens `/admin/gapfill`. Operators can run the
 synthetic gapfiller self-tests from the admin UI without touching raw crawler
 tables.
+
+This page is intentionally separate from the productive gapfill controls. The
+productive settings live on the crawler detail page for the corresponding job.
+There, operators decide whether the post-run gapfill script runs at all, which
+source tables are included, and which derived schema receives the gapfilled
+copies and QA metadata used by Grafana. The table list is a built-in metadata
+allowlist for supported time-series tables, not an unconstrained database table
+browser. When the configured database is reachable, the detail page also marks
+whether each supported source table currently exists. Each selected table can
+override the default gapfill method.
 
 The self-test catalog currently covers:
 

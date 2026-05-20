@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #eef2f7;
   --bg-strong: #d9e2ee;
   --surface: rgba(255, 255, 255, 0.98);
@@ -2068,6 +2068,55 @@ button {
   color: var(--muted);
 }
 
+.field-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.help-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e7edf5;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+}
+
+.help-tip::after {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  width: min(320px, 72vw);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: #14213d;
+  color: #ffffff;
+  box-shadow: var(--shadow-md);
+  content: attr(data-tip);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.help-tip:hover::after,
+.help-tip:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 select,
 input[type="number"],
 input[type="search"] {
@@ -2186,6 +2235,109 @@ select[multiple] {
 .flash--error {
   background: var(--error-soft);
   color: var(--error);
+}
+
+.gapfill-ops-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.gapfill-config-form {
+  display: grid;
+  gap: 18px;
+}
+
+.gapfill-table-selector {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.gapfill-table-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gapfill-table-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.gapfill-table-option input {
+  margin-top: 2px;
+}
+
+.gapfill-table-option__check {
+  margin-top: 2px;
+}
+
+.gapfill-table-option__body {
+  display: grid;
+  gap: 8px;
+}
+
+.gapfill-table-option__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gapfill-table-option__body strong {
+  line-height: 1.35;
+}
+
+.gapfill-table-option__body span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.gapfill-table-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.gapfill-table-status--present {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.gapfill-table-status--missing {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.gapfill-table-status--unknown {
+  color: var(--muted);
+  background: #e7edf5;
+}
+
+.gapfill-table-method {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.gapfill-table-method .field-label {
+  font-size: 0.72rem;
 }
 
 .editor-layout {

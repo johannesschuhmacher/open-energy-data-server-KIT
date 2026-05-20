@@ -4,14 +4,13 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
 from pathlib import Path
-import re
 from typing import Any
 
 import pandas as pd
 import yaml
-
 from crawler.common.runtime_env import resolve_database_uri
 from scripts.lib.gapfiller.core import GAPFILL_METHODS, GapfillMethod, SeriesFillConfig
 
@@ -177,6 +176,7 @@ def load_job_from_crawler_config(
     database_uri = _database_uri_for_schema(crawler_config, default_config, source_schema)
     enabled = bool(gapfill_config.get("enable", True))
     method = gapfill_config.get("method", "donor_refined")
+    table_methods = _parse_table_methods(gapfill_config.get("table_methods"))
     max_gap_periods = int(gapfill_config.get("max_gap_periods", 24))
     candidate_periods = _parse_timedelta_tuple(gapfill_config.get("candidate_periods"))
     donor_context_periods = int(gapfill_config.get("donor_context_periods", 6))
@@ -194,6 +194,7 @@ def load_job_from_crawler_config(
     tables = select_tables(
         selected,
         method=method,
+        table_methods=table_methods,
         max_gap_periods=max_gap_periods,
         candidate_periods=candidate_periods,
         donor_context_periods=donor_context_periods,
@@ -217,6 +218,7 @@ def select_tables(
     table_names: list[str] | tuple[str, ...],
     *,
     method: str = "donor_refined",
+    table_methods: dict[str, str] | None = None,
     max_gap_periods: int = 24,
     candidate_periods: tuple[pd.Timedelta, ...] | None = None,
     donor_context_periods: int = 6,
@@ -224,14 +226,16 @@ def select_tables(
     refinement_periods: int = 3,
 ) -> list[TimeSeriesTableConfig]:
     known_tables = {table.table_name: table for table in ENTSOE_FMS_TABLES}
+    configured_methods = table_methods or {}
     selected: list[TimeSeriesTableConfig] = []
     for table_name in table_names:
         if table_name not in known_tables:
             raise ValueError(f"Unknown gapfill table '{table_name}'. Known tables: {sorted(known_tables)}")
+        table_method = configured_methods.get(table_name, method)
         selected.append(
             replace(
                 known_tables[table_name],
-                method=_validate_method(method),
+                method=_validate_method(table_method),
                 max_gap_periods=max_gap_periods,
                 candidate_periods=candidate_periods,
                 donor_context_periods=donor_context_periods,
@@ -240,6 +244,16 @@ def select_tables(
             )
         )
     return selected
+
+
+def _parse_table_methods(value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(table_name): str(method)
+        for table_name, method in value.items()
+        if str(table_name).strip() and str(method).strip()
+    }
 
 
 def _database_uri_for_schema(crawler_config: dict[str, Any], default_config: dict[str, Any], source_schema: str) -> str:

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 import smtplib
@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+import pandas as pd
 import yaml
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -24,6 +25,7 @@ from crawler_admin.config_service import (
     get_local_time_label,
     read_config_text,
     update_crawler_schedule_config_text,
+    update_gapfill_config_text,
     validate_config_text,
     write_config_text_atomic,
 )
@@ -32,6 +34,7 @@ from crawler_admin.gapfill_service import (
     GapfillSelfTestView,
     build_gapfill_holdout_catalog,
     build_gapfill_holdout_view,
+    build_gapfill_runtime_view,
     build_gapfill_selftest_catalog,
     build_gapfill_selftest_view,
     gapfill_method_options,
@@ -304,6 +307,8 @@ def crawler_detail(
     run: int | None = Query(default=None),
     started: int | None = Query(default=None),
     email_tested: int | None = Query(default=None),
+    gapfill_saved: int | None = Query(default=None),
+    check_gapfill_db: int | None = Query(default=None),
 ) -> HTMLResponse:
     message_kind = None
     message_text = None
@@ -313,6 +318,9 @@ def crawler_detail(
     elif email_tested:
         message_kind = "success"
         message_text = f"Sent test email for {crawler_name}."
+    elif gapfill_saved:
+        message_kind = "success"
+        message_text = f"Saved gapfill settings for {crawler_name}."
 
     return _render_crawler_detail(
         request=request,
@@ -320,7 +328,74 @@ def crawler_detail(
         selected_run_id=run,
         message_kind=message_kind,
         message_text=message_text,
+        check_gapfill_db=bool(check_gapfill_db),
     )
+
+
+@app.post("/admin/crawlers/{crawler_name}/gapfill", response_class=HTMLResponse)
+async def save_crawler_gapfill(request: Request, crawler_name: str) -> HTMLResponse:
+    form = await request.form()
+    overview = get_crawler_overview(crawler_name)
+    if overview.card is None:
+        raise HTTPException(status_code=404, detail=f"Crawler '{crawler_name}' not found.")
+
+    redirect_to = str(form.get("redirect_to") or f"/admin/crawlers/{crawler_name}")
+    base_hash = str(form.get("base_hash") or "")
+    gapfill_values = _extract_gapfill_form_values(form, overview)
+    gapfill_errors = _validate_gapfill_form_values(gapfill_values, overview)
+
+    if gapfill_errors:
+        return _render_crawler_detail(
+            request=request,
+            crawler_name=crawler_name,
+            message_kind="error",
+            message_text="Gapfill settings were not saved.",
+            gapfill_errors=gapfill_errors,
+            gapfill_values=gapfill_values,
+        )
+
+    try:
+        updated_yaml_text = update_gapfill_config_text(
+            crawler_name,
+            enabled=gapfill_values["gapfill_enabled"] == "true",
+            script_enabled=gapfill_values["script_enabled"] == "true",
+            selected_tables=list(gapfill_values["selected_tables"]),
+            table_methods=dict(gapfill_values["table_methods"]),
+            target_schema=gapfill_values["target_schema"],
+            method=gapfill_values["method"],
+            candidate_periods=_split_gapfill_periods(gapfill_values["candidate_periods"]),
+            donor_context_periods=int(gapfill_values["donor_context_periods"]),
+            donor_search_radius=gapfill_values["donor_search_radius"],
+            refinement_periods=int(gapfill_values["refinement_periods"]),
+            max_gap_periods=int(gapfill_values["max_gap_periods"]),
+            lookback=gapfill_values["lookback"],
+            fail_on_table_error=gapfill_values["fail_on_table_error"] == "true",
+        )
+    except ValueError as exc:
+        return _render_crawler_detail(
+            request=request,
+            crawler_name=crawler_name,
+            message_kind="error",
+            message_text="Gapfill settings were not saved.",
+            gapfill_errors=[str(exc)],
+            gapfill_values=gapfill_values,
+        )
+
+    saved, _ = write_config_text_atomic(updated_yaml_text, expected_hash=base_hash)
+    if not saved:
+        return _render_crawler_detail(
+            request=request,
+            crawler_name=crawler_name,
+            message_kind="error",
+            message_text=(
+                "CRAWLER_CONFIG.yml changed on disk while you were editing. "
+                "Reload the crawler page and apply the change again."
+            ),
+            gapfill_errors=["The crawler page was stale and could not save the gapfill change."],
+            gapfill_values=gapfill_values,
+        )
+
+    return RedirectResponse(url=_append_query_string(redirect_to, {"gapfill_saved": "1"}), status_code=303)
 
 
 @app.post("/admin/crawlers/{crawler_name}/actions/{action_id}", response_class=HTMLResponse)
@@ -590,6 +665,144 @@ def _build_holdout_form_defaults(
         "gap_start_index": str(default_dataset.recommended_gap_start if default_dataset else ""),
     }
 
+def _extract_gapfill_form_values(form: Any, overview: Any) -> dict[str, Any]:
+    defaults = _build_gapfill_form_defaults(overview)
+    selected_tables = [str(value) for value in form.getlist("gapfill_tables") if str(value).strip()]
+    table_methods = {
+        table_name: str(
+            form.get(f"gapfill_table_method__{table_name}")
+            or defaults["table_methods"].get(table_name)
+            or defaults["method"]
+        ).strip()
+        for table_name in defaults["table_methods"]
+    }
+    return {
+        "script_enabled": "true" if form.get("script_enabled") else "false",
+        "gapfill_enabled": "true" if form.get("gapfill_enabled") else "false",
+        "target_schema": str(form.get("target_schema") or defaults["target_schema"]).strip(),
+        "method": str(form.get("method") or defaults["method"]).strip(),
+        "candidate_periods": str(form.get("candidate_periods") or defaults["candidate_periods"]).strip(),
+        "donor_context_periods": str(form.get("donor_context_periods") or defaults["donor_context_periods"]).strip(),
+        "donor_search_radius": str(form.get("donor_search_radius") or defaults["donor_search_radius"]).strip(),
+        "refinement_periods": str(form.get("refinement_periods") or defaults["refinement_periods"]).strip(),
+        "max_gap_periods": str(form.get("max_gap_periods") or defaults["max_gap_periods"]).strip(),
+        "lookback": str(form.get("lookback") or defaults["lookback"]).strip(),
+        "fail_on_table_error": "true" if form.get("fail_on_table_error") else "false",
+        "selected_tables": selected_tables,
+        "table_methods": table_methods,
+    }
+
+
+def _build_gapfill_form_defaults(overview: Any) -> dict[str, Any]:
+    gapfill_view = build_gapfill_runtime_view(
+        overview.crawler_name,
+        overview.raw_config,
+        overview.effective_config,
+    )
+    return _build_gapfill_form_defaults_from_view(gapfill_view)
+
+
+def _build_gapfill_form_defaults_from_view(gapfill_view: Any) -> dict[str, Any]:
+    return {
+        "script_enabled": "true" if gapfill_view.script_enabled else "false",
+        "gapfill_enabled": "true" if gapfill_view.gapfill_enabled else "false",
+        "target_schema": gapfill_view.target_schema,
+        "method": gapfill_view.method,
+        "candidate_periods": gapfill_view.candidate_periods_label if gapfill_view.candidate_periods_label != "-" else "",
+        "donor_context_periods": str(gapfill_view.donor_context_periods),
+        "donor_search_radius": gapfill_view.donor_search_radius_label,
+        "refinement_periods": str(gapfill_view.refinement_periods),
+        "max_gap_periods": str(gapfill_view.max_gap_periods),
+        "lookback": gapfill_view.lookback_label,
+        "fail_on_table_error": "true" if gapfill_view.fail_on_table_error else "false",
+        "selected_tables": [item.table_name for item in gapfill_view.tables if item.selected],
+        "table_methods": {item.table_name: item.method for item in gapfill_view.tables},
+    }
+
+
+def _validate_gapfill_form_values(gapfill_values: dict[str, Any], overview: Any) -> list[str]:
+    errors: list[str] = []
+    gapfill_view = build_gapfill_runtime_view(
+        overview.crawler_name,
+        overview.raw_config,
+        overview.effective_config,
+    )
+
+    if not gapfill_view.supported:
+        return ["Gapfill controls are only available for crawlers with built-in table metadata."]
+
+    target_schema = str(gapfill_values["target_schema"]).strip()
+    if not target_schema:
+        errors.append("Target schema is required.")
+    elif not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", target_schema):
+        errors.append("Target schema must be a valid PostgreSQL schema identifier.")
+
+    method = str(gapfill_values["method"]).strip()
+    if method not in gapfill_method_options():
+        errors.append(f"Gapfill method must be one of: {', '.join(gapfill_method_options())}.")
+
+    try:
+        donor_context_periods = int(gapfill_values["donor_context_periods"])
+        if donor_context_periods < 1:
+            errors.append("Donor context periods must be at least 1.")
+    except (TypeError, ValueError):
+        errors.append("Donor context periods must be an integer.")
+
+    try:
+        refinement_periods = int(gapfill_values["refinement_periods"])
+        if refinement_periods < 0:
+            errors.append("Refinement periods must be 0 or greater.")
+    except (TypeError, ValueError):
+        errors.append("Refinement periods must be an integer.")
+
+    try:
+        max_gap_periods = int(gapfill_values["max_gap_periods"])
+        if max_gap_periods < 1:
+            errors.append("Max gap periods must be at least 1.")
+    except (TypeError, ValueError):
+        errors.append("Max gap periods must be an integer.")
+
+    for label, raw_value in (
+        ("Candidate periods", gapfill_values["candidate_periods"]),
+        ("Donor search radius", gapfill_values["donor_search_radius"]),
+        ("Lookback", gapfill_values["lookback"]),
+    ):
+        values = _split_gapfill_periods(raw_value) if label == "Candidate periods" else [str(raw_value).strip()]
+        for value in values:
+            if not value:
+                continue
+            try:
+                pd.Timedelta(value)
+            except (TypeError, ValueError):
+                errors.append(f"{label} contains an invalid duration: {value}")
+
+    known_tables = {item.table_name for item in gapfill_view.tables}
+    invalid_tables = sorted(set(gapfill_values["selected_tables"]) - known_tables)
+    if invalid_tables:
+        errors.append(f"Unknown gapfill tables: {', '.join(invalid_tables)}.")
+
+    table_methods = gapfill_values.get("table_methods")
+    if not isinstance(table_methods, dict):
+        errors.append("Table methods could not be read from the submitted form.")
+    else:
+        invalid_method_tables = [
+            table_name
+            for table_name in gapfill_values["selected_tables"]
+            if table_methods.get(table_name) not in gapfill_method_options()
+        ]
+        if invalid_method_tables:
+            errors.append(
+                "Each selected table needs a valid gapfill method. Invalid tables: "
+                + ", ".join(invalid_method_tables)
+                + "."
+            )
+
+    return errors
+
+
+def _split_gapfill_periods(raw_value: object) -> list[str]:
+    return [item.strip() for item in str(raw_value or "").split(",") if item.strip()]
+
 
 def _render_crawler_detail(
     *,
@@ -600,6 +813,9 @@ def _render_crawler_detail(
     message_text: str | None = None,
     form_errors: list[str] | None = None,
     email_test_errors: list[str] | None = None,
+    gapfill_errors: list[str] | None = None,
+    gapfill_values: dict[str, Any] | None = None,
+    check_gapfill_db: bool = False,
     submitted_action_id: str | None = None,
     submitted_values: dict[str, Any] | None = None,
 ) -> HTMLResponse:
@@ -615,6 +831,16 @@ def _render_crawler_detail(
     latest_run = history[0] if history else None
     action_values = _build_action_values(actions, submitted_action_id, submitted_values)
     email_state = _build_email_alert_state(overview)
+    gapfill_view = build_gapfill_runtime_view(
+        crawler_name,
+        overview.raw_config,
+        overview.effective_config,
+        check_database_tables=check_gapfill_db,
+    )
+    gapfill_form_values = gapfill_values or _build_gapfill_form_defaults_from_view(
+        gapfill_view
+    )
+    config_hash = compute_content_hash(read_config_text())
 
     return templates.TemplateResponse(
         request,
@@ -641,6 +867,12 @@ def _render_crawler_detail(
             "message_kind": message_kind,
             "message_text": message_text,
             "form_errors": form_errors or [],
+            "gapfill_view": gapfill_view,
+            "check_gapfill_db": check_gapfill_db,
+            "gapfill_errors": gapfill_errors or [],
+            "gapfill_values": gapfill_form_values,
+            "gapfill_methods": gapfill_method_options(),
+            "base_hash": config_hash,
             "submitted_action_id": submitted_action_id,
             "time_label": get_local_time_label(),
         },

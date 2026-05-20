@@ -70,7 +70,7 @@ The maintained walkthroughs are:
 
 - [Local stack to first query](examples/local_stack_first_query.md)
 - [First crawler change](examples/first_crawler_change.md)
-- [Gapfill QA walkthrough](examples/gapfill_qa_walkthrough.md)
+- [Gapfill Tests walkthrough](examples/gapfill_qa_walkthrough.md)
 
 These are intentionally deterministic and avoid requiring access to external
 production systems.
@@ -131,7 +131,7 @@ repository split too early.
   behind `crawler_core`
 - keep `crawler_admin.app` focused on HTTP and templates, while run history,
   lock handling, and action execution move toward `crawler_runtime`
-- treat synthetic gapfill QA, holdout tests, and fill algorithms as reusable
+- treat synthetic gapfill tests, holdout tests, and fill algorithms as reusable
   library behavior under `oeds_gapfill`, while `scripts/gapfill_timeseries.py`
   remains only a CLI entrypoint
 - isolate YAML parsing, default merging, and validation into a config package so

@@ -864,6 +864,7 @@ def update_gapfill_config_text(
     max_gap_periods: int,
     lookback: str,
     fail_on_table_error: bool,
+    table_methods: dict[str, str] | None = None,
     repo_root: Path | None = None,
 ) -> str:
     root = repo_root or get_repo_root()
@@ -917,6 +918,13 @@ def update_gapfill_config_text(
     gapfill_config["lookback"] = DoubleQuotedScalarString(lookback)
     gapfill_config["fail_on_table_error"] = fail_on_table_error
     gapfill_config["tables"] = [DoubleQuotedScalarString(table_name) for table_name in selected_tables]
+    method_by_table = table_methods or {}
+    table_method_config = CommentedMap()
+    for table_name in selected_tables:
+        table_method_config[DoubleQuotedScalarString(table_name)] = DoubleQuotedScalarString(
+            method_by_table.get(table_name, method)
+        )
+    gapfill_config["table_methods"] = table_method_config
 
     buffer = StringIO()
     yaml_rt.dump(config_data, buffer)

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Gapfill QA | OEDS Crawler Control{% endblock %}
+{% block title %}Gapfill Tests | OEDS Crawler Control{% endblock %}
 
 {% block content %}
   <section class="crawler-header">
     <div class="crawler-header__copy">
       <div class="crawler-header__title">
         <div>
-          <p class="eyebrow">Post-run scripts</p>
-          <h2>Gapfill QA</h2>
+          <p class="eyebrow">Algorithm diagnostics</p>
+          <h2>Gapfill Tests</h2>
         </div>
         {% if latest_view %}
           <span class="summary-pill summary-pill--{% if latest_view.all_passed %}success{% else %}error{% endif %}">
@@ -17,7 +17,7 @@
         {% endif %}
       </div>
       <p class="crawler-header__meta">
-        Synthetic time-series faults are injected, processed by the gapfiller, and rendered from the resulting source and gapfilled series.
+        Synthetic time-series faults are injected, processed by the gapfiller, and rendered from the resulting source and gapfilled series. These tests do not change crawler run settings.
       </p>
     </div>
     <div class="crawler-header__actions">
