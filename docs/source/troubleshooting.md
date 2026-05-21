@@ -50,6 +50,7 @@ Typical examples:
 
 - `ENTSOE_USERNAME`
 - `ENTSOE_PASSWORD`
+- `ENTSOE_API_KEY`
 - `ENERGY_FORECAST_TOKEN`
 - `EPEX_SFTP_USERNAME`
 - `EPEX_SFTP_PASSWORD`
@@ -57,6 +58,11 @@ Typical examples:
 Put these values into `crawler/.env` for local or containerized crawler runs.
 On long-lived deployments, keep the runtime `.env` outside the Git working tree
 when possible.
+
+For ENTSO-E, distinguish the two credential paths: `entsoe_fms` uses
+`ENTSOE_USERNAME` and `ENTSOE_PASSWORD`; `entsoe_api` uses the separate
+`ENTSOE_API_KEY` security token. `ENTSOE_API` is accepted as a local alias for
+that token. The API-backed price forecast job requires this token.
 
 ## PostgreSQL or TimescaleDB was upgraded and the container no longer starts
 
@@ -77,11 +83,11 @@ migration step.
 Gapfill has two different paths:
 
 - **productive gapfill operations** on the crawler detail page
-- **Gapfill QA** under `/admin/gapfill`
+- **Gapfill Tests** under `/admin/gapfill`
 
 Important distinction:
 
-- the admin QA page runs synthetic checks in-process and does not persist them
+- the admin test page runs synthetic checks in-process and does not persist them
   automatically
 - the productive post-run gapfill writes derived tables and control tables to
   the configured target schema

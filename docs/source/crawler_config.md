@@ -2,7 +2,8 @@
 
 The scheduler reads crawler settings from `CRAWLER_CONFIG.yml` in the repository
 root. Each top-level key matches one crawler module name such as
-`entsoe_fms`, `weather_forecast`, or `energy_forecast_crawler`.
+`entsoe_fms`, `entsoe_api`, `weather_forecast`, or
+`energy_forecast_crawler`.
 
 ## Defaults and overrides
 
@@ -90,6 +91,8 @@ Many crawlers define additional options. Examples:
 - `weather_forecast`: `forecast_hours`, `past_hours`, `locations`
 - `entsoe_fms`: `target_data_items`, `fms_package_window_months`,
   `fms_package_write_mode`
+- `entsoe_api`: `country_code`, `lookback_days`, `lookahead_days`,
+  `target_datasets`
 - source-specific tokens or credentials loaded from `crawler/.env`
 
 Crawler-specific behavior should be documented on the crawler page under

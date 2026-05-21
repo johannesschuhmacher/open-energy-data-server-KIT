@@ -9,6 +9,16 @@ networks:
 # systems. Do not expose an OEDS host that still uses these defaults on a
 # shared or public network.
 
+x-oeds-python-environment: &oeds-python-environment
+  OEDS_DB_HOST: open-data
+  OEDS_DB_PORT: "5432"
+  OEDS_DB_PASSWORD: ${OEDS_DB_PASSWORD:-opendata}
+  OEDS_PRICE_FORECAST_BACKEND: ${OEDS_PRICE_FORECAST_BACKEND:-auto}
+  OEDS_PRICE_FORECAST_MARKET_AREA: ${OEDS_PRICE_FORECAST_MARKET_AREA:-DE_LU}
+  OEDS_PRICE_FORECAST_TRAIN_DAYS: ${OEDS_PRICE_FORECAST_TRAIN_DAYS:-56}
+  OEDS_PRICE_FORECAST_BACKTEST_DAYS: ${OEDS_PRICE_FORECAST_BACKTEST_DAYS:-2}
+  OEDS_PRICE_FORECAST_RETENTION_DAYS: ${OEDS_PRICE_FORECAST_RETENTION_DAYS:-180}
+
 x-oeds-python-service: &oeds-python-service
   build:
     context: .
@@ -16,9 +26,7 @@ x-oeds-python-service: &oeds-python-service
   restart: unless-stopped
   working_dir: /app
   environment:
-    OEDS_DB_HOST: open-data
-    OEDS_DB_PORT: "5432"
-    OEDS_DB_PASSWORD: ${OEDS_DB_PASSWORD:-opendata}
+    <<: *oeds-python-environment
   env_file:
     - ${OEDS_RUNTIME_DIR:-.}/crawler/.env
   volumes:
@@ -183,12 +191,10 @@ services:
     user: "0:0"
     command: ["python", "crawler_admin_server.py"]
     environment:
+      <<: *oeds-python-environment
       OEDS_ADMIN_HOST: 0.0.0.0
       OEDS_ADMIN_PORT: "3010"
       OEDS_ADMIN_STATE_DIR: /var/lib/oeds-admin
-      OEDS_DB_HOST: open-data
-      OEDS_DB_PORT: "5432"
-      OEDS_DB_PASSWORD: ${OEDS_DB_PASSWORD:-opendata}
     volumes:
       - type: bind
         source: ${OEDS_RUNTIME_DIR:-.}/CRAWLER_CONFIG.yml

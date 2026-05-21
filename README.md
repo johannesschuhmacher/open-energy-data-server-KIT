@@ -162,6 +162,12 @@ Sync the Python environment:
 uv sync --locked
 ```
 
+For host-side price forecasting with the upstream LEAR backend:
+
+```bash
+uv sync --locked --group price-forecast
+```
+
 For host-side crawler execution, this environment includes native dependencies
 such as `pygrib` and therefore expects an available `ecCodes` toolchain. On
 Windows, Docker or WSL is usually the simpler path.
@@ -174,6 +180,7 @@ Run a crawler manually:
 ```bash
 uv run python -m crawler.weather_forecast
 uv run python -m crawler.entsoe_fms
+uv run python -m crawler.entsoe_api
 uv run python -m crawler.energy_forecast_crawler
 ```
 
@@ -206,10 +213,17 @@ Important settings include:
 Credentials and local operator overrides should not be committed. Keep them in
 `crawler/.env` or another local environment mechanism.
 
-Credentialed crawlers such as `entsoe_fms`, `energy_forecast_crawler`, and
-`epex_spot` should be reviewed before the first scheduler run. On a fresh
-deployment, set the required secrets and, for `entsoe_fms`, adjust
-`default_start_date` if you do not want a full historical backfill.
+Credentialed crawlers such as `entsoe_fms`, `entsoe_api`,
+`energy_forecast_crawler`, and `epex_spot` should be reviewed before the first
+scheduler run. On a fresh deployment, set the required secrets and, for
+`entsoe_fms`, adjust `default_start_date` if you do not want a full historical
+backfill.
+
+`ENTSOE_API_KEY` is a separate Transparency Platform Web API token, not the FMS
+username/password. `ENTSOE_API` is accepted as a local alias. The day-ahead
+price forecast is triggered from `entsoe_api`, so productive forecast
+deployments need this API token. Existing FMS history can still be used as a
+training fallback while API history warms up.
 
 On a clean installation, crawler-backed schemas and dashboards remain empty
 until the first successful crawler run. For example, the `weather` schema and
@@ -241,7 +255,9 @@ Examples include:
 
 - `Weather Dashboard`
 - `Energy Weather Dashboard`
+- `Day-ahead Price Forecast`
 - `ENTSOE Stress Cockpit`
+- `ENTSOE API - Fresh Market Data`
 - `ENTSOE Cross-Border & Price Spread Cockpit`
 - `ENTSOE Negative Prices - Event 2026-04-26`
 - `ENTSOE Negative Prices - Long-Term Analysis`
@@ -257,6 +273,7 @@ For local and published documentation, start here:
 - [Deployment Guide](docs/source/deployment.md)
 - [Crawler Documentation](docs/source/crawlers/README.md)
 - [Crawler Configuration](docs/source/crawler_config.md)
+- [Day-ahead Price Forecasting](docs/source/price_forecasting.md)
 - [Crawler Development](docs/source/crawler_development.md)
 - [Crawler Admin UI](docs/source/crawler_admin.md)
 - [Deployment Validation](docs/source/deployment_validation.md)

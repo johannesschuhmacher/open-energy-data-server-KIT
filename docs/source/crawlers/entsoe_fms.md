@@ -146,7 +146,7 @@ Recommended first-run workflow on a clean deployment:
 
 ## Post-run processing
 
-`entsoe_fms` currently has two post-run scripts:
+The standard `entsoe_fms` maintenance jobs have two post-run scripts:
 
 1. `scripts/gapfill_timeseries.py`
 2. `scripts/refresh_entsoe_availability_map.py`
@@ -154,6 +154,10 @@ Recommended first-run workflow on a clean deployment:
 They run only after the crawler itself finishes successfully. The order is
 intentional: gapfilled time-series copies are produced first, then the
 availability-map objects are refreshed.
+
+The day-ahead price forecast is triggered by `entsoe_api` in the default
+deployment. Existing FMS history may still be used as a training fallback while
+the API-backed history warms up.
 
 ### Time-series gapfilling
 

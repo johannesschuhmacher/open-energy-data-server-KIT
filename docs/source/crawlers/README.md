@@ -32,6 +32,7 @@ Currently documented crawlers:
 
 - [entsoe_fms](./entsoe_fms.md)
 - [entsog](./entsog.md)
+- [entsoe_api](./entsoe_api.md)
 - [weather_forecast](./weather_forecast.md)
 - [energy_forecast_crawler](./energy_forecast_crawler.md)
 - [smard](./smard.md)

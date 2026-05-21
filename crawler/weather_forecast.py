@@ -4,13 +4,23 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import math
-from typing import Any, Optional, Tuple
+from datetime import datetime, timezone
+from typing import Any
 
 import pandas as pd
 import requests
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, MetaData, String, Table, text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    text,
+)
 from sqlalchemy.dialects.postgresql import insert
 
 from crawler.common.base_crawler import BaseCrawler
@@ -482,6 +492,42 @@ class WeatherForecastCrawler(BaseCrawler):
                 )
             )
 
+            conn.execute(
+                text(
+                    """
+                    CREATE OR REPLACE VIEW price_forecast_weather_features AS
+                    SELECT
+                        CASE
+                            WHEN country_code = 'DE' THEN 'DE_LU'
+                            ELSE country_code
+                        END AS market_area,
+                        country_code,
+                        country_name,
+                        forecast_time AS delivery_start_utc,
+                        retrieved_at,
+                        temperature_2m_c,
+                        apparent_temperature_c,
+                        relative_humidity_2m_pct,
+                        precipitation_probability_pct,
+                        precipitation_mm,
+                        cloud_cover_pct,
+                        wind_speed_10m_ms,
+                        wind_speed_80m_ms,
+                        wind_gusts_10m_ms,
+                        shortwave_radiation_wm2,
+                        direct_radiation_wm2,
+                        diffuse_radiation_wm2,
+                        heating_degree_18c,
+                        cooling_degree_22c,
+                        solar_generation_index,
+                        wind_generation_index,
+                        renewables_weather_index,
+                        load_weather_index
+                    FROM latest_country_hourly_forecast;
+                    """
+                )
+            )
+
     def _upsert_static_tables(self, locations: list[dict[str, Any]]) -> None:
         location_rows = []
         for location in locations:
@@ -548,7 +594,7 @@ class WeatherForecastCrawler(BaseCrawler):
             "precipitation_unit": "mm",
         }
 
-    def _weather_label(self, weather_code: Any) -> Optional[str]:
+    def _weather_label(self, weather_code: Any) -> str | None:
         if weather_code is None or (isinstance(weather_code, float) and math.isnan(weather_code)):
             return None
         return self.WMO_LABELS.get(int(weather_code), "Unknown")
@@ -557,7 +603,7 @@ class WeatherForecastCrawler(BaseCrawler):
         self,
         location: dict[str, Any],
         retrieved_at: pd.Timestamp,
-    ) -> Tuple[pd.DataFrame, Optional[float]]:
+    ) -> tuple[pd.DataFrame, float | None]:
         response = self.session.get(
             self.SOURCE_URL,
             params=self._build_request_params(location),
@@ -635,7 +681,7 @@ class WeatherForecastCrawler(BaseCrawler):
         frame = frame.where(pd.notnull(frame), None)
         return frame, payload.get("elevation")
 
-    def _update_location_elevation(self, location_id: str, elevation_m: Optional[float]) -> None:
+    def _update_location_elevation(self, location_id: str, elevation_m: float | None) -> None:
         if elevation_m is None:
             return
         with self.engine.begin() as conn:

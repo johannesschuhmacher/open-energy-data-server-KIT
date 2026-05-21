@@ -102,6 +102,34 @@ entsoe_fms:
       - "EnergyPrices"
       - "ForecastedTransferCapacities"
       - "PhysicalFlows"
+entsoe_api:
+  enable: true
+  schema_name: "entsoe_api"
+  description: "Crawls selected ENTSO-E Transparency Platform Web API time series"
+  schedule: "35 11 * * *"
+  post_run_scripts:
+    - "scripts/run_price_forecast.py"
+  country_code: "DE_LU"
+  lookback_days: 14
+  lookahead_days: 2
+  request_pause_seconds: 0.5
+  include_day_ahead_prices: true
+  include_exaa_prices: true
+  include_load_forecast: true
+  include_wind_solar_forecast: true
+  jobs:
+    forecast_daily:
+      enable: true
+      schedule: "35 11 * * *"
+      lookback_days: 14
+      lookahead_days: 2
+      run_post_scripts: true
+    training_bootstrap:
+      enable: false
+      schedule: "10 3 * * 0"
+      lookback_days: 120
+      lookahead_days: 2
+      run_post_scripts: false
 
 entsog:
   enable: false

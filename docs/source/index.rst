@@ -16,6 +16,7 @@ analysis.
    crawler_admin
    crawler_config
    post_run_scripts
+   price_forecasting
    open_source_maturity
    troubleshooting
    crawler_development
@@ -27,6 +28,7 @@ analysis.
    crawlers/README
    crawlers/entsoe_fms
    crawlers/entsog
+   crawlers/entsoe_api
    crawlers/weather_forecast
    crawlers/energy_forecast_crawler
    crawlers/smard

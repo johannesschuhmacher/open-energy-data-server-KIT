@@ -118,9 +118,15 @@ Common secrets used in this repository include:
 
 - `ENTSOE_USERNAME`
 - `ENTSOE_PASSWORD`
+- `ENTSOE_API_KEY`
 - `ENERGY_FORECAST_TOKEN`
 - `EPEX_SFTP_USERNAME`
 - `EPEX_SFTP_PASSWORD`
+
+`ENTSOE_API_KEY` is a generated Web API security token. `ENTSOE_API` is accepted
+as a local alias. It is separate from the FMS `ENTSOE_USERNAME`/`ENTSOE_PASSWORD`
+login and is required when the API-backed day-ahead price forecast job is
+enabled.
 
 If you plan to enable `entsoe_fms` on a clean install, narrow the initial scope
 before the first productive run. In practice that means reviewing:
@@ -136,6 +142,7 @@ Run crawlers from the repository root with `python -m`:
 ```bash
 uv run python -m crawler.weather_forecast
 uv run python -m crawler.entsoe_fms
+uv run python -m crawler.entsoe_api
 uv run python -m crawler.energy_forecast_crawler
 ```
 
@@ -171,7 +178,7 @@ The same Compose file also supports `OEDS_RUNTIME_DIR` so deployments can keep
 working tree.
 
 For productive control of gapfilling, use the crawler detail page in the admin
-UI. The separate `Gapfill QA` page is intended for synthetic validation and
+UI. The separate `Gapfill Tests` page is intended for synthetic validation and
 holdout checks, not for choosing which real source tables are processed after a
 crawler run.
 

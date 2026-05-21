@@ -55,6 +55,19 @@ same-host Linux install, `playbooks/inventory.example.yml` is prefilled for
 `sudo`, so the minimal path is to copy it to `inventory.yml` and run
 `oeds-install-crawlers.yml`.
 
+## Operator quick map
+
+If you are operating a running OEDS-KIT instance, these are the key surfaces:
+
+| Task | Primary surface | Notes |
+| --- | --- | --- |
+| Inspect dashboards and derived metrics | Grafana | crawler dashboards stay empty until their source schemas are populated |
+| Query tables and debug schemas | PgAdmin / SQL | inspect `public.metadata`, crawler schemas, and derived schemas directly |
+| Trigger runs, inspect logs, edit schedules | Crawler Admin UI | scheduler control, manual runs, runtime logs, and gapfill operations |
+| Edit the source-of-truth config | `CRAWLER_CONFIG.yml` / YAML editor | runtime behavior still comes from YAML, even when edited through the UI |
+| Validate post-run quality | Gapfill QA page and Grafana QA dashboard | synthetic self-tests stay local in admin UI; persisted QA data is written to the gapfill target schema |
+| Run derived price forecasts | `entsoe_api:forecast_daily` post-run and `price_forecast` schema | API rows are converted into point, quantile, and backtest outputs; FMS history can bridge warmup |
+
 ## Supported crawler functions
 
 The current maintained baseline in this repository covers these data functions:
@@ -63,6 +76,7 @@ The current maintained baseline in this repository covers these data functions:
 | --- | --- | --- | --- | --- | --- |
 | `weather_forecast` | Open-Meteo DWD | none | `weather` | hourly forecasts, location views, country views | `Weather Dashboard`, `Energy Weather Dashboard` |
 | `entsoe_fms` | ENTSO-E File Library | `ENTSOE_USERNAME`, `ENTSOE_PASSWORD` | `entsoe_fms` | prices, load, generation, outages, transfer capacities, asset lookups | ENTSO-E dashboards, availability map, gapfilling, `Energy Weather Dashboard` |
+| `entsoe_api` | ENTSO-E Web API | `ENTSOE_API_KEY` token, separate from FMS login | `entsoe_api` | fresh prices, EXAA sequence, load forecast, wind and solar forecast | `ENTSOE API - Fresh Market Data`, price forecasting inputs |
 | `entsog` | ENTSOG transparency API | none | `entsog` | gas operators, points, physical flow, allocation, firm technical capacity | `ENTSOG-Monitor` |
 | `smard` | SMARD | none | `smard` | German generation, consumption, and price series | SQL analysis, custom dashboards, SMARD gapfilling |
 | `eurostat_crawler` | Eurostat | none | `eurostat` | annual European energy statistics | SQL analysis, country comparison workflows |
@@ -72,6 +86,24 @@ The current maintained baseline in this repository covers these data functions:
 
 For crawler-specific run modes, output tables, and downstream dependencies,
 start with [Crawler Documentation](./crawlers/README.md).
+
+## Crawler, schema, and dashboard map
+
+This is the quickest way to understand where data lands and how users normally
+see it:
+
+| Crawler | Main schema | Auth | Typical derived output | Main dashboards / consumers |
+| --- | --- | --- | --- | --- |
+| `weather_forecast` | `weather` | none | country and location forecast views | `Weather Dashboard`, `Energy Weather Dashboard` |
+| `entsoe_fms` | `entsoe_fms` | `ENTSOE_USERNAME`, `ENTSOE_PASSWORD` | `entsoe_fms_gapfilled`, availability map objects | ENTSO-E dashboards, `OEDS Gapfilling Quality`, SQL analysis |
+| `entsoe_api` | `entsoe_api` | `ENTSOE_API_KEY` token, separate from FMS login | refresh-oriented API tables | `ENTSOE API - Fresh Market Data`, price forecasting inputs |
+| `price_forecast` | `price_forecast` | inherited source credentials | point, quantile, and metric tables | `Day-ahead Price Forecast` |
+| `entsog` | `entsog` | none | API-backed reporting tables | `ENTSOG-Monitor` |
+| `smard` | `smard` | none | optional gapfilled helper tables | SQL analysis, custom dashboards |
+| `eurostat_crawler` | `eurostat` | none | annual indicator tables | SQL analysis, comparison workflows |
+| `mastr` | `mastr` | none | registry reference tables | asset lookups, enrichment joins |
+| `energy_forecast_crawler` | `energy_forecast` | `ENERGY_FORECAST_TOKEN` | forecast tables for next 48h | custom forecast dashboards and analysis |
+| `epex_spot` | `epex_spot` | `EPEX_SFTP_USERNAME`, `EPEX_SFTP_PASSWORD` | intraday market tables | intraday analysis and custom dashboards |
 
 ## How to access the data
 

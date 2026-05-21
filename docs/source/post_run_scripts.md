@@ -129,3 +129,4 @@ raw crawler tables.
 | `scripts/gapfill_smard.py` | `smard` | Legacy SMARD gapfill helper |
 | `scripts/gapfill_timeseries.py` | `entsoe_fms` | Generic OEDS time-series gapfilling |
 | `scripts/refresh_entsoe_availability_map.py` | `entsoe_fms` | Refresh ENTSO-E availability map SQL objects |
+| `scripts/run_price_forecast.py` | `entsoe_api` | Build derived day-ahead price forecasts in `price_forecast` |

@@ -116,10 +116,17 @@ Common examples in this repository:
 
 - `ENTSOE_USERNAME`
 - `ENTSOE_PASSWORD`
+- `ENTSOE_API_KEY`
 - `ENERGY_FORECAST_TOKEN`
 - `OEDS_EMAIL_TOADDRS`
 - optional `OEDS_EMAIL_MAILHOST`, `OEDS_EMAIL_FROMADDR`,
   `OEDS_EMAIL_USERNAME`, and `OEDS_EMAIL_PASSWORD`
+
+`ENTSOE_API_KEY` is not the same secret as the ENTSO-E FMS login. The FMS
+crawler uses `ENTSOE_USERNAME` and `ENTSOE_PASSWORD`; the Web API crawler uses a
+generated Transparency Platform security token. `ENTSOE_API` is accepted as a
+local alias for that token. The day-ahead price forecast is scheduled from
+`entsoe_api`, so productive forecast deployments need this API token.
 
 Do not commit this file.
 
@@ -187,6 +194,19 @@ persists:
 - `logs/` for scheduler and crawler log files
 - `crawler_admin_state/` for admin run history and per-run metadata
 
+The crawler image installs the `price-forecast` dependency group, including the
+pinned upstream `DA_Price_Forecasting_Pipeline_DE_LU` package. Compose also
+sets default forecast runtime options for the scheduler:
+
+- `OEDS_PRICE_FORECAST_BACKEND=auto`
+- `OEDS_PRICE_FORECAST_MARKET_AREA=DE_LU`
+- `OEDS_PRICE_FORECAST_TRAIN_DAYS=56`
+- `OEDS_PRICE_FORECAST_BACKTEST_DAYS=2`
+- `OEDS_PRICE_FORECAST_RETENTION_DAYS=180`
+
+Override these environment variables when a deployment needs a different
+market area, backtest cadence, or retention window.
+
 On long-lived hosts, set `OEDS_RUNTIME_DIR` so these mutable files live outside
 the Git checkout, for example under `/open_energy_data_server/runtime`.
 
@@ -239,6 +259,7 @@ Before enabling unattended scheduling, run the important crawlers once by hand:
 ```bash
 uv run python -m crawler.weather_forecast
 uv run python -m crawler.entsoe_fms
+uv run python -m crawler.entsoe_api
 uv run python -m crawler.energy_forecast_crawler
 ```
 

@@ -51,9 +51,12 @@ Derived views:
 
 - `latest_hourly_forecast`
 - `latest_country_hourly_forecast`
+- `price_forecast_weather_features`
 
-`hourly_forecast` stores forecast history per retrieval time, while the two
+`hourly_forecast` stores forecast history per retrieval time, while the main
 views expose the latest forecast per location and per mapped country.
+`price_forecast_weather_features` maps country-level DWD/Open-Meteo features
+to market-area keys such as `DE_LU` for the derived price forecast pipeline.
 
 ## Downstream dependencies
 
@@ -61,6 +64,7 @@ Known downstream consumers:
 
 - `Weather Dashboard`
 - `Energy Weather Dashboard`
+- day-ahead price forecasting post-run pipeline
 
 The energy-weather dashboard uses the country-level view together with ENTSO-E
 forecast tables.
