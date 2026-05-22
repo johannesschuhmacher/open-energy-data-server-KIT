@@ -75,6 +75,16 @@ def parse_args() -> argparse.Namespace:
         help="Process and record metrics without replacing target data.",
     )
     parser.add_argument(
+        "--start",
+        default=None,
+        help="Manual processing window start timestamp, for example 2024-01-01 or 2024-01-01T00:00:00Z.",
+    )
+    parser.add_argument(
+        "--end",
+        default=None,
+        help="Optional manual processing window end timestamp.",
+    )
+    parser.add_argument(
         "--self-test",
         action="store_true",
         help="Run synthetic gapfiller self-tests and write their results for the dashboard.",
@@ -158,6 +168,12 @@ def main() -> int:
         args.config, job_name=args.job, table_names=table_names
     )
     job = _apply_overrides(job, args)
+    manual_start = _parse_optional_timestamp(args.start, "start")
+    manual_end = _parse_optional_timestamp(args.end, "end")
+    if manual_end is not None and manual_start is None:
+        raise ValueError("--start is required when --end is set.")
+    if manual_start is not None and manual_end is not None and manual_end < manual_start:
+        raise ValueError("--end must not be earlier than --start.")
 
     engine = create_engine(job.database_uri)
 
@@ -210,7 +226,20 @@ def main() -> int:
             )
         return 0 if all(result.status == "passed" for result in results) else 1
 
-    summary = run_gapfill_job(engine, job, dry_run=args.dry_run, logger=logger)
+    if manual_start is not None:
+        logger.info(
+            "Manual gapfill window requested: start=%s end=%s",
+            manual_start,
+            manual_end or "latest source timestamp",
+        )
+    summary = run_gapfill_job(
+        engine,
+        job,
+        dry_run=args.dry_run,
+        start=manual_start,
+        end=manual_end,
+        logger=logger,
+    )
     logger.info(
         "Gapfill %s: tables=%s processed, %s skipped, %s failed; rows_written=%s; values_filled=%s",
         summary.status,
@@ -247,6 +276,18 @@ def _split_tables(raw_tables: str | None) -> list[str] | None:
     if not raw_tables:
         return None
     return [table.strip() for table in raw_tables.split(",") if table.strip()]
+
+
+def _parse_optional_timestamp(value: str | None, label: str) -> pd.Timestamp | None:
+    if not value:
+        return None
+    try:
+        timestamp = pd.Timestamp(value)
+    except ValueError as exc:
+        raise ValueError(f"--{label} must be a valid timestamp.") from exc
+    if timestamp.tzinfo is None:
+        return timestamp.tz_localize("UTC")
+    return timestamp.tz_convert("UTC")
 
 
 if __name__ == "__main__":

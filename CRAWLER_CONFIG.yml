@@ -88,7 +88,9 @@ entsoe_fms:
     enable: true
     target_schema: "entsoe_fms_gapfilled"
     method: "donor_refined"
-    candidate_periods: ["24h", "7d"]
+    candidate_periods:
+      - "24h"
+      - "7d"
     donor_context_periods: 6
     donor_search_radius: "28d"
     refinement_periods: 3
@@ -102,6 +104,13 @@ entsoe_fms:
       - "EnergyPrices"
       - "ForecastedTransferCapacities"
       - "PhysicalFlows"
+    table_methods:
+      "ActualTotalLoad": "linear"
+      "DayAheadTotalLoadForecast": "donor_refined"
+      "GenerationForecastsForWindAndSolar": "donor_refined"
+      "EnergyPrices": "donor_refined"
+      "ForecastedTransferCapacities": "donor_refined"
+      "PhysicalFlows": "donor_refined"
 entsoe_api:
   enable: true
   schema_name: "entsoe_api"
@@ -134,7 +143,8 @@ entsoe_api:
 entsog:
   enable: false
   schema_name: "entsog"
-  description: "Crawls ENTSOG transparency platform reference and operational gas data"
+  description: "Crawls ENTSOG transparency platform reference and operational gas
+    data"
   schedule: "30 2 * * *"
   default_start_date: "2024-01-01"
   chunk_days: 7

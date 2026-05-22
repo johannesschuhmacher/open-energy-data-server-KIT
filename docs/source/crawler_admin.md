@@ -16,6 +16,7 @@ Implemented phases:
 - dashboard `Run Once` opens a confirmation dialog with the current crawler configuration before execution
 - email alert status and testing moved into the crawler-specific `Settings & Details` view
 - run history with persistent status tracking
+- runtime benchmarks per manual action based on completed run durations
 - live log tailing for active and completed runs
 - in-process locking so the same crawler cannot be started twice at once
 - separate Gapfill Tests page for synthetic fault injection, gapfill self-tests,
@@ -214,6 +215,10 @@ The run store contains:
 - temporary overrides used for the action
 - a dedicated log file path
 
+The crawler detail page derives runtime benchmarks from the same run store.
+For each manual action it shows sample count, success rate, and the latest
+completed duration.
+
 On a clean installation, a first manual run can also bootstrap crawler-owned
 schemas and metadata entries. The validated weather deployment path uses this
 behavior to create and populate the `weather` schema before dashboard panels
@@ -229,3 +234,19 @@ implemented:
 - `eurostat_crawler`: temporary `dataset_id`, `start_year`, and `end_year`
 - `entsoe_fms`: targeted runs via `target_data_items` and historical backfills
   for monthly, annual, or single-file extracts
+- `entsoe_api`: on-demand day-ahead price forecast runs and self-tests
+- supported gapfill jobs: manual gapfill backfills for an explicit source
+  timestamp window
+
+The `entsoe_api` detail page also shows whether
+`scripts/run_price_forecast.py` is attached as a post-run script and lists the
+latest rows from `price_forecast.forecast_runs` when the database is reachable.
+The manual Price forecast action exposes target date, training window,
+backtest days, and model backend without editing YAML.
+
+The manual gapfill backfill action calls `scripts/gapfill_timeseries.py` with
+`--start` and optional `--end`. It reprocesses the configured source tables for
+that time window and writes the derived gapfilled target tables plus
+`gapfill_runs` and `gapfill_metrics` rows. It intentionally does not advance
+`gapfill_tracking`, so a historical backfill cannot move the normal
+incremental post-run watermark backwards.

@@ -73,6 +73,7 @@
         <a href="/admin/editor" class="button button--secondary button--small">Open YAML Editor</a>
       </div>
 
+      {% set primary_benchmark = runtime_benchmarks[0] if runtime_benchmarks else none %}
       <div class="settings-grid">
         <article class="settings-card">
           <span class="fleet-summary__label">Scheduler</span>
@@ -199,6 +200,43 @@
               <dd>
                 {% if latest_run %}
                   <span class="status-pill status-pill--{{ latest_run.status }}">{{ latest_run.status }}</span>
+                {% else %}
+                  -
+                {% endif %}
+              </dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="settings-card">
+          <span class="fleet-summary__label">Runtime benchmark</span>
+          <strong>
+            {% if primary_benchmark and primary_benchmark.latest_seconds is not none %}
+              {{ "%.2f"|format(primary_benchmark.latest_seconds) }}s latest
+            {% else %}
+              No completed samples yet
+            {% endif %}
+          </strong>
+          <dl class="detail-list detail-list--compact">
+            <div>
+              <dt>Action</dt>
+              <dd>{{ primary_benchmark.action_label if primary_benchmark else "-" }}</dd>
+            </div>
+            <div>
+              <dt>Samples</dt>
+              <dd>
+                {% if primary_benchmark %}
+                  {{ primary_benchmark.sample_count }}
+                {% else %}
+                  -
+                {% endif %}
+              </dd>
+            </div>
+            <div>
+              <dt>Success rate</dt>
+              <dd>
+                {% if primary_benchmark %}
+                  {{ "%.1f"|format(primary_benchmark.success_rate) }}%
                 {% else %}
                   -
                 {% endif %}
@@ -457,6 +495,110 @@
         {% endif %}
       </section>
 
+      {% if price_forecast_view %}
+        <section class="panel price-forecast-panel" id="price-forecast">
+          <div class="panel-heading panel-heading--stack">
+            <div>
+              <p class="eyebrow">Derived forecast</p>
+              <h3>Price Forecast</h3>
+            </div>
+            <p class="subtle-note">
+              Forecast metadata and outputs are written to <code>{{ price_forecast_view.schema_name }}</code>.
+              Grafana reads this schema in <strong>{{ price_forecast_view.dashboard_name }}</strong>.
+            </p>
+          </div>
+
+          <div class="settings-grid">
+            <article class="settings-card">
+              <span class="fleet-summary__label">Post-run status</span>
+              <strong>
+                {% if price_forecast_view.script_enabled %}
+                  Price forecast active
+                {% else %}
+                  Price forecast not attached
+                {% endif %}
+              </strong>
+              <p class="subtle-note">
+                {% if price_forecast_view.script_enabled %}
+                  <code>scripts/run_price_forecast.py</code> runs after successful crawler executions.
+                {% else %}
+                  Add <code>scripts/run_price_forecast.py</code> to this crawler's <code>post_run_scripts</code> to run it automatically.
+                {% endif %}
+              </p>
+            </article>
+
+            <article class="settings-card">
+              <span class="fleet-summary__label">Latest forecast</span>
+              <strong>
+                {% if price_forecast_view.latest_run %}
+                  {{ price_forecast_view.latest_run.target_date }}
+                {% else %}
+                  No runs yet
+                {% endif %}
+              </strong>
+              <dl class="detail-list detail-list--compact">
+                <div>
+                  <dt>Status</dt>
+                  <dd>
+                    {% if price_forecast_view.latest_run %}
+                      <span class="status-pill status-pill--{{ price_forecast_view.latest_run.status }}">{{ price_forecast_view.latest_run.status }}</span>
+                    {% else %}
+                      -
+                    {% endif %}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Market</dt>
+                  <dd>{{ price_forecast_view.latest_run.market_area if price_forecast_view.latest_run else "-" }}</dd>
+                </div>
+                <div>
+                  <dt>Variant</dt>
+                  <dd>{{ price_forecast_view.latest_run.variant if price_forecast_view.latest_run else "-" }}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="settings-card">
+              <span class="fleet-summary__label">Manual run</span>
+              <strong>Use Manual Actions</strong>
+              <p class="subtle-note">Start an on-demand forecast or self-test from the Price forecast action on this page.</p>
+            </article>
+          </div>
+
+          <p class="subtle-note">{{ price_forecast_view.database_status_note }}</p>
+          {% if price_forecast_view.runs %}
+            <div class="history-table-wrapper">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Created</th>
+                    <th>Target</th>
+                    <th>Market</th>
+                    <th>Variant</th>
+                    <th>Status</th>
+                    <th>Model</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for run in price_forecast_view.runs %}
+                    <tr>
+                      <td>{{ run.created_at }}</td>
+                      <td>{{ run.target_date }}</td>
+                      <td>{{ run.market_area }}</td>
+                      <td>{{ run.variant }}</td>
+                      <td><span class="status-pill status-pill--{{ run.status }}">{{ run.status }}</span></td>
+                      <td>{{ run.model_name }} {{ run.model_version }}</td>
+                      <td>{{ run.message or "-" }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+        </section>
+      {% endif %}
+
       {% if overview.issues %}
         <div class="issue-cluster">
           <h4>Validation</h4>
@@ -570,6 +712,44 @@
   </section>
 
   <section class="detail-grid detail-grid--logs">
+    <article class="panel runtime-benchmark-panel">
+      <div class="panel-heading">
+        <h3>Runtime Benchmarks</h3>
+      </div>
+      {% if runtime_benchmarks %}
+        <div class="history-table-wrapper">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Samples</th>
+                <th>Success</th>
+                <th>Latest</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for benchmark in runtime_benchmarks %}
+                <tr>
+                  <td>{{ benchmark.action_label }}</td>
+                  <td>{{ benchmark.sample_count }}</td>
+                  <td>{{ benchmark.success_count }} / {{ benchmark.sample_count }} ({{ "%.1f"|format(benchmark.success_rate) }}%)</td>
+                  <td>
+                    {% if benchmark.latest_seconds is not none %}
+                      {{ "%.2f"|format(benchmark.latest_seconds) }}s
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="empty-state">No completed runs with duration samples yet.</p>
+      {% endif %}
+    </article>
+
     <article class="panel">
       <div class="panel-heading">
         <h3>Run History</h3>

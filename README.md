@@ -310,7 +310,7 @@ If you want a guided path through the stack before changing code, start with:
 
 - [Local stack to first query](docs/source/examples/local_stack_first_query.md)
 - [First crawler change](docs/source/examples/first_crawler_change.md)
-- [Gapfill QA walkthrough](docs/source/examples/gapfill_qa_walkthrough.md)
+- [Gapfill Tests walkthrough](docs/source/examples/gapfill_qa_walkthrough.md)
 
 When adding a crawler or a new derived dataset:
 

@@ -9,14 +9,16 @@ import subprocess
 import sys
 import threading
 import traceback
-from collections.abc import Callable
-from contextlib import redirect_stderr, redirect_stdout
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from datetime import datetime
 from importlib import import_module
 from inspect import isclass
 from pathlib import Path
 from typing import Any
+
+from oeds_gapfill.config import BUILTIN_GAPFILL_TABLES_BY_JOB
 
 from crawler_admin.config_service import (
     CrawlerOverview,
@@ -141,6 +143,18 @@ class RunRecord:
 
 
 @dataclass(frozen=True)
+class ActionRuntimeBenchmark:
+    action_id: str
+    action_label: str
+    sample_count: int
+    success_count: int
+    failure_count: int
+    success_rate: float
+    latest_seconds: float | None
+    latest_finished_at: str | None
+
+
+@dataclass(frozen=True)
 class PreparedAction:
     crawler_name: str
     action_id: str
@@ -151,6 +165,7 @@ class PreparedAction:
     action_payload: dict[str, Any]
     run_post_scripts: bool
     executor: Callable[[Any], str | None]
+    requires_crawler: bool = True
 
 
 class ActionValidationError(Exception):
@@ -206,10 +221,14 @@ class CrawlerRunService:
 
         return Path.home() / ".oeds-crawler-admin"
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.db_path)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            yield connection
+        finally:
+            connection.close()
 
     def _init_db(self) -> None:
         with self._connect() as connection:
@@ -294,6 +313,50 @@ class CrawlerRunService:
         for record in records:
             latest_by_crawler.setdefault(record.crawler_name, record)
         return latest_by_crawler
+
+    def get_runtime_benchmarks(
+        self,
+        crawler_name: str,
+        limit: int = 100,
+    ) -> list[ActionRuntimeBenchmark]:
+        records = [
+            record
+            for record in self.list_runs(crawler_name, limit=limit)
+            if record.duration_seconds is not None and not record.is_active
+        ]
+        grouped_records: dict[str, list[RunRecord]] = {}
+        for record in records:
+            grouped_records.setdefault(record.action_id, []).append(record)
+
+        benchmarks: list[ActionRuntimeBenchmark] = []
+        for action_id, action_records in grouped_records.items():
+            success_records = [
+                record for record in action_records if record.status == "succeeded"
+            ]
+            latest_record = action_records[0]
+            sample_count = len(action_records)
+            success_count = len(success_records)
+            failure_count = sample_count - success_count
+            success_rate = (
+                round(success_count / sample_count * 100.0, 1)
+                if sample_count
+                else 0.0
+            )
+
+            benchmarks.append(
+                ActionRuntimeBenchmark(
+                    action_id=action_id,
+                    action_label=latest_record.action_label,
+                    sample_count=sample_count,
+                    success_count=success_count,
+                    failure_count=failure_count,
+                    success_rate=success_rate,
+                    latest_seconds=latest_record.duration_seconds,
+                    latest_finished_at=latest_record.finished_at,
+                )
+            )
+
+        return benchmarks
 
     def get_active_run(self, crawler_name: str) -> RunRecord | None:
         with self._guard:
@@ -532,6 +595,110 @@ class CrawlerRunService:
                 executor=lambda crawler: self._run_entsoe_backfill(crawler, payload),
             )
 
+        if action_id == "gapfill_backfill":
+            supported_tables = BUILTIN_GAPFILL_TABLES_BY_JOB.get(crawler_name, ())
+            if not supported_tables:
+                raise ActionValidationError(
+                    [f"Crawler '{crawler_name}' does not have built-in gapfill table metadata."]
+                )
+
+            start_value = self._require_text(
+                action_payload.get("gapfill_start"), "Gapfill start"
+            )
+            end_value = str(action_payload.get("gapfill_end") or "").strip()
+            start_timestamp = self._parse_timestamp(start_value, "Gapfill start")
+            end_timestamp = self._parse_timestamp(end_value, "Gapfill end") if end_value else None
+            if end_timestamp is not None and end_timestamp < start_timestamp:
+                raise ActionValidationError(["Gapfill end must not be earlier than gapfill start."])
+
+            selected_tables = self._ensure_list(action_payload.get("gapfill_tables"))
+            valid_tables = {table.table_name for table in supported_tables}
+            invalid_tables = sorted(set(selected_tables) - valid_tables)
+            if invalid_tables:
+                raise ActionValidationError(
+                    [f"Unknown gapfill table(s): {', '.join(invalid_tables)}."]
+                )
+
+            payload = {
+                "job": crawler_name,
+                "start": start_value,
+                "end": end_value,
+                "tables": selected_tables,
+            }
+            description = f"Gapfill backfill for {crawler_name} from {start_value}"
+            if end_value:
+                description += f" to {end_value}"
+
+            return PreparedAction(
+                crawler_name=crawler_name,
+                action_id=action_id,
+                action_label=definition.label,
+                description=description + ".",
+                effective_config=effective_config,
+                config_overrides={},
+                action_payload=payload,
+                run_post_scripts=False,
+                executor=lambda _crawler: self._run_gapfill_backfill(payload),
+                requires_crawler=False,
+            )
+
+        if action_id == "price_forecast":
+            if crawler_name != "entsoe_api":
+                raise ActionValidationError(
+                    ["Price forecast can only be started from the entsoe_api crawler."]
+                )
+
+            run_mode = str(action_payload.get("run_mode") or "forecast").strip().lower()
+            if run_mode not in {"forecast", "self_test"}:
+                raise ActionValidationError(["Price forecast run mode is invalid."])
+
+            target_date = str(action_payload.get("target_date") or "").strip()
+            if target_date:
+                self._parse_date(target_date, "Target date")
+            train_days = self._parse_int(
+                action_payload.get("train_days"),
+                field_label="Train days",
+                minimum=14,
+                maximum=365,
+            )
+            backtest_days = self._parse_int(
+                action_payload.get("backtest_days"),
+                field_label="Backtest days",
+                minimum=0,
+                maximum=60,
+            )
+            model_backend = str(action_payload.get("model_backend") or "auto").strip().lower()
+            if model_backend not in {"auto", "upstream", "ridge"}:
+                raise ActionValidationError(["Model backend must be auto, upstream, or ridge."])
+
+            payload = {
+                "run_mode": run_mode,
+                "target_date": target_date,
+                "train_days": train_days,
+                "backtest_days": backtest_days,
+                "model_backend": model_backend,
+            }
+            description = (
+                "Price forecast self-test"
+                if run_mode == "self_test"
+                else "Price forecast run"
+            )
+            if target_date:
+                description += f" for {target_date}"
+
+            return PreparedAction(
+                crawler_name=crawler_name,
+                action_id=action_id,
+                action_label=definition.label,
+                description=description + ".",
+                effective_config=effective_config,
+                config_overrides={},
+                action_payload=payload,
+                run_post_scripts=False,
+                executor=lambda _crawler: self._run_price_forecast(payload),
+                requires_crawler=False,
+            )
+
         raise ActionValidationError(
             [f"No runtime handler registered for action '{action_id}'."]
         )
@@ -696,6 +863,120 @@ class CrawlerRunService:
                 )
             )
 
+        if overview.crawler_name == "entsoe_api":
+            actions.append(
+                ActionDefinition(
+                    action_id="price_forecast",
+                    label="Price forecast",
+                    description="Run the day-ahead price forecast post-run workflow on demand.",
+                    button_label="Start price forecast",
+                    note="The normal scheduled path still runs scripts/run_price_forecast.py through post_run_scripts.",
+                    fields=[
+                        ActionField(
+                            name="run_mode",
+                            label="Run mode",
+                            input_type="select",
+                            required=True,
+                            options=[
+                                ActionOption(value="forecast", label="Database forecast"),
+                                ActionOption(value="self_test", label="Self-test"),
+                            ],
+                            default_value="forecast",
+                        ),
+                        ActionField(
+                            name="target_date",
+                            label="Target date",
+                            input_type="text",
+                            placeholder="2026-05-23",
+                            help_text="Leave empty to forecast tomorrow in Europe/Berlin.",
+                            default_value="",
+                        ),
+                        ActionField(
+                            name="train_days",
+                            label="Train days",
+                            input_type="number",
+                            required=True,
+                            min_value=14,
+                            max_value=365,
+                            default_value=self._env_int_default(
+                                "OEDS_PRICE_FORECAST_TRAIN_DAYS", 56
+                            ),
+                        ),
+                        ActionField(
+                            name="backtest_days",
+                            label="Backtest days",
+                            input_type="number",
+                            required=True,
+                            min_value=0,
+                            max_value=60,
+                            default_value=self._env_int_default(
+                                "OEDS_PRICE_FORECAST_BACKTEST_DAYS", 2
+                            ),
+                        ),
+                        ActionField(
+                            name="model_backend",
+                            label="Model backend",
+                            input_type="select",
+                            required=True,
+                            options=[
+                                ActionOption(value="auto", label="auto"),
+                                ActionOption(value="upstream", label="upstream"),
+                                ActionOption(value="ridge", label="ridge"),
+                            ],
+                            default_value=os.getenv("OEDS_PRICE_FORECAST_BACKEND", "auto"),
+                        ),
+                    ],
+                )
+            )
+
+        supported_gapfill_tables = BUILTIN_GAPFILL_TABLES_BY_JOB.get(overview.crawler_name, ())
+        if supported_gapfill_tables:
+            gapfill_config = effective_config.get("gapfill")
+            configured_tables = []
+            if isinstance(gapfill_config, dict) and isinstance(gapfill_config.get("tables"), list):
+                configured_tables = [
+                    str(table_name)
+                    for table_name in gapfill_config.get("tables", [])
+                    if str(table_name).strip()
+                ]
+            actions.append(
+                ActionDefinition(
+                    action_id="gapfill_backfill",
+                    label="Gapfill backfill",
+                    description="Run the configured gapfill process for an explicit source time window.",
+                    button_label="Start gapfill backfill",
+                    note="Uses the current gapfill settings and writes to the configured target schema. It does not run the crawler first.",
+                    fields=[
+                        ActionField(
+                            name="gapfill_start",
+                            label="Start timestamp",
+                            input_type="text",
+                            required=True,
+                            placeholder="2024-01-01 or 2024-01-01T00:00:00Z",
+                            help_text="First source timestamp to process. Date-only values are treated as UTC midnight.",
+                        ),
+                        ActionField(
+                            name="gapfill_end",
+                            label="End timestamp (optional)",
+                            input_type="text",
+                            placeholder="2024-12-31 or 2024-12-31T23:00:00Z",
+                            help_text="Leave empty to process through the latest available source timestamp.",
+                        ),
+                        ActionField(
+                            name="gapfill_tables",
+                            label="Tables (optional)",
+                            input_type="multiselect",
+                            options=[
+                                ActionOption(value=table.table_name, label=table.table_name)
+                                for table in supported_gapfill_tables
+                            ],
+                            help_text="Leave empty to use the tables selected in the current gapfill configuration.",
+                            default_value=configured_tables,
+                        ),
+                    ],
+                )
+            )
+
         return actions
 
     def get_run_log_tail(self, run_id: int, lines: int = 200) -> dict[str, Any]:
@@ -827,8 +1108,12 @@ class CrawlerRunService:
                             )
                         )
 
-                    crawler = self._build_crawler_instance(
-                        prepared.crawler_name, prepared.effective_config
+                    crawler = (
+                        self._build_crawler_instance(
+                            prepared.crawler_name, prepared.effective_config
+                        )
+                        if prepared.requires_crawler
+                        else None
                     )
                     result_summary = prepared.executor(crawler)
                     if prepared.run_post_scripts:
@@ -894,6 +1179,78 @@ class CrawlerRunService:
         if payload["cadence"] == "single":
             return f"Backfill completed for {payload['data_item']}."
         return f"Backfill completed for {payload['data_item']} from {payload['start']} to {payload['end']}."
+
+    def _run_gapfill_backfill(self, payload: dict[str, Any]) -> str | None:
+        command = [
+            sys.executable,
+            "scripts/gapfill_timeseries.py",
+            "--job",
+            str(payload["job"]),
+            "--start",
+            str(payload["start"]),
+        ]
+        if payload.get("end"):
+            command.extend(["--end", str(payload["end"])])
+        if payload.get("tables"):
+            command.extend(["--tables", ",".join(str(table) for table in payload["tables"])])
+
+        completed = subprocess.run(
+            command,
+            cwd=self.repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.stdout:
+            print(completed.stdout, end="" if completed.stdout.endswith("\n") else "\n")
+        if completed.stderr:
+            print(completed.stderr, end="" if completed.stderr.endswith("\n") else "\n")
+        if completed.returncode != 0:
+            raise RuntimeError(
+                f"Gapfill backfill exited with code {completed.returncode}."
+            )
+
+        if payload.get("end"):
+            return f"Gapfill backfill completed for {payload['job']} from {payload['start']} to {payload['end']}."
+        return f"Gapfill backfill completed for {payload['job']} from {payload['start']}."
+
+    def _run_price_forecast(self, payload: dict[str, Any]) -> str | None:
+        command = [
+            sys.executable,
+            "scripts/run_price_forecast.py",
+            "--train-days",
+            str(payload["train_days"]),
+            "--backtest-days",
+            str(payload["backtest_days"]),
+            "--model-backend",
+            str(payload["model_backend"]),
+        ]
+        if payload.get("target_date"):
+            command.extend(["--target-date", str(payload["target_date"])])
+        if payload.get("run_mode") == "self_test":
+            command.append("--self-test")
+
+        completed = subprocess.run(
+            command,
+            cwd=self.repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.stdout:
+            print(completed.stdout, end="" if completed.stdout.endswith("\n") else "\n")
+        if completed.stderr:
+            print(completed.stderr, end="" if completed.stderr.endswith("\n") else "\n")
+        if completed.returncode != 0:
+            raise RuntimeError(
+                f"Price forecast exited with code {completed.returncode}."
+            )
+
+        if payload.get("run_mode") == "self_test":
+            return "Price forecast self-test completed."
+        if payload.get("target_date"):
+            return f"Price forecast completed for {payload['target_date']}."
+        return "Price forecast completed."
 
     def _run_post_scripts(
         self, effective_config: dict[str, Any], handle: io.TextIOBase
@@ -988,6 +1345,30 @@ class CrawlerRunService:
         if not text_value:
             raise ActionValidationError([f"{field_label} is required."])
         return text_value
+
+    def _parse_timestamp(self, value: str, field_label: str) -> datetime:
+        text_value = value.strip()
+        try:
+            return datetime.fromisoformat(text_value.replace("Z", "+00:00")).replace(tzinfo=None)
+        except ValueError as exc:
+            raise ActionValidationError(
+                [f"{field_label} must be a valid ISO date or timestamp."]
+            ) from exc
+
+    def _parse_date(self, value: str, field_label: str) -> datetime:
+        text_value = value.strip()
+        try:
+            return datetime.fromisoformat(text_value)
+        except ValueError as exc:
+            raise ActionValidationError(
+                [f"{field_label} must be a valid ISO date."]
+            ) from exc
+
+    def _env_int_default(self, name: str, fallback: int) -> int:
+        try:
+            return int(os.getenv(name, str(fallback)))
+        except ValueError:
+            return fallback
 
     def _ensure_list(self, value: Any) -> list[str]:
         if value is None:

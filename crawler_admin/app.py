@@ -39,6 +39,7 @@ from crawler_admin.gapfill_service import (
     build_gapfill_selftest_view,
     gapfill_method_options,
 )
+from crawler_admin.price_forecast_service import build_price_forecast_runtime_view
 from crawler_admin.runtime_service import (
     ActionValidationError,
     CrawlerRunService,
@@ -829,6 +830,7 @@ def _render_crawler_detail(
     selected_run = _select_run(history, active_run, selected_run_id)
     selected_log = run_service.get_run_log_tail(selected_run.run_id) if selected_run else None
     latest_run = history[0] if history else None
+    runtime_benchmarks = run_service.get_runtime_benchmarks(crawler_name)
     action_values = _build_action_values(actions, submitted_action_id, submitted_values)
     email_state = _build_email_alert_state(overview)
     gapfill_view = build_gapfill_runtime_view(
@@ -839,6 +841,11 @@ def _render_crawler_detail(
     )
     gapfill_form_values = gapfill_values or _build_gapfill_form_defaults_from_view(
         gapfill_view
+    )
+    price_forecast_view = (
+        build_price_forecast_runtime_view(overview.effective_config)
+        if crawler_name == "entsoe_api"
+        else None
     )
     config_hash = compute_content_hash(read_config_text())
 
@@ -854,6 +861,7 @@ def _render_crawler_detail(
             "history": history,
             "active_run": active_run,
             "latest_run": latest_run,
+            "runtime_benchmarks": runtime_benchmarks,
             "selected_run": selected_run,
             "selected_log": selected_log,
             "is_locked": run_service.is_locked(crawler_name),
@@ -868,6 +876,7 @@ def _render_crawler_detail(
             "message_text": message_text,
             "form_errors": form_errors or [],
             "gapfill_view": gapfill_view,
+            "price_forecast_view": price_forecast_view,
             "check_gapfill_db": check_gapfill_db,
             "gapfill_errors": gapfill_errors or [],
             "gapfill_values": gapfill_form_values,

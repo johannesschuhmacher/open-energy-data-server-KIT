@@ -1776,7 +1776,16 @@ class EntsoeFMSCrawler(BaseCrawler):
         if data_item in self.SINGLE_FILE_DATA_ITEMS:
             self.logger.warning(f"Backward update is not supported for SINGLE-FILE table '{data_item}'.")
             self.logger.info(f"Processing the single file '{data_item}.csv' one time...")
-            self._update_data_file(data_item, local_dir, file_identifier=None, logic_type="single")
+            metadata_entries = self._load_backfill_metadata(data_item)
+            if metadata_entries is None:
+                return
+            self._update_data_file(
+                data_item,
+                local_dir,
+                file_identifier=None,
+                logic_type="single",
+                metadata_entries=metadata_entries,
+            )
             return
         elif data_item in self.ANNUAL_FILE_DATA_ITEMS:
             loop_format = "%Y"
@@ -1789,22 +1798,57 @@ class EntsoeFMSCrawler(BaseCrawler):
             self.logger.info("Detected MONTHLY file logic for backward update.")
 
         try:
-            start_dt = pd.to_datetime(start, format=loop_format)
-            end_dt = pd.to_datetime(end, format=loop_format)
+            backfill_periods = self._build_backfill_periods(start, end, loop_format, date_offset)
         except ValueError:
-             self.logger.error(f"Invalid start/end format. Expected format '{loop_format}' for {data_item}, but got start='{start}' and end='{end}'.", exc_info=True)
-             return
+            self.logger.error(f"Invalid start/end format. Expected format '{loop_format}' for {data_item}, but got start='{start}' and end='{end}'.", exc_info=True)
+            return
 
-        dt = start_dt
-        while dt <= end_dt:
-            period_string = dt.strftime(loop_format)
-            self._update_data_file(data_item, local_dir, file_identifier=period_string, logic_type=loop_format)
-            dt += date_offset
+        if not backfill_periods:
+            self.logger.warning(f"Backward update range is empty for {data_item}: {start} to {end}.")
+            return
+
+        metadata_entries = self._load_backfill_metadata(data_item)
+        if metadata_entries is None:
+            return
+
+        for period_string in backfill_periods:
+            self._update_data_file(
+                data_item,
+                local_dir,
+                file_identifier=period_string,
+                logic_type=loop_format,
+                metadata_entries=metadata_entries,
+            )
 
         self.logger.info(f"Backward update finished for {data_item}.")
 
+    @staticmethod
+    def _build_backfill_periods(start: str, end: str, loop_format: str, date_offset: pd.DateOffset) -> list[str]:
+        start_dt = pd.to_datetime(start, format=loop_format)
+        end_dt = pd.to_datetime(end, format=loop_format)
 
-    def _update_data_file(self, data_item: str, local_dir: str, file_identifier: str | None, logic_type: str):
+        periods = []
+        dt = start_dt
+        while dt <= end_dt:
+            periods.append(dt.strftime(loop_format))
+            dt += date_offset
+        return periods
+
+    def _load_backfill_metadata(self, data_item: str) -> list[Dict] | None:
+        try:
+            return self._list_metadata(data_item, pd.Timestamp("2000-01-01"), pd.Timestamp.now())
+        except Exception as exc:
+            self.logger.error(f"Backward update failed while listing metadata for {data_item}: {exc}", exc_info=True)
+            return None
+
+    def _update_data_file(
+        self,
+        data_item: str,
+        local_dir: str,
+        file_identifier: str | None,
+        logic_type: str,
+        metadata_entries: list[Dict] | None = None,
+    ):
         """
         Helper for backwards_update. Downloads a specific file using the robust
         _list_metadata and _download_file methods, processes it, and flushes *only* old data.
@@ -1822,7 +1866,9 @@ class EntsoeFMSCrawler(BaseCrawler):
         try:
             self.logger.debug(f"[_update_data_file] Listing metadata for {data_item} to find file for period '{file_identifier}'...")
 
-            all_metas = self._list_metadata(data_item, pd.Timestamp("2000-01-01"), pd.Timestamp.now())
+            all_metas = metadata_entries
+            if all_metas is None:
+                all_metas = self._list_metadata(data_item, pd.Timestamp("2000-01-01"), pd.Timestamp.now())
 
             target_meta = None
             if logic_type == "single":

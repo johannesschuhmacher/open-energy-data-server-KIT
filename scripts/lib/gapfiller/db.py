@@ -62,6 +62,8 @@ def run_gapfill_job(
     job: GapfillJobConfig,
     *,
     dry_run: bool = False,
+    start: pd.Timestamp | None = None,
+    end: pd.Timestamp | None = None,
     logger: logging.Logger | None = None,
 ) -> GapfillRunSummary:
     logger = logger or logging.getLogger(__name__)
@@ -91,7 +93,17 @@ def run_gapfill_job(
 
     for table_config in job.tables:
         try:
-            result = process_table(engine, job, table_config, run_id, started_at, dry_run=dry_run, logger=logger)
+            result = process_table(
+                engine,
+                job,
+                table_config,
+                run_id,
+                started_at,
+                dry_run=dry_run,
+                start=start,
+                end=end,
+                logger=logger,
+            )
         except Exception as exc:
             totals["tables_failed"] += 1
             errors.append(f"{table_config.table_name}: {exc}")
@@ -154,6 +166,8 @@ def process_table(
     run_timestamp: pd.Timestamp,
     *,
     dry_run: bool,
+    start: pd.Timestamp | None = None,
+    end: pd.Timestamp | None = None,
     logger: logging.Logger,
 ) -> dict[str, int | str]:
     if not table_exists(engine, job.source_schema, table_config.table_name):
@@ -173,7 +187,7 @@ def process_table(
         raise ValueError(f"source table is missing configured columns: {missing_columns}")
 
     tracking = get_tracking_state(engine, job.target_schema, job.source_schema, table_config.table_name)
-    window = get_processing_window(engine, job, table_config, tracking, source_columns)
+    window = get_processing_window(engine, job, table_config, tracking, source_columns, start=start, end=end)
     if window is None:
         logger.info("No changed rows for %s.%s", job.source_schema, table_config.table_name)
         write_metrics(
@@ -209,14 +223,15 @@ def process_table(
             window.read_end,
             fill_result.dataframe,
         )
-        update_tracking_state(
-            engine,
-            job.target_schema,
-            job.source_schema,
-            table_config.table_name,
-            last_source_timestamp=window.changed_end,
-            last_update_time=window.max_update_time,
-        )
+        if start is None and end is None:
+            update_tracking_state(
+                engine,
+                job.target_schema,
+                job.source_schema,
+                table_config.table_name,
+                last_source_timestamp=window.changed_end,
+                last_update_time=window.max_update_time,
+            )
 
     write_metrics(engine, job, run_id, metrics, recorded_at=run_timestamp)
     logger.info(
@@ -489,6 +504,9 @@ def get_processing_window(
     config: TimeSeriesTableConfig,
     tracking: TrackingState,
     source_columns: list[str],
+    *,
+    start: pd.Timestamp | None = None,
+    end: pd.Timestamp | None = None,
 ) -> WindowInfo | None:
     update_column = config.update_time_column if config.update_time_column in source_columns else None
     schema_table = qualified(job.source_schema, config.table_name)
@@ -497,10 +515,17 @@ def get_processing_window(
     where_parts = [f"{time_column} IS NOT NULL"]
     params: dict[str, Any] = {}
 
-    if update_column and tracking.last_update_time is not None:
+    if start is not None:
+        where_parts.append(f"{time_column} >= :manual_start")
+        params["manual_start"] = start.to_pydatetime()
+    if end is not None:
+        where_parts.append(f"{time_column} <= :manual_end")
+        params["manual_end"] = end.to_pydatetime()
+
+    if start is None and end is None and update_column and tracking.last_update_time is not None:
         where_parts.append(f"{quote_identifier(update_column)} > :last_update_time")
         params["last_update_time"] = tracking.last_update_time.to_pydatetime()
-    elif tracking.last_source_timestamp is not None:
+    elif start is None and end is None and tracking.last_source_timestamp is not None:
         where_parts.append(f"{time_column} > :last_source_timestamp")
         params["last_source_timestamp"] = tracking.last_source_timestamp.to_pydatetime()
 
@@ -532,7 +557,7 @@ def get_processing_window(
     max_update_time = _timestamp_or_none(row["max_update_time"])
 
     read_start = changed_start
-    if tracking.last_source_timestamp is not None or tracking.last_update_time is not None:
+    if start is None and end is None and (tracking.last_source_timestamp is not None or tracking.last_update_time is not None):
         read_start = changed_start - job.lookback
 
     return WindowInfo(

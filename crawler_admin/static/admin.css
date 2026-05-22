@@ -592,6 +592,10 @@
   align-items: start;
 }
 
+.runtime-benchmark-panel {
+  grid-column: 1 / -1;
+}
+
 .fleet-detail-band {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr) minmax(250px, 0.8fr);
@@ -2211,6 +2215,22 @@ select[multiple] {
 .status-pill--succeeded {
   background: var(--success-soft);
   color: var(--success);
+}
+
+.status-pill--completed {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.status-pill--skipped,
+.status-pill--superseded {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.status-pill--writing {
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .status-pill--idle {

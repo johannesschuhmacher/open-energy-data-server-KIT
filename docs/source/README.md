@@ -65,7 +65,7 @@ If you are operating a running OEDS-KIT instance, these are the key surfaces:
 | Query tables and debug schemas | PgAdmin / SQL | inspect `public.metadata`, crawler schemas, and derived schemas directly |
 | Trigger runs, inspect logs, edit schedules | Crawler Admin UI | scheduler control, manual runs, runtime logs, and gapfill operations |
 | Edit the source-of-truth config | `CRAWLER_CONFIG.yml` / YAML editor | runtime behavior still comes from YAML, even when edited through the UI |
-| Validate post-run quality | Gapfill QA page and Grafana QA dashboard | synthetic self-tests stay local in admin UI; persisted QA data is written to the gapfill target schema |
+| Validate post-run quality | Gapfill Tests page and Grafana QA dashboard | synthetic self-tests stay local in admin UI; persisted QA data is written to the gapfill target schema |
 | Run derived price forecasts | `entsoe_api:forecast_daily` post-run and `price_forecast` schema | API rows are converted into point, quantile, and backtest outputs; FMS history can bridge warmup |
 
 ## Supported crawler functions
