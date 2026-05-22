@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: Johannes Schuhmacher
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Compatibility facade for crawler runtime environment helpers."""
 
 from crawler.common.runtime_env import (

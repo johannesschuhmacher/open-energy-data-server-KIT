@@ -338,9 +338,7 @@ class CrawlerRunService:
             success_count = len(success_records)
             failure_count = sample_count - success_count
             success_rate = (
-                round(success_count / sample_count * 100.0, 1)
-                if sample_count
-                else 0.0
+                round(success_count / sample_count * 100.0, 1) if sample_count else 0.0
             )
 
             benchmarks.append(
@@ -599,7 +597,9 @@ class CrawlerRunService:
             supported_tables = BUILTIN_GAPFILL_TABLES_BY_JOB.get(crawler_name, ())
             if not supported_tables:
                 raise ActionValidationError(
-                    [f"Crawler '{crawler_name}' does not have built-in gapfill table metadata."]
+                    [
+                        f"Crawler '{crawler_name}' does not have built-in gapfill table metadata."
+                    ]
                 )
 
             start_value = self._require_text(
@@ -607,9 +607,13 @@ class CrawlerRunService:
             )
             end_value = str(action_payload.get("gapfill_end") or "").strip()
             start_timestamp = self._parse_timestamp(start_value, "Gapfill start")
-            end_timestamp = self._parse_timestamp(end_value, "Gapfill end") if end_value else None
+            end_timestamp = (
+                self._parse_timestamp(end_value, "Gapfill end") if end_value else None
+            )
             if end_timestamp is not None and end_timestamp < start_timestamp:
-                raise ActionValidationError(["Gapfill end must not be earlier than gapfill start."])
+                raise ActionValidationError(
+                    ["Gapfill end must not be earlier than gapfill start."]
+                )
 
             selected_tables = self._ensure_list(action_payload.get("gapfill_tables"))
             valid_tables = {table.table_name for table in supported_tables}
@@ -667,9 +671,13 @@ class CrawlerRunService:
                 minimum=0,
                 maximum=60,
             )
-            model_backend = str(action_payload.get("model_backend") or "auto").strip().lower()
+            model_backend = (
+                str(action_payload.get("model_backend") or "auto").strip().lower()
+            )
             if model_backend not in {"auto", "upstream", "ridge"}:
-                raise ActionValidationError(["Model backend must be auto, upstream, or ridge."])
+                raise ActionValidationError(
+                    ["Model backend must be auto, upstream, or ridge."]
+                )
 
             payload = {
                 "run_mode": run_mode,
@@ -878,7 +886,9 @@ class CrawlerRunService:
                             input_type="select",
                             required=True,
                             options=[
-                                ActionOption(value="forecast", label="Database forecast"),
+                                ActionOption(
+                                    value="forecast", label="Database forecast"
+                                ),
                                 ActionOption(value="self_test", label="Self-test"),
                             ],
                             default_value="forecast",
@@ -923,17 +933,23 @@ class CrawlerRunService:
                                 ActionOption(value="upstream", label="upstream"),
                                 ActionOption(value="ridge", label="ridge"),
                             ],
-                            default_value=os.getenv("OEDS_PRICE_FORECAST_BACKEND", "auto"),
+                            default_value=os.getenv(
+                                "OEDS_PRICE_FORECAST_BACKEND", "auto"
+                            ),
                         ),
                     ],
                 )
             )
 
-        supported_gapfill_tables = BUILTIN_GAPFILL_TABLES_BY_JOB.get(overview.crawler_name, ())
+        supported_gapfill_tables = BUILTIN_GAPFILL_TABLES_BY_JOB.get(
+            overview.crawler_name, ()
+        )
         if supported_gapfill_tables:
             gapfill_config = effective_config.get("gapfill")
             configured_tables = []
-            if isinstance(gapfill_config, dict) and isinstance(gapfill_config.get("tables"), list):
+            if isinstance(gapfill_config, dict) and isinstance(
+                gapfill_config.get("tables"), list
+            ):
                 configured_tables = [
                     str(table_name)
                     for table_name in gapfill_config.get("tables", [])
@@ -967,7 +983,9 @@ class CrawlerRunService:
                             label="Tables (optional)",
                             input_type="multiselect",
                             options=[
-                                ActionOption(value=table.table_name, label=table.table_name)
+                                ActionOption(
+                                    value=table.table_name, label=table.table_name
+                                )
                                 for table in supported_gapfill_tables
                             ],
                             help_text="Leave empty to use the tables selected in the current gapfill configuration.",
@@ -1192,7 +1210,9 @@ class CrawlerRunService:
         if payload.get("end"):
             command.extend(["--end", str(payload["end"])])
         if payload.get("tables"):
-            command.extend(["--tables", ",".join(str(table) for table in payload["tables"])])
+            command.extend(
+                ["--tables", ",".join(str(table) for table in payload["tables"])]
+            )
 
         completed = subprocess.run(
             command,
@@ -1212,7 +1232,9 @@ class CrawlerRunService:
 
         if payload.get("end"):
             return f"Gapfill backfill completed for {payload['job']} from {payload['start']} to {payload['end']}."
-        return f"Gapfill backfill completed for {payload['job']} from {payload['start']}."
+        return (
+            f"Gapfill backfill completed for {payload['job']} from {payload['start']}."
+        )
 
     def _run_price_forecast(self, payload: dict[str, Any]) -> str | None:
         command = [
@@ -1349,7 +1371,9 @@ class CrawlerRunService:
     def _parse_timestamp(self, value: str, field_label: str) -> datetime:
         text_value = value.strip()
         try:
-            return datetime.fromisoformat(text_value.replace("Z", "+00:00")).replace(tzinfo=None)
+            return datetime.fromisoformat(text_value.replace("Z", "+00:00")).replace(
+                tzinfo=None
+            )
         except ValueError as exc:
             raise ActionValidationError(
                 [f"{field_label} must be a valid ISO date or timestamp."]

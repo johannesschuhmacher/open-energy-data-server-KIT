@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: Johannes Schuhmacher
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Stable import surface for reusable OEDS gapfill helpers."""
 
 from .config import (

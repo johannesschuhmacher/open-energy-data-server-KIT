@@ -152,7 +152,7 @@ entsoe_fms:
         self.assertIn('method: "donor_refined"', updated)
         self.assertIn('      - "EnergyPrices"', updated)
         self.assertIn('      - "PhysicalFlows"', updated)
-        self.assertIn('table_methods:', updated)
+        self.assertIn("table_methods:", updated)
         self.assertIn('    "EnergyPrices": "linear"', updated)
         self.assertIn('    "PhysicalFlows": "donor_refined"', updated)
 

@@ -26,6 +26,14 @@ from common.base_crawler import BaseCrawler
 log = logging.getLogger("entsoe")
 log.setLevel(logging.INFO)
 
+
+def _require_entsoe_api_key() -> str:
+    api_key = os.getenv("ENTSOE_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("ENTSOE_API_KEY environment variable is required.")
+    return api_key
+
+
 metadata_info = {
     "schema_name": "entsoe",
     "data_source": "https://data.open-power-system-data.org/conventional_power_plants/latest/conventional_power_plants_EU.csv",
@@ -621,7 +629,7 @@ class EntsoeCrawler(BaseCrawler):
 
 
 def main(schema_name):
-    api_key = os.getenv("ENTSOE_API_KEY", "ae2ed060-c25c-4eea-8ae4-007712f95375")
+    api_key = _require_entsoe_api_key()
     client = EntsoePandasClient(api_key=api_key)
     crawler = EntsoeCrawler(schema_name)
 
@@ -642,7 +650,7 @@ if __name__ == "__main__":
     Generate Token as documented here:
     https://iop-transparency.entsoe.eu/content/static_content/download?path=/Static%20content/API-Token-Management.pdf
     """
-    api_key = os.getenv("ENTSOE_API_KEY", "ae2ed060-c25c-4eea-8ae4-007712f95375")
+    api_key = _require_entsoe_api_key()
     client = EntsoePandasClient(api_key=api_key)
 
     start = pd.Timestamp("20250501", tz="Europe/Berlin")

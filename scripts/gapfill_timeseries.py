@@ -172,7 +172,11 @@ def main() -> int:
     manual_end = _parse_optional_timestamp(args.end, "end")
     if manual_end is not None and manual_start is None:
         raise ValueError("--start is required when --end is set.")
-    if manual_start is not None and manual_end is not None and manual_end < manual_start:
+    if (
+        manual_start is not None
+        and manual_end is not None
+        and manual_end < manual_start
+    ):
         raise ValueError("--end must not be earlier than --start.")
 
     engine = create_engine(job.database_uri)
