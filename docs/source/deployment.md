@@ -221,8 +221,6 @@ installations and updates. The recommended entry points are:
   admin UI through the Compose `crawlers` profile.
 - `oeds-update-crawlers.yml` for updates on installations that run the crawler
   profile and stay on the public defaults.
-- optional operator-specific edge playbooks for reverse proxy, TLS, or
-  firewalling, if you decide to maintain them outside the public repository.
 
 Operator-specific files such as `inventory.yml`, `group_vars/oeds.yml`, and
 secret-bearing crawler environment files should stay local and are ignored by
@@ -251,6 +249,10 @@ and SMTP settings are provided via local environment variables, for example
 `OEDS_ANSIBLE_EMAIL_TOADDRS`. If those playbook-specific variables are absent,
 the callback falls back to the existing crawler mail overrides
 `OEDS_EMAIL_MAILHOST`, `OEDS_EMAIL_FROMADDR`, and `OEDS_EMAIL_TOADDRS`.
+Repeated identical playbook status emails are rate-limited to one message per
+hour by default. Use `OEDS_ANSIBLE_EMAIL_RATE_LIMIT_SECONDS`,
+`OEDS_ANSIBLE_EMAIL_RATE_LIMIT_MINUTES`, or
+`OEDS_ANSIBLE_EMAIL_RATE_LIMIT_STATE_FILE` to tune the cooldown.
 
 ## 6. Run initial crawler loads manually
 

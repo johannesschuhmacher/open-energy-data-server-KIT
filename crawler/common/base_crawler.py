@@ -2,20 +2,23 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-from datetime import date, datetime
-from sqlalchemy import create_engine, text
-from abc import ABC, abstractmethod
 import json
 import logging
-from logging.handlers import SMTPHandler
 import os
-from pathlib import Path
 import threading
 import time
+from abc import ABC, abstractmethod
+from datetime import date, datetime
+from logging.handlers import RotatingFileHandler, SMTPHandler
+from pathlib import Path
+
+from sqlalchemy import create_engine, text
 
 from crawler.common.runtime_env import resolve_database_uri
 
 DEFAULT_EMAIL_RATE_LIMIT_SECONDS = 60 * 60
+DEFAULT_LOG_FILE_MAX_BYTES = 100 * 1024 * 1024
+DEFAULT_LOG_FILE_BACKUP_COUNT = 5
 
 
 class RateLimitedSMTPHandler(SMTPHandler):
@@ -116,6 +119,40 @@ def _email_recipients(toaddrs) -> list[str]:
     return []
 
 
+def _parse_nonnegative_int(raw_value, default: int) -> int:
+    if raw_value in (None, ""):
+        return default
+    try:
+        return max(0, int(raw_value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _logging_config(config: dict) -> dict:
+    raw_config = config.get("logging")
+    return raw_config if isinstance(raw_config, dict) else {}
+
+
+def _log_file_max_bytes(config: dict) -> int:
+    env_value = os.getenv("OEDS_LOG_FILE_MAX_BYTES")
+    if env_value not in (None, ""):
+        return _parse_nonnegative_int(env_value, DEFAULT_LOG_FILE_MAX_BYTES)
+    return _parse_nonnegative_int(
+        _logging_config(config).get("max_bytes"),
+        DEFAULT_LOG_FILE_MAX_BYTES,
+    )
+
+
+def _log_file_backup_count(config: dict) -> int:
+    env_value = os.getenv("OEDS_LOG_FILE_BACKUP_COUNT")
+    if env_value not in (None, ""):
+        return _parse_nonnegative_int(env_value, DEFAULT_LOG_FILE_BACKUP_COUNT)
+    return _parse_nonnegative_int(
+        _logging_config(config).get("backup_count"),
+        DEFAULT_LOG_FILE_BACKUP_COUNT,
+    )
+
+
 def _handler_matches_key(handler: logging.Handler, key: tuple) -> bool:
     if getattr(handler, "_oeds_handler_key", None) == key:
         return True
@@ -178,7 +215,11 @@ class BaseCrawler(ABC):
         if not os.path.isfile(log_file_name):
             os.makedirs(os.path.dirname(log_file_name), exist_ok=True)
 
-        fileHandler = logging.FileHandler(log_file_name)
+        fileHandler = RotatingFileHandler(
+            log_file_name,
+            maxBytes=_log_file_max_bytes(self.config),
+            backupCount=_log_file_backup_count(self.config),
+        )
         if logging.root.handlers: # if basicConfig was called before, use the same formatter
             fileHandler.setFormatter(logging.root.handlers[0].formatter) # use the same formatter as defined in basic config in server.py
         _add_unique_handler(
@@ -253,7 +294,7 @@ class BaseCrawler(ABC):
 
         conf = self.config
         for k in keys:
-            if type(conf) == dict and k in conf:
+            if isinstance(conf, dict) and k in conf:
                 conf = conf[k]
             else:
                 raise KeyError(f"Key '{key}' not found in crawler configuration.")

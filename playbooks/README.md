@@ -8,6 +8,10 @@ Secrets, inventories, host-specific overrides, and runtime data do not belong
 in the repository. Keep them in local `group_vars`, untracked `.env` files, or
 host-side runtime directories.
 
+For managed internal deployments, keep the repo-root compose `.env` at `0600`.
+It is the natural place for the rotated OEDS service passwords because Compose
+loads it automatically.
+
 ## Target layout
 
 The playbooks install and operate OEDS on a Linux host with Docker Compose.
@@ -161,6 +165,9 @@ the callback sends one status email at the end of each playbook run.
 - Runtime failures and unreachable hosts are reported as `FAILED`.
 - Syntax errors that happen before callback plugins are loaded cannot trigger
   emails.
+- Repeated identical status emails are rate-limited by default to one message
+  per hour. Set `OEDS_ANSIBLE_EMAIL_RATE_LIMIT_SECONDS=0` to disable this, or
+  use `OEDS_ANSIBLE_EMAIL_RATE_LIMIT_MINUTES` for a different cooldown.
 
 The callback can use the same local mail overrides as the crawler runtime:
 
@@ -179,11 +186,115 @@ export OEDS_ANSIBLE_EMAIL_TOADDRS=ops@example.com
 export OEDS_ANSIBLE_EMAIL_STARTTLS=true
 export OEDS_ANSIBLE_EMAIL_USERNAME=smtp-user
 export OEDS_ANSIBLE_EMAIL_PASSWORD='...'
+export OEDS_ANSIBLE_EMAIL_RATE_LIMIT_MINUTES=60
 ```
 
 If `crawler/.env` exists on the control node, it is used as a fallback source
 for `OEDS_EMAIL_*`. Keep secrets in local environment variables or untracked
 `.env` files, never in the repository.
+
+The rate-limit state is stored in the control user's cache directory by
+default. Override it with `OEDS_ANSIBLE_EMAIL_RATE_LIMIT_STATE_FILE` if the
+control environment should persist it elsewhere.
+
+## Internal password rotation
+
+For internal long-running hosts, use the host-side rotation script instead of
+manually editing passwords:
+
+```bash
+export BW_SERVER_URL=https://bitwarden.example.internal
+export BW_CLIENTID=...
+export BW_CLIENTSECRET=...
+export BW_PASSWORD=...
+python scripts/rotate_oeds_passwords.py --deployment-name intern-test
+```
+
+The script:
+
+- generates fresh passwords for `opendata`, `readonly`, the Grafana admin, and
+  the pgAdmin admin,
+- updates the live OEDS containers,
+- rewrites the repo-root Compose `.env` with the new secret values,
+- restarts the affected services,
+- and upserts the credentials into Bitwarden under `OEDS/<deployment-name>`.
+
+Bitwarden-specific notes:
+
+- The script uses the official `bw` CLI because Bitwarden documents vault-item
+  automation through the Vault Management path exposed by the CLI.
+- `BW_CLIENTID` and `BW_CLIENTSECRET` authenticate `bw login --apikey`.
+- `BW_PASSWORD` is still required because Bitwarden requires an explicit
+  `unlock` step before vault items can be read or edited.
+
+Operational notes:
+
+- Run the script on the target OEDS host, usually as the same privileged user
+  that owns the deployment checkout and Docker access.
+- A timestamped backup of the previous `.env` is kept next to the file.
+- On failure, the script attempts to roll the passwords back and leaves a local
+  pending-secret file for manual recovery if rollback is incomplete.
+
+### Run it centrally across one or more VMs
+
+If you already manage your OEDS hosts through the Ansible inventory, use the
+dedicated rotation playbook instead of SSHing into every VM:
+
+```bash
+export BW_SERVER_URL=https://bitwarden.example.internal
+export BW_CLIENTID=...
+export BW_CLIENTSECRET=...
+export BW_PASSWORD=...
+ANSIBLE_CONFIG=playbooks/ansible.cfg \
+ansible-playbook -i playbooks/inventory.yml playbooks/oeds-rotate-passwords.yml
+```
+
+The playbook runs `serial: 1`, so the hosts rotate one after another instead
+of all at once.
+
+To rotate only selected hosts:
+
+```bash
+ANSIBLE_CONFIG=playbooks/ansible.cfg \
+ansible-playbook -i playbooks/inventory.yml playbooks/oeds-rotate-passwords.yml \
+  -l intern-test,extern
+```
+
+To inspect the plan without changing anything:
+
+```bash
+ANSIBLE_CONFIG=playbooks/ansible.cfg \
+ansible-playbook -i playbooks/inventory.yml playbooks/oeds-rotate-passwords.yml \
+  -e oeds_rotation_dry_run=true
+```
+
+Useful per-host inventory or `group_vars` overrides:
+
+- `oeds_rotation_deployment_name`: label used in Bitwarden item names
+- `oeds_rotation_access_host`: URI host written into Bitwarden entries
+- `oeds_rotation_bitwarden_folder`: folder override, default `OEDS/<deployment-name>`
+- `oeds_rotation_password_length`: generated password length, default `32`
+
+Example inventory excerpt:
+
+```yaml
+all:
+  children:
+    oeds:
+      hosts:
+        intern-test:
+          ansible_host: iip-vm-oeds-intern-test.iip.kit.edu
+          ansible_user: your-ssh-user
+          ansible_become: true
+          oeds_rotation_deployment_name: intern-test
+          oeds_rotation_access_host: iip-vm-oeds-intern-test.iip.kit.edu
+        extern:
+          ansible_host: iip-vm-oeds-extern.iip.kit.edu
+          ansible_user: your-ssh-user
+          ansible_become: true
+          oeds_rotation_deployment_name: extern
+          oeds_rotation_access_host: iip-vm-oeds-extern.iip.kit.edu
+```
 
 Dry-run example:
 

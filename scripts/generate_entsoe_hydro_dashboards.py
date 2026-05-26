@@ -7,8 +7,8 @@ from pathlib import Path
 
 
 DATASOURCE_UID = "P6EAA63344BCC9F38"
-OUT_OVERVIEW = Path("data/provisioning/grafana/dashboards/ENTSOE_Hydro_Overview_Structure.json")
-OUT_FLEX = Path("data/provisioning/grafana/dashboards/ENTSOE_Hydro_Flexibility_Markets.json")
+OUT_OVERVIEW = Path("data/provisioning/grafana/dashboards/entsoe_fms/ENTSOE_Hydro_Overview_Structure.json")
+OUT_FLEX = Path("data/provisioning/grafana/dashboards/entsoe_fms/ENTSOE_Hydro_Flexibility_Markets.json")
 
 HYDRO_TYPES_SQL = "('Hydro Pumped Storage', 'Hydro Run-of-river and poundage', 'Hydro Water Reservoir')"
 PRICE_FILTER_SQL = "\"AreaTypeCode\" = 'BZN' AND (TRIM(COALESCE(\"Sequence\", '')) = '' OR \"Sequence\" = '1')"
@@ -1353,6 +1353,7 @@ ORDER BY 1
 
 
 def main() -> None:
+    OUT_OVERVIEW.parent.mkdir(parents=True, exist_ok=True)
     OUT_OVERVIEW.write_text(json.dumps(overview_dashboard(), indent=4) + "\n", encoding="utf-8")
     OUT_FLEX.write_text(json.dumps(flexibility_dashboard(), indent=4) + "\n", encoding="utf-8")
     print(f"Wrote {OUT_OVERVIEW}")

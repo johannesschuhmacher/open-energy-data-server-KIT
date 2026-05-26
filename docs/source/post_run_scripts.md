@@ -1,7 +1,8 @@
 # Post-Run Scripts
 
-OEDS crawlers can run follow-up scripts after a crawler finished successfully.
-These scripts are configured with `post_run_scripts` in `CRAWLER_CONFIG.yml`.
+OEDS-KIT crawlers can run follow-up scripts after a crawler finished
+successfully. These scripts are configured with `post_run_scripts` in
+`CRAWLER_CONFIG.yml`.
 
 Post-run scripts are intended for derived data and maintenance work that depends
 on freshly imported crawler data, for example:
@@ -99,6 +100,11 @@ For an interactive local check, open the crawler admin UI and use
 `/admin/gapfill`. The admin view lets operators select fault scenarios and
 renders source-versus-filled previews without writing synthetic data to the
 database.
+
+For productive control, use the crawler detail page of the corresponding
+time-series crawler. That page controls whether the gapfill post-run script is
+attached, which source tables are included, and which derived target schema
+receives the gapfilled copies and Grafana QA data.
 
 The admin UI also has a holdout error test for gapfilling. Select a synthetic
 time-series dataset, remove a configurable number of periods from a configurable

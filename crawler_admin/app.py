@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 import smtplib
@@ -665,6 +665,7 @@ def _build_holdout_form_defaults(
         "gap_length_periods": str(default_dataset.recommended_gap_length if default_dataset else 6),
         "gap_start_index": str(default_dataset.recommended_gap_start if default_dataset else ""),
     }
+
 
 def _extract_gapfill_form_values(form: Any, overview: Any) -> dict[str, Any]:
     defaults = _build_gapfill_form_defaults(overview)

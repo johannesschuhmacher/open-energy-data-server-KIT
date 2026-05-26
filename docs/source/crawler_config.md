@@ -36,7 +36,14 @@ Most crawlers use some or all of these options:
 - `post_run_scripts`: scripts that should run after the crawler; see
   [Post-Run Scripts](post_run_scripts.md)
 - `description`: short human-readable description
-- `email`: optional notification settings for critical failures
+- `email`: optional notification settings for critical failures. Crawler
+  critical emails are rate-limited to one message per crawler and subject per
+  hour by default; set `email.rate_limit_seconds` or
+  `email.rate_limit_minutes` to tune this.
+- `logging`: optional crawler log rotation settings. Runtime log files rotate
+  at 100 MiB with 5 retained backups by default. Set `logging.max_bytes` and
+  `logging.backup_count`, or the environment variables
+  `OEDS_LOG_FILE_MAX_BYTES` and `OEDS_LOG_FILE_BACKUP_COUNT`, to tune this.
 
 List values are replaced completely when overridden. Dictionary values are
 merged key-by-key.

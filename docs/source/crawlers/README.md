@@ -31,7 +31,6 @@ This keeps the documentation readable for operators and makes crawler pages easy
 Currently documented crawlers:
 
 - [entsoe_fms](./entsoe_fms.md)
-- [entsog](./entsog.md)
 - [entsoe_api](./entsoe_api.md)
 - [weather_forecast](./weather_forecast.md)
 - [energy_forecast_crawler](./energy_forecast_crawler.md)
@@ -43,4 +42,5 @@ Currently documented crawlers:
 Recommended next candidates:
 
 - `ninja`
-- `opsd_renewable_powerplants`
+- `dwd_cdc`
+- `open_meteo`

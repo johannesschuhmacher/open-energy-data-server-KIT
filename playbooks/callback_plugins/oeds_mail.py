@@ -5,10 +5,13 @@
 from __future__ import annotations
 
 import getpass
+import hashlib
+import json
 import os
 import re
 import smtplib
 import socket
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -16,7 +19,6 @@ from pathlib import Path
 from typing import Any
 
 from ansible.plugins.callback import CallbackBase
-
 
 DOCUMENTATION = r"""
     name: oeds_mail
@@ -34,6 +36,7 @@ DOCUMENTATION = r"""
 TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
 FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 DEFAULT_SUBJECT = "OEDS Ansible {status}: {playbook}"
+DEFAULT_EMAIL_RATE_LIMIT_SECONDS = 60 * 60
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,8 @@ class MailConfig:
     timeout: float
     dry_run: bool
     dry_run_file: str
+    rate_limit_seconds: int
+    rate_limit_state_file: str
 
 
 class CallbackModule(CallbackBase):
@@ -97,6 +102,8 @@ class CallbackModule(CallbackBase):
             host=socket.gethostname(),
         )
         body = self._message_body(status, finished_at, host_rows)
+        if _is_rate_limited(config, subject):
+            return
 
         try:
             self._send_message(config, subject, body)
@@ -177,6 +184,18 @@ class CallbackModule(CallbackBase):
                 "OEDS_ANSIBLE_EMAIL_DRY_RUN_FILE",
                 "OEDS_ANSIBLE_MAIL_DRY_RUN_FILE",
                 default="",
+            ),
+            rate_limit_seconds=_get_rate_limit_seconds(
+                seconds_names=("OEDS_ANSIBLE_EMAIL_RATE_LIMIT_SECONDS", "OEDS_ANSIBLE_MAIL_RATE_LIMIT_SECONDS"),
+                minutes_names=("OEDS_ANSIBLE_EMAIL_RATE_LIMIT_MINUTES", "OEDS_ANSIBLE_MAIL_RATE_LIMIT_MINUTES"),
+                default=DEFAULT_EMAIL_RATE_LIMIT_SECONDS,
+            ),
+            rate_limit_state_file=_get_env(
+                "OEDS_ANSIBLE_EMAIL_RATE_LIMIT_STATE_FILE",
+                "OEDS_ANSIBLE_MAIL_RATE_LIMIT_STATE_FILE",
+                "OEDS_ANSIBLE_EMAIL_RATE_LIMIT_FILE",
+                "OEDS_ANSIBLE_MAIL_RATE_LIMIT_FILE",
+                default=_default_rate_limit_state_file(),
             ),
         )
         return self._config
@@ -299,6 +318,24 @@ def _get_bool(*names: str, default: bool | None) -> bool | None:
     return default
 
 
+def _get_rate_limit_seconds(*, seconds_names: tuple[str, ...], minutes_names: tuple[str, ...], default: int) -> int:
+    raw_seconds = _get_env(*seconds_names, default="")
+    if raw_seconds:
+        try:
+            return max(0, int(raw_seconds))
+        except (TypeError, ValueError):
+            return default
+
+    raw_minutes = _get_env(*minutes_names, default="")
+    if raw_minutes:
+        try:
+            return max(0, int(float(raw_minutes) * 60))
+        except (TypeError, ValueError):
+            return default
+
+    return default
+
+
 def _parse_recipients(raw_recipients: str) -> list[str]:
     return [token.strip() for token in re.split(r"[,\n;]+", raw_recipients) if token.strip()]
 
@@ -318,3 +355,67 @@ def _unquote_env_value(value: str) -> str:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
         return value[1:-1]
     return value
+
+
+def _default_rate_limit_state_file() -> str:
+    return str(Path.home() / ".cache" / "oeds" / "ansible_mail_state.json")
+
+
+def _rate_limit_key(config: MailConfig, subject: str) -> str:
+    raw_key = "\0".join(
+        [
+            config.mailhost,
+            config.fromaddr,
+            ",".join(config.toaddrs),
+            subject,
+        ]
+    )
+    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
+
+def _is_rate_limited(config: MailConfig, subject: str) -> bool:
+    if config.rate_limit_seconds <= 0:
+        return False
+
+    state_path = Path(config.rate_limit_state_file).expanduser()
+    key = _rate_limit_key(config, subject)
+    now = time.time()
+
+    try:
+        state = _read_rate_limit_state(state_path)
+        entry = state.get(key)
+        if isinstance(entry, dict):
+            try:
+                last_sent = float(entry.get("last_sent", 0))
+            except (TypeError, ValueError):
+                last_sent = 0
+            if now - last_sent < config.rate_limit_seconds:
+                return True
+
+        state[key] = {
+            "last_sent": now,
+            "subject": subject[:200],
+        }
+        _write_rate_limit_state(state_path, state)
+    except OSError:
+        return False
+
+    return False
+
+
+def _read_rate_limit_state(path: Path) -> dict[str, Any]:
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return state if isinstance(state, dict) else {}
+
+
+def _write_rate_limit_state(path: Path, state: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    temp_path.write_text(
+        json.dumps(state, sort_keys=True, indent=2),
+        encoding="utf-8",
+    )
+    os.replace(temp_path, path)

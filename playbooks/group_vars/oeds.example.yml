@@ -32,3 +32,11 @@ oeds_uninstall_remove_repo: false
 oeds_uninstall_remove_runtime: false
 oeds_uninstall_remove_backups: false
 oeds_uninstall_remove_images: false
+
+# Optional host-specific labels for password rotation. Keep Bitwarden secrets in
+# environment variables on the control node, not in this file.
+# oeds_rotation_deployment_name: intern-test
+# oeds_rotation_access_host: iip-vm-oeds-intern-test.iip.kit.edu
+# oeds_rotation_bitwarden_folder: OEDS/intern-test
+# oeds_rotation_password_length: 32
+# oeds_rotation_dry_run: false

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Florian Maurer, Christian Rieke
+# SPDX-FileCopyrightText: OEDS Contributors
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -11,13 +11,14 @@
 __pycache__
 ninja_*
 *.grb
-/axxteq
 *.log
 *.ipynb
 config.py
 /env/
 .env
 .venv
+.bitwarden-cli-oeds/
+.oeds-password-rotation.pending-*.json
 git_server_token
 crawler/data/Waermebedarf_NRW.gdb/
 crawler/data/copernicus_cds/

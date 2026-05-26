@@ -7,8 +7,8 @@ from pathlib import Path
 
 
 DATASOURCE_UID = "P6EAA63344BCC9F38"
-OUT_EVENT = Path("data/provisioning/grafana/dashboards/ENTSOE_Negative_Prices_Event_2026_04_26.json")
-OUT_LONG_TERM = Path("data/provisioning/grafana/dashboards/ENTSOE_Negative_Prices_Long_Term.json")
+OUT_EVENT = Path("data/provisioning/grafana/dashboards/entsoe_fms/ENTSOE_Negative_Prices_Event_2026_04_26.json")
+OUT_LONG_TERM = Path("data/provisioning/grafana/dashboards/entsoe_fms/ENTSOE_Negative_Prices_Long_Term.json")
 
 EVENT_SUNDAY = "DATE '2026-04-26'"
 UNIT_EUR_PER_MWH = "suffix:€/MWh"

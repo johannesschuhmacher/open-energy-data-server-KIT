@@ -49,9 +49,11 @@ dev = [
     "ruff",
 ]
 docs = [
-    "recommonmark",
     "sphinx",
-    "sphinx-rtd-theme",
+    "myst-parser",
+    "pydata-sphinx-theme",
+    "sphinx-copybutton",
+    "sphinx-design",
 ]
 price-forecast = [
     "da-price-forecasting @ git+https://github.com/philipprisk/DA_Price_Forecasting_Pipeline_DE_LU.git@c3f8a270cbeff328a30609f9b66e96ced693b676",

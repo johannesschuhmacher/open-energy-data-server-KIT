@@ -1,0 +1,155 @@
+<!-- SPDX-FileCopyrightText: Florian Maurer, Christian Rieke, Andre Meyer, Haoshen Zhang, Johannes Schuhmacher -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">OEDS simple architecture overview</title>
+  <desc id="desc">A simplified architecture overview for Open Energy Data Server showing sources, crawler operations including the admin UI, database storage, user interfaces, and runtime support.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 36px "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 18px "Segoe UI", Arial, sans-serif; fill: #475569; }
+      .step { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #ffffff; }
+      .section { font: 700 24px "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .label { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #162033; }
+      .text { font: 400 15px "Segoe UI", Arial, sans-serif; fill: #334155; }
+      .small { font: 400 13px "Segoe UI", Arial, sans-serif; fill: #475569; }
+      .mono { font: 700 13px Consolas, "Courier New", monospace; fill: #334155; }
+      .panel { stroke-width: 2; }
+      .inner { fill: rgba(255, 255, 255, 0.72); stroke-width: 1.5; }
+      .arrow { fill: none; stroke: #0284c7; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .arrow-soft { fill: none; stroke: #64748b; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-soft); }
+      .icon { fill: none; stroke: #0f172a; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+      .tag { font: 700 12px "Segoe UI", Arial, sans-serif; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#0284c7"/>
+    </marker>
+    <marker id="arrow-soft" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#64748b"/>
+    </marker>
+    <linearGradient id="db" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#94a3b8" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect class="bg" width="1600" height="900"/>
+  <text class="title" x="58" y="62">Open Energy Data Server</text>
+  <text class="subtitle" x="60" y="95">Simple architecture overview: automated ingestion, crawler operations, shared storage, and multiple access paths.</text>
+
+  <g transform="translate(60 135)" filter="url(#shadow)">
+    <rect class="panel" width="305" height="445" rx="26" fill="#eef8f3" stroke="#7ccba7"/>
+    <circle cx="42" cy="43" r="24" fill="#16a34a"/>
+    <text class="step" x="36" y="49">1</text>
+    <text class="section" x="80" y="51">Sources</text>
+
+    <g transform="translate(31 91)">
+      <rect class="inner" width="243" height="74" rx="16" stroke="#b7dec8"/>
+      <text class="label" x="20" y="30">Open data</text>
+      <text class="text" x="20" y="55">SMARD, Eurostat, DWD, OSM</text>
+    </g>
+    <g transform="translate(31 184)">
+      <rect class="inner" width="243" height="86" rx="16" stroke="#b7dec8"/>
+      <text class="label" x="20" y="30">Authenticated</text>
+      <text class="text" x="20" y="55">ENTSO-E, EPEX, GIE, EIA,</text>
+      <text class="text" x="20" y="78">Copernicus, Netztransparenz</text>
+    </g>
+    <g transform="translate(31 289)">
+      <rect class="inner" width="243" height="74" rx="16" stroke="#b7dec8"/>
+      <text class="label" x="20" y="30">Configured feeds</text>
+      <text class="text" x="20" y="55">Energy Forecast, PRISMA</text>
+    </g>
+    <rect x="31" y="383" width="243" height="32" rx="16" fill="#dcfce7" stroke="#16a34a"/>
+    <text class="tag" x="57" y="404" fill="#166534">energy, weather, gas, grids, markets</text>
+  </g>
+
+  <g transform="translate(445 135)" filter="url(#shadow)">
+    <rect class="panel" width="330" height="445" rx="28" fill="#fff7ed" stroke="#fb923c"/>
+    <circle cx="42" cy="43" r="24" fill="#f97316"/>
+    <text class="step" x="36" y="49">2</text>
+    <text class="section" x="80" y="51">Crawler layer</text>
+
+    <g transform="translate(30 88)">
+      <rect class="inner" width="270" height="82" rx="16" stroke="#fed7aa"/>
+      <path class="icon" d="M25 25v18l15 9M14 43a26 26 0 1 0 8-19"/>
+      <text class="label" x="78" y="31">Scheduler</text>
+      <text class="text" x="78" y="57">scheduled imports and alerts</text>
+    </g>
+    <g transform="translate(30 184)">
+      <rect class="inner" width="270" height="90" rx="16" stroke="#fed7aa"/>
+      <path class="icon" d="M18 25h36M18 42h36M18 59h24"/>
+      <text class="label" x="78" y="31">Crawler modules</text>
+      <text class="text" x="78" y="56">fetch and normalize data</text>
+      <text class="text" x="78" y="79">write source schemas</text>
+    </g>
+    <g transform="translate(30 292)">
+      <rect class="inner" width="270" height="94" rx="16" stroke="#fed7aa"/>
+      <path class="icon" d="M17 25h38v27H17zM25 64h22M31 52v12M27 34h18"/>
+      <text class="label" x="78" y="31">Admin UI</text>
+      <text class="text" x="78" y="57">manual runs, config, logs</text>
+      <text class="mono" x="78" y="82">localhost:3010/admin</text>
+    </g>
+    <rect x="30" y="405" width="270" height="32" rx="16" fill="#ffedd5" stroke="#fb923c"/>
+    <text class="tag" x="62" y="426" fill="#9a3412">managed by CRAWLER_CONFIG.yml</text>
+  </g>
+
+  <g transform="translate(870 135)" filter="url(#shadow)">
+    <rect class="panel" width="300" height="445" rx="30" fill="#eaf7ff" stroke="#7dd3fc"/>
+    <circle cx="42" cy="43" r="24" fill="#0284c7"/>
+    <text class="step" x="36" y="49">3</text>
+    <text class="section" x="80" y="51">Data store</text>
+
+    <rect x="48" y="96" width="204" height="160" rx="22" fill="#ffffff" stroke="#bae6fd" stroke-width="2"/>
+    <image href="postgresql-logo.svg" x="87" y="111" width="126" height="130" preserveAspectRatio="xMidYMid meet"/>
+
+    <text x="54" y="296" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#0f172a">PostgreSQL</text>
+    <text x="54" y="326" class="text">TimescaleDB time-series</text>
+    <text x="54" y="352" class="text">PostGIS spatial data</text>
+    <text x="54" y="378" class="text">metadata and gap-filled views</text>
+  </g>
+
+  <g transform="translate(1270 135)" filter="url(#shadow)">
+    <rect class="panel" width="270" height="445" rx="26" fill="#f4f0ff" stroke="#c4b5fd"/>
+    <circle cx="42" cy="43" r="24" fill="#7c3aed"/>
+    <text class="step" x="36" y="49">4</text>
+    <text class="section" x="80" y="51">Access</text>
+
+    <g transform="translate(30 91)">
+      <rect class="inner" width="210" height="66" rx="16" stroke="#ddd6fe"/>
+      <text class="label" x="18" y="29">Grafana</text>
+      <text class="text" x="18" y="53">dashboards and maps</text>
+    </g>
+    <g transform="translate(30 176)">
+      <rect class="inner" width="210" height="66" rx="16" stroke="#ddd6fe"/>
+      <text class="label" x="18" y="29">PostgREST</text>
+      <text class="text" x="18" y="53">HTTP API for clients</text>
+    </g>
+    <g transform="translate(30 261)">
+      <rect class="inner" width="210" height="66" rx="16" stroke="#ddd6fe"/>
+      <text class="label" x="18" y="29">PgAdmin / SQL</text>
+      <text class="text" x="18" y="53">direct inspection</text>
+    </g>
+    <g transform="translate(30 346)">
+      <rect class="inner" width="210" height="66" rx="16" stroke="#ddd6fe"/>
+      <text class="label" x="18" y="29">Python / notebooks</text>
+      <text class="text" x="18" y="53">exports and analysis</text>
+    </g>
+  </g>
+
+  <path class="arrow" d="M365 360 H445"/>
+  <path class="arrow" d="M775 360 H870"/>
+  <path class="arrow" d="M1170 360 H1270"/>
+
+  <g transform="translate(445 625)" filter="url(#shadow)">
+    <rect width="725" height="108" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text class="section" x="30" y="42">Runtime and deployment support</text>
+    <text class="text" x="30" y="73">Docker Compose profiles, provisioned dashboards, PgAdmin config, logs, crawler data, and admin state.</text>
+  </g>
+
+  <path class="arrow-soft" d="M610 625 V580"/>
+  <path class="arrow-soft" d="M1030 625 V580"/>
+</svg>

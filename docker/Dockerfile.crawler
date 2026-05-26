@@ -27,7 +27,9 @@ COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --locked --no-dev --no-install-project --group price-forecast
 
 COPY crawler ./crawler
+COPY crawler_core ./crawler_core
 COPY crawler_admin ./crawler_admin
+COPY oeds_gapfill ./oeds_gapfill
 COPY oeds_price_forecast ./oeds_price_forecast
 COPY scripts ./scripts
 COPY crawler_scheduler.py ./crawler_scheduler.py

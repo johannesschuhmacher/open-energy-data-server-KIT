@@ -1,0 +1,103 @@
+<!-- SPDX-FileCopyrightText: Florian Maurer, Christian Rieke, Andre Meyer, Haoshen Zhang, Johannes Schuhmacher -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">OEDS workflow overview</title>
+  <desc id="desc">Simplified OEDS workflow from source APIs through scheduled crawlers and storage to dashboards, APIs, and exports.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 36px "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 18px "Segoe UI", Arial, sans-serif; fill: #475569; }
+      .section { font: 700 24px "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .label { font: 700 17px "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .text { font: 400 15px "Segoe UI", Arial, sans-serif; fill: #334155; }
+      .small { font: 700 12px "Segoe UI", Arial, sans-serif; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .step { font: 700 18px "Segoe UI", Arial, sans-serif; fill: #ffffff; }
+      .arrow { fill: none; stroke: #0284c7; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .soft-arrow { fill: none; stroke: #64748b; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-soft); }
+      .icon { fill: none; stroke: #0f172a; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#0284c7"/>
+    </marker>
+    <marker id="arrow-soft" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#64748b"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#94a3b8" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect class="bg" width="1600" height="900"/>
+  <text class="title" x="60" y="64">OEDS Data Workflow</text>
+  <text class="subtitle" x="60" y="98">From scheduled source imports to database-backed dashboards, APIs, and export workflows.</text>
+
+  <g transform="translate(90 170)" filter="url(#shadow)">
+    <rect class="panel" width="300" height="390" rx="28" fill="#eef8f3" stroke="#7ccba7"/>
+    <circle cx="48" cy="48" r="25" fill="#16a34a"/>
+    <text class="step" x="42" y="55">1</text>
+    <text class="section" x="88" y="56">Collect</text>
+    <path class="icon" d="M75 132h150M75 172h150M75 212h150M95 112h110a22 22 0 0 1 22 22v98a22 22 0 0 1-22 22H95a22 22 0 0 1-22-22v-98a22 22 0 0 1 22-22z"/>
+    <text class="label" x="55" y="306">Source APIs and files</text>
+    <text class="text" x="55" y="334">public, authenticated, and</text>
+    <text class="text" x="55" y="358">configured energy datasets</text>
+  </g>
+
+  <g transform="translate(500 140)" filter="url(#shadow)">
+    <rect class="panel" width="310" height="450" rx="28" fill="#fff7ed" stroke="#fb923c"/>
+    <circle cx="48" cy="48" r="25" fill="#f97316"/>
+    <text class="step" x="42" y="55">2</text>
+    <text class="section" x="88" y="56">Run crawlers</text>
+    <g transform="translate(55 112)">
+      <rect width="200" height="74" rx="16" fill="#ffffff" stroke="#fed7aa"/>
+      <text class="label" x="24" y="31">Scheduler</text>
+      <text class="text" x="24" y="56">cron imports</text>
+    </g>
+    <g transform="translate(55 212)">
+      <rect width="200" height="74" rx="16" fill="#ffffff" stroke="#fed7aa"/>
+      <text class="label" x="24" y="31">Admin UI</text>
+      <text class="text" x="24" y="56">manual runs and logs</text>
+    </g>
+    <g transform="translate(55 312)">
+      <rect width="200" height="74" rx="16" fill="#ffffff" stroke="#fed7aa"/>
+      <text class="label" x="24" y="31">Post-run tasks</text>
+      <text class="text" x="24" y="56">refresh and gap-fill</text>
+    </g>
+  </g>
+
+  <g transform="translate(920 170)" filter="url(#shadow)">
+    <rect class="panel" width="300" height="390" rx="28" fill="#eaf7ff" stroke="#7dd3fc"/>
+    <circle cx="48" cy="48" r="25" fill="#0284c7"/>
+    <text class="step" x="42" y="55">3</text>
+    <text class="section" x="88" y="56">Store</text>
+    <image href="postgresql-logo.svg" x="92" y="102" width="116" height="122" preserveAspectRatio="xMidYMid meet"/>
+    <text class="label" x="62" y="288">PostgreSQL / TimescaleDB</text>
+    <text class="text" x="62" y="318">source schemas, time series,</text>
+    <text class="text" x="62" y="342">spatial data, metadata views</text>
+  </g>
+
+  <g transform="translate(1320 170)" filter="url(#shadow)">
+    <rect class="panel" width="230" height="390" rx="28" fill="#f4f0ff" stroke="#c4b5fd"/>
+    <circle cx="48" cy="48" r="25" fill="#7c3aed"/>
+    <text class="step" x="42" y="55">4</text>
+    <text class="section" x="88" y="56">Use</text>
+    <text class="label" x="45" y="140">Dashboards</text>
+    <text class="label" x="45" y="195">REST API</text>
+    <text class="label" x="45" y="250">SQL access</text>
+    <text class="label" x="45" y="305">CSV exports</text>
+  </g>
+
+  <path class="arrow" d="M390 365 H500"/>
+  <path class="arrow" d="M810 365 H920"/>
+  <path class="arrow" d="M1220 365 H1320"/>
+
+  <g transform="translate(500 660)" filter="url(#shadow)">
+    <rect width="720" height="105" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text class="section" x="30" y="42">Operational feedback loop</text>
+    <text class="text" x="30" y="74">Crawler status, logs, and dashboard results guide configuration updates and targeted reruns.</text>
+  </g>
+  <path class="soft-arrow" d="M630 660 V590"/>
+  <path class="soft-arrow" d="M1065 560 V660"/>
+</svg>

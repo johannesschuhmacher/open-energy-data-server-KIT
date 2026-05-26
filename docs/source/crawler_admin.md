@@ -1,4 +1,4 @@
-﻿# Crawler Admin UI
+# Crawler Admin UI
 
 The crawler admin UI is a local control surface for `CRAWLER_CONFIG.yml` and
 manual crawler operations.
@@ -15,6 +15,7 @@ Implemented phases:
 - manual one-off execution from the dashboard and crawler detail pages without changing the scheduler
 - dashboard `Run Once` opens a confirmation dialog with the current crawler configuration before execution
 - email alert status and testing moved into the crawler-specific `Settings & Details` view
+- productive gapfill controls on the crawler detail page for supported time-series crawlers, including per-table selection and target schema configuration
 - run history with persistent status tracking
 - runtime benchmarks per manual action based on completed run durations
 - live log tailing for active and completed runs

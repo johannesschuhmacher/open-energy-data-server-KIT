@@ -155,6 +155,13 @@ energy_forecast_crawler:
   schema_name: "energy_forecast"
   description: "Crawls Energy Price Forecasts (Next 48h)"
   schedule: "0 4,16 * * *"
+
+power_system_data:
+  enable: true
+  schema_name: "power_system_data"
+  database_uri: "postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path="
+  description: "Crawls power system and power plant data from PyPSA"
+  schedule: "0 4 * * 0"
 epex_spot:
   enable: false
   schema_name: "epex_spot"
@@ -177,3 +184,80 @@ weather_forecast:
   schedule: "15 */3 * * *"
   forecast_hours: 120
   past_hours: 24
+
+netztransparenz:
+  enable: false
+  schema_name: "netztransparenz"
+  description: "Crawls Netztransparenz WebAPI datasets via OAuth2 client credentials"
+  schedule: "10 * * * *"
+  lookback_days: 7
+  request_pause_seconds: 0.6
+
+regelleistung:
+  enable: false
+  schema_name: "regelleistung"
+  description: "Crawls public regelleistung.net datacenter tender files"
+  schedule: "30 4 * * *"
+  lookback_days: 35
+  max_files_per_run: 12
+  download_files: true
+
+gie_agsi_alsi:
+  enable: false
+  schema_name: "gie_agsi_alsi"
+  description: "Crawls GIE AGSI gas storage and ALSI LNG data via x-key API access"
+  schedule: "20 5 * * *"
+  lookback_days: 30
+
+tradinghub:
+  enable: false
+  schema_name: "tradinghub"
+  description: "Crawls Trading Hub Europe public XML interface reports"
+  schedule: "40 5 * * *"
+  lookback_days: 45
+
+prisma_capacity:
+  enable: false
+  schema_name: "prisma_capacity"
+  description: "Imports configured PRISMA Capacity Platform API resources after API
+    package subscription"
+  schedule: "0 6 * * *"
+  resources: []
+
+osm_power:
+  enable: false
+  schema_name: "osm_power"
+  description: "Crawls OpenStreetMap power infrastructure features via Overpass"
+  schedule: "0 3 * * 0"
+  bbox: [47.2, 5.5, 55.2, 15.5]
+  power_tags: ["plant", "generator", "substation"]
+  max_elements: 50000
+
+dwd_cdc:
+  enable: false
+  schema_name: "dwd_cdc"
+  description: "Crawls DWD Climate Data Center monthly regional German climate averages"
+  schedule: "25 3 * * 0"
+
+copernicus_cds:
+  enable: false
+  schema_name: "copernicus_cds"
+  description: "Downloads configured Copernicus Climate Data Store requests using
+    cdsapi"
+  schedule: "35 3 * * 0"
+  storage_dir: "crawler/data/copernicus_cds"
+
+open_meteo:
+  enable: false
+  schema_name: "open_meteo"
+  description: "Crawls Open-Meteo DWD ICON weather forecasts for energy-relevant locations"
+  schedule: "45 */3 * * *"
+  forecast_days: 5
+  past_days: 1
+
+eia:
+  enable: false
+  schema_name: "eia"
+  description: "Crawls configured U.S. EIA Open Data API routes"
+  schedule: "55 * * * *"
+  lookback_days: 14

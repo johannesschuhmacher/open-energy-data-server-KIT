@@ -157,7 +157,7 @@
       dest: "{{ oeds_repo_dir_effective }}/.env"
       owner: root
       group: root
-      mode: "u=rw,g=r,o=r"
+      mode: "0600"
       content: |
         COMPOSE_PROJECT_NAME={{ oeds_compose_project_name_effective }}
         OEDS_RUNTIME_DIR={{ oeds_runtime_dir_effective }}

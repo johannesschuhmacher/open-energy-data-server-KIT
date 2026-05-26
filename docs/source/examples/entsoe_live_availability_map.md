@@ -30,7 +30,7 @@ The proposed derived schema is `entsoe_availability_map`. It adds:
 
 The full prototype lives in two repository files:
 
-- SQL objects: `docs/entsoe_live_availability_schema.sql`
+- SQL objects: `scripts/lib/entsoe_availability_map.sql`
 - refresh/backfill helper: `scripts/backfill_entsoe_unavailability.py`
 
 ## Status

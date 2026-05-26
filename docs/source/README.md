@@ -4,15 +4,15 @@ SPDX-FileCopyrightText: Florian Maurer, Christian Rieke
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Open Energy Data Server
+# Open Energy Data Server (KIT)
 
 This repository builds on the original
 [Open Energy Data Server](https://github.com/NOWUM/open-energy-data-server)
 and extends it for the workflows documented here.
 
-OEDS is a crawler-driven data platform for energy-system analysis. It combines
-data ingestion, PostgreSQL/TimescaleDB storage, HTTP export through PostgREST,
-and dashboarding through Grafana.
+OEDS-KIT is a crawler-driven data platform for energy-system analysis. It
+combines data ingestion, PostgreSQL/TimescaleDB storage, HTTP export through
+PostgREST, and dashboarding through Grafana.
 
 ![Basic outline of the architecture and included services](media/oeds-architecture.png)
 
@@ -117,9 +117,10 @@ Once the stack is running, there are four main ways to inspect or use the data:
 | Python / notebooks | programmatic access and custom analysis | run `uv run python ...` and use the example scripts under `examples/` or `scripts/` |
 
 The Crawler Admin UI at `http://localhost:3010/admin` is the operational
-surface for schedules, manual runs, YAML editing, logs, and run history. It is
-not the primary data browser, but it is the fastest way to see which crawlers
-exist, which ones are enabled, and whether recent runs succeeded.
+surface for schedules, manual runs, YAML editing, logs, run history, and
+productive gapfill settings. It is not the primary data browser, but it is the
+fastest way to see which crawlers exist, which ones are enabled, and whether
+recent runs succeeded.
 
 If you want to know where a specific dataset ends up:
 
@@ -167,3 +168,9 @@ the current KIT deployment path are intentionally omitted.
 These dashboards are provisioned from `data/provisioning/grafana/dashboards/`,
 grouped by crawler subfolder plus `shared/`,
 and depend on their related crawler schemas being populated.
+
+## Troubleshooting
+
+For common operator problems such as empty Grafana panels, missing crawler
+credentials, or PostgreSQL major-version upgrades, see
+[Troubleshooting](./troubleshooting.md).

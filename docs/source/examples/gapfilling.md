@@ -4,6 +4,12 @@ OEDS includes a generic post-run gapfiller for regular time-series tables. The
 first configured job targets selected `entsoe_fms` tables and writes cleaned
 copies to `entsoe_fms_gapfilled`.
 
+In the crawler admin UI, productive gapfill settings now live on the crawler
+detail page of the corresponding job. That page controls whether the post-run
+gapfill script is attached, which source tables are included in the productive
+run, and which derived target schema receives the gapfilled copies. The
+separate `/admin/gapfill` page is QA-only.
+
 The source tables are never modified. Each gapfilled target table keeps the
 source columns and adds:
 

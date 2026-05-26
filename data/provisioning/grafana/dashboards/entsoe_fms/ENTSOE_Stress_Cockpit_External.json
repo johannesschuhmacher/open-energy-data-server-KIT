@@ -1,0 +1,1390 @@
+{
+    "__inputs":  [
+
+                 ],
+    "__requires":  [
+                       {
+                           "type":  "datasource",
+                           "id":  "grafana-postgresql-datasource",
+                           "name":  "OPENDATA",
+                           "version":  "1.0.0"
+                       },
+                       {
+                           "type":  "panel",
+                           "id":  "stat",
+                           "name":  "Stat",
+                           "version":  "11.3.1"
+                       },
+                       {
+                           "type":  "panel",
+                           "id":  "timeseries",
+                           "name":  "Time series",
+                           "version":  "11.3.1"
+                       },
+                       {
+                           "type":  "panel",
+                           "id":  "geomap",
+                           "name":  "Geomap",
+                           "version":  "11.3.1"
+                       },
+                       {
+                           "type":  "panel",
+                           "id":  "table",
+                           "name":  "Table",
+                           "version":  "11.3.1"
+                       }
+                   ],
+    "annotations":  {
+                        "list":  [
+                                     {
+                                         "builtIn":  1,
+                                         "datasource":  {
+                                                            "type":  "grafana",
+                                                            "uid":  "-- Grafana --"
+                                                        },
+                                         "enable":  true,
+                                         "hide":  true,
+                                         "iconColor":  "rgba(0, 211, 255, 1)",
+                                         "name":  "Annotations \u0026 Alerts",
+                                         "type":  "dashboard"
+                                     }
+                                 ]
+                    },
+    "editable":  true,
+    "fiscalYearStartMonth":  0,
+    "graphTooltip":  0,
+    "links":  [
+                  {
+                      "asDropdown":  false,
+                      "icon":  "external link",
+                      "includeVars":  false,
+                      "keepTime":  false,
+                      "targetBlank":  true,
+                      "title":  "Impressum",
+                      "type":  "link",
+                      "url":  "https://www.iip.kit.edu/16.php"
+                  },
+                  {
+                      "asDropdown":  false,
+                      "icon":  "info",
+                      "includeVars":  false,
+                      "keepTime":  false,
+                      "targetBlank":  false,
+                      "title":  "Datenschutz",
+                      "type":  "link",
+                      "url":  "/d/oeds-datenschutz/oeds-datenschutz"
+                  }
+              ],
+    "liveNow":  false,
+    "panels":  [
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-GrYlRd"
+                                                                      },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "yellow",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  4,
+                                       "w":  6,
+                                       "x":  0,
+                                       "y":  0
+                                   },
+                       "id":  1,
+                       "options":  {
+                                       "colorMode":  "value",
+                                       "graphMode":  "area",
+                                       "justifyMode":  "auto",
+                                       "orientation":  "horizontal",
+                                       "reduceOptions":  {
+                                                             "calcs":  [
+                                                                           "lastNotNull"
+                                                                       ],
+                                                             "fields":  "",
+                                                             "values":  false
+                                                         },
+                                       "showPercentChange":  false,
+                                       "textMode":  "auto",
+                                       "wideLayout":  true
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "SELECT \"DateTime(UTC)\" AS \"time\", \"TotalLoad[MW]\" AS \"value\" FROM entsoe_fms.\"ActualTotalLoad\" WHERE \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027$Area_Type\u0027 AND \"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 ORDER BY \"DateTime(UTC)\" DESC LIMIT 1",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Current Load",
+                       "type":  "stat"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-GrYlRd"
+                                                                      },
+                                                            "decimals":  2,
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             },
+                                                                                             {
+                                                                                                 "color":  "orange",
+                                                                                                 "value":  100
+                                                                                             },
+                                                                                             {
+                                                                                                 "color":  "red",
+                                                                                                 "value":  200
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "currencyEUR"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  4,
+                                       "w":  6,
+                                       "x":  6,
+                                       "y":  0
+                                   },
+                       "id":  2,
+                       "options":  {
+                                       "colorMode":  "value",
+                                       "graphMode":  "area",
+                                       "justifyMode":  "auto",
+                                       "orientation":  "horizontal",
+                                       "reduceOptions":  {
+                                                             "calcs":  [
+                                                                           "lastNotNull"
+                                                                       ],
+                                                             "fields":  "",
+                                                             "values":  false
+                                                         },
+                                       "showPercentChange":  false,
+                                       "textMode":  "auto",
+                                       "wideLayout":  true
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "SELECT \"DateTime(UTC)\" AS \"time\", \"Price[Currency/MWh]\" AS \"value\" FROM entsoe_fms.\"EnergyPrices\" WHERE \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027BZN\u0027 AND \"DateTime(UTC)\" \u003e= now() - interval \u00273 days\u0027 AND (TRIM(COALESCE(\"Sequence\", \u0027\u0027)) = \u0027\u0027 OR \"Sequence\" = \u00271\u0027) ORDER BY \"DateTime(UTC)\" DESC LIMIT 1",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Latest Day-Ahead Price",
+                       "type":  "stat",
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-GrYlRd"
+                                                                      },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "yellow",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  4,
+                                       "w":  6,
+                                       "x":  12,
+                                       "y":  0
+                                   },
+                       "id":  3,
+                       "options":  {
+                                       "colorMode":  "value",
+                                       "graphMode":  "area",
+                                       "justifyMode":  "auto",
+                                       "orientation":  "horizontal",
+                                       "reduceOptions":  {
+                                                             "calcs":  [
+                                                                           "lastNotNull"
+                                                                       ],
+                                                             "fields":  "",
+                                                             "values":  false
+                                                         },
+                                       "showPercentChange":  false,
+                                       "textMode":  "auto",
+                                       "wideLayout":  true
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH latest_load AS (SELECT \"DateTime(UTC)\" AS ts, \"TotalLoad[MW]\" AS load_mw FROM entsoe_fms.\"ActualTotalLoad\" WHERE \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027$Area_Type\u0027 AND \"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 ORDER BY \"DateTime(UTC)\" DESC LIMIT 1), latest_vres AS (SELECT \"DateTime(UTC)\" AS ts, SUM(\"ActualGenerationOutput[MW]\") AS vres_mw FROM entsoe_fms.\"AggregatedGenerationPerType\" WHERE \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027$Area_Type\u0027 AND \"ProductionType\" IN (\u0027Solar\u0027, \u0027Wind Onshore\u0027, \u0027Wind Offshore\u0027) AND \"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 GROUP BY 1) SELECT l.ts AS \"time\", l.load_mw - COALESCE(v.vres_mw, 0) AS \"value\" FROM latest_load l LEFT JOIN latest_vres v ON v.ts = l.ts",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Residual Load",
+                       "type":  "stat"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-GrYlRd"
+                                                                      },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "yellow",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  4,
+                                       "w":  6,
+                                       "x":  18,
+                                       "y":  0
+                                   },
+                       "id":  4,
+                       "options":  {
+                                       "colorMode":  "value",
+                                       "graphMode":  "area",
+                                       "justifyMode":  "auto",
+                                       "orientation":  "horizontal",
+                                       "reduceOptions":  {
+                                                             "calcs":  [
+                                                                           "lastNotNull"
+                                                                       ],
+                                                             "fields":  "",
+                                                             "values":  false
+                                                         },
+                                       "showPercentChange":  false,
+                                       "textMode":  "auto",
+                                       "wideLayout":  true
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH imports AS (SELECT \"DateTime(UTC)\" AS ts, SUM(\"ForecastTransferCapacity[MW]\") AS import_mw FROM entsoe_fms.\"ForecastedTransferCapacities\" WHERE \"InAreaDisplayName\" = \u0027$Country\u0027 AND \"ContractType\" = \u0027$Transfer_Contract\u0027 AND \"DateTime(UTC)\" \u003e= now() AND \"DateTime(UTC)\" \u003c now() + interval \u002724 hours\u0027 GROUP BY 1), exports AS (SELECT \"DateTime(UTC)\" AS ts, SUM(\"ForecastTransferCapacity[MW]\") AS export_mw FROM entsoe_fms.\"ForecastedTransferCapacities\" WHERE \"OutAreaDisplayName\" = \u0027$Country\u0027 AND \"ContractType\" = \u0027$Transfer_Contract\u0027 AND \"DateTime(UTC)\" \u003e= now() AND \"DateTime(UTC)\" \u003c now() + interval \u002724 hours\u0027 GROUP BY 1) SELECT now() AS \"time\", AVG(COALESCE(i.import_mw, 0) - COALESCE(e.export_mw, 0)) AS \"value\" FROM imports i FULL OUTER JOIN exports e ON e.ts = i.ts",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Avg Net Import Headroom (Next 24h)",
+                       "type":  "stat"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  12,
+                                       "x":  0,
+                                       "y":  4
+                                   },
+                       "id":  5,
+                       "options":  {
+                                       "legend":  {
+                                                      "calcs":  [
+
+                                                                ],
+                                                      "displayMode":  "list",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "hideZeros":  false,
+                                                       "mode":  "single",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH vres AS (SELECT \"DateTime(UTC)\" AS ts, SUM(\"ActualGenerationOutput[MW]\") AS vres_mw FROM entsoe_fms.\"AggregatedGenerationPerType\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027$Area_Type\u0027 AND \"ProductionType\" IN (\u0027Solar\u0027, \u0027Wind Onshore\u0027, \u0027Wind Offshore\u0027) GROUP BY 1) SELECT l.\"DateTime(UTC)\" AS \"time\", \u0027Total Load\u0027 AS \"metric\", l.\"TotalLoad[MW]\" AS \"value\" FROM entsoe_fms.\"ActualTotalLoad\" l WHERE l.\"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND l.\"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND l.\"AreaDisplayName\" = \u0027$Country\u0027 AND l.\"AreaTypeCode\" = \u0027$Area_Type\u0027 UNION ALL SELECT d.\"DateTime(UTC)\" AS \"time\", \u0027Day-ahead Generation\u0027 AS \"metric\", d.\"GenerationForecast[MW]\" AS \"value\" FROM entsoe_fms.\"DayAheadAggregatedGeneration\" d WHERE d.\"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND d.\"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND d.\"AreaDisplayName\" = \u0027$Country\u0027 AND d.\"AreaTypeCode\" = \u0027$Area_Type\u0027 UNION ALL SELECT l.\"DateTime(UTC)\" AS \"time\", \u0027Residual Load\u0027 AS \"metric\", l.\"TotalLoad[MW]\" - COALESCE(v.vres_mw, 0) AS \"value\" FROM entsoe_fms.\"ActualTotalLoad\" l LEFT JOIN vres v ON v.ts = l.\"DateTime(UTC)\" WHERE l.\"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND l.\"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND l.\"AreaDisplayName\" = \u0027$Country\u0027 AND l.\"AreaTypeCode\" = \u0027$Area_Type\u0027 ORDER BY 1, 2",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Load vs Residual Load vs Day-Ahead Generation",
+                       "type":  "timeseries"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "decimals":  2,
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "currencyEUR"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  12,
+                                       "x":  12,
+                                       "y":  4
+                                   },
+                       "id":  6,
+                       "options":  {
+                                       "legend":  {
+                                                      "calcs":  [
+
+                                                                ],
+                                                      "displayMode":  "list",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "hideZeros":  false,
+                                                       "mode":  "single",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "SELECT $__timeGroupAlias(my_time, $__interval), metric, AVG(value) AS \"value\" FROM (SELECT \"DateTime(UTC)\" AS my_time, \u0027Day-ahead Hourly\u0027 AS metric, \"Price[Currency/MWh]\" AS value FROM entsoe_fms.\"EnergyPrices\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027BZN\u0027 AND (TRIM(COALESCE(\"Sequence\", \u0027\u0027)) = \u0027\u0027 OR \"Sequence\" = \u00271\u0027) UNION ALL SELECT \"DateTime(UTC)\" AS my_time, \u0027Day-ahead 15m\u0027 AS metric, \"Price[Currency/MWh]\" AS value FROM entsoe_fms.\"EnergyPrices\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027BZN\u0027 AND \"Sequence\" = \u00272\u0027 UNION ALL SELECT \"DateTime(UTC)\" AS my_time, \u0027Intraday 15m\u0027 AS metric, \"Price[Currency/MWh]\" AS value FROM entsoe_fms.\"EnergyPrices\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027BZN\u0027 AND \"Sequence\" = \u00273\u0027) s GROUP BY 1, 2 ORDER BY 1",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Price Structure",
+                       "type":  "timeseries",
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  12,
+                                       "x":  0,
+                                       "y":  12
+                                   },
+                       "id":  7,
+                       "options":  {
+                                       "legend":  {
+                                                      "calcs":  [
+
+                                                                ],
+                                                      "displayMode":  "list",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "hideZeros":  false,
+                                                       "mode":  "single",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "SELECT $__timeGroupAlias(my_time, $__interval), metric, AVG(value) AS \"value\" FROM (SELECT \"DateTime(UTC)\" AS my_time, \u0027Actual\u0027 AS metric, \"ActualGenerationOutput[MW]\" AS value FROM entsoe_fms.\"AggregatedGenerationPerType\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027$Area_Type\u0027 AND \"ProductionType\" = \u0027$RES_Type\u0027 UNION ALL SELECT \"DateTime(UTC)\" AS my_time, \u0027Day-ahead Forecast\u0027 AS metric, \"DayAheadGenerationForecast[MW]\" AS value FROM entsoe_fms.\"GenerationForecastsForWindAndSolar\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027$Area_Type\u0027 AND \"ProductionType\" = \u0027$RES_Type\u0027 UNION ALL SELECT \"DateTime(UTC)\" AS my_time, \u0027Current Forecast\u0027 AS metric, \"CurrentGenerationForecast[MW]\" AS value FROM entsoe_fms.\"GenerationForecastsForWindAndSolar\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027$Area_Type\u0027 AND \"ProductionType\" = \u0027$RES_Type\u0027) s GROUP BY 1, 2 ORDER BY 1",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Forecast vs Actual ($RES_Type)",
+                       "type":  "timeseries"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "custom":  {
+                                                                           "drawStyle":  "line",
+                                                                           "fillOpacity":  20,
+                                                                           "lineInterpolation":  "linear",
+                                                                           "lineWidth":  1,
+                                                                           "pointSize":  4,
+                                                                           "showPoints":  "never",
+                                                                           "stacking":  {
+                                                                                            "group":  "A",
+                                                                                            "mode":  "normal"
+                                                                                        }
+                                                                       },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Biomass"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#36B24A",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Energy storage"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#29A8FF",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Fossil Brown coal/Lignite"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#B6A48F",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Fossil Coal-derived gas"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#D4B45D",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Fossil Gas"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#FFB171",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Fossil Hard coal"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#57575D",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Fossil Oil"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#8F7A61",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Fossil Oil shale"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#8F7A61",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Fossil Peat"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#9A8568",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Geothermal"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#5B4FC9",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Hydro Pumped Storage"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#29A8FF",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Hydro Run-of-river and poundage"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#2F39D0",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Hydro Water Reservoir"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#B5CBFF",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Marine"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#4AB8E8",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Nuclear"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#C85AA5",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Other"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#8A75B3",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Other renewable"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#8A75B3",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Solar"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#FFD676",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Waste"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#6E4513",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Wind Offshore"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#97AA96",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             },
+                                                             {
+                                                                 "matcher":  {
+                                                                                 "id":  "byName",
+                                                                                 "options":  "Wind Onshore"
+                                                                             },
+                                                                 "properties":  [
+                                                                                    {
+                                                                                        "id":  "color",
+                                                                                        "value":  {
+                                                                                                      "fixedColor":  "#C9DBBE",
+                                                                                                      "mode":  "fixed"
+                                                                                                  }
+                                                                                    }
+                                                                                ]
+                                                             }
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  12,
+                                       "x":  12,
+                                       "y":  12
+                                   },
+                       "id":  8,
+                       "options":  {
+                                       "legend":  {
+                                                      "calcs":  [
+
+                                                                ],
+                                                      "displayMode":  "list",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "hideZeros":  false,
+                                                       "mode":  "single",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "SELECT $__timeGroupAlias(my_time, $__interval), metric, AVG(value) AS \"value\" FROM (SELECT \"DateTime(UTC)\" AS my_time, \"ProductionType\" AS metric, \"ActualGenerationOutput[MW]\" AS value FROM entsoe_fms.\"AggregatedGenerationPerType\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" = \u0027$Country\u0027 AND \"AreaTypeCode\" = \u0027$Area_Type\u0027) s GROUP BY 1, 2 ORDER BY 1",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Generation Mix",
+                       "type":  "timeseries"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-YlRd"
+                                                                      },
+                                                            "decimals":  2,
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "currencyEUR"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  10,
+                                       "w":  14,
+                                       "x":  0,
+                                       "y":  20
+                                   },
+                       "id":  9,
+                       "options":  {
+                                       "basemap":  {
+                                                       "config":  {
+
+                                                                  },
+                                                       "name":  "Layer 0",
+                                                       "type":  "default"
+                                                   },
+                                       "controls":  {
+                                                        "mouseWheelZoom":  true,
+                                                        "showAttribution":  true,
+                                                        "showDebug":  false,
+                                                        "showMeasure":  false,
+                                                        "showScale":  false,
+                                                        "showZoom":  true
+                                                    },
+                                       "layers":  [
+                                                      {
+                                                          "config":  {
+                                                                         "showLegend":  true,
+                                                                         "style":  {
+                                                                                       "color":  {
+                                                                                                     "field":  "price_mwh"
+                                                                                                 },
+                                                                                       "opacity":  0.8,
+                                                                                       "rotation":  {
+                                                                                                        "fixed":  0,
+                                                                                                        "max":  360,
+                                                                                                        "min":  -360,
+                                                                                                        "mode":  "mod"
+                                                                                                    },
+                                                                                       "size":  {
+                                                                                                    "fixed":  10,
+                                                                                                    "max":  15,
+                                                                                                    "min":  6
+                                                                                                },
+                                                                                       "symbol":  {
+                                                                                                      "field":  "",
+                                                                                                      "fixed":  "",
+                                                                                                      "mode":  "fixed"
+                                                                                                  },
+                                                                                       "symbolAlign":  {
+                                                                                                           "horizontal":  "center",
+                                                                                                           "vertical":  "center"
+                                                                                                       },
+                                                                                       "textConfig":  {
+                                                                                                          "fontSize":  12,
+                                                                                                          "offsetX":  0,
+                                                                                                          "offsetY":  0,
+                                                                                                          "textAlign":  "center",
+                                                                                                          "textBaseline":  "middle"
+                                                                                                      }
+                                                                                   }
+                                                                     },
+                                                          "location":  {
+                                                                           "latitude":  "lat",
+                                                                           "longitude":  "lon",
+                                                                           "mode":  "coords"
+                                                                       },
+                                                          "name":  "Layer 1",
+                                                          "tooltip":  true,
+                                                          "type":  "markers"
+                                                      }
+                                                  ],
+                                       "tooltip":  {
+                                                       "mode":  "details"
+                                                   },
+                                       "view":  {
+                                                    "allLayers":  true,
+                                                    "id":  "europe",
+                                                    "lat":  50,
+                                                    "lon":  10,
+                                                    "zoom":  3
+                                                }
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "table",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH val_map (grafana_label, db_name) AS (VALUES (\u0027Albania (AL)\u0027, \u0027Albania\u0027), (\u0027Austria (AT)\u0027, \u0027Austria\u0027), (\u0027Belgium (BE)\u0027, \u0027Belgium\u0027), (\u0027Bosnia and Herz. (BA)\u0027, \u0027Bosnia and Herzegovina\u0027), (\u0027Bulgaria (BG)\u0027, \u0027Bulgaria\u0027), (\u0027Croatia (HR)\u0027, \u0027Croatia\u0027), (\u0027Cyprus (CY)\u0027, \u0027Cyprus\u0027), (\u0027Czech Republic (CZ)\u0027, \u0027Czechia\u0027), (\u0027Denmark (DK)\u0027, \u0027Denmark\u0027), (\u0027DK\u0027, \u0027Denmark\u0027), (\u0027DK1\u0027, \u0027Denmark\u0027), (\u0027DK2\u0027, \u0027Denmark\u0027), (\u0027Estonia (EE)\u0027, \u0027Estonia\u0027), (\u0027Finland (FI)\u0027, \u0027Finland\u0027), (\u0027France (FR)\u0027, \u0027France\u0027), (\u0027Germany (DE)\u0027, \u0027Germany\u0027), (\u0027DE(50Hertz)\u0027, \u0027Germany\u0027), (\u0027DE(Amprion)\u0027, \u0027Germany\u0027), (\u0027DE(TenneT GER)\u0027, \u0027Germany\u0027), (\u0027DE(TransnetBW)\u0027, \u0027Germany\u0027), (\u0027DE-LU\u0027, \u0027Germany\u0027), (\u0027Greece (GR)\u0027, \u0027Greece\u0027), (\u0027Hungary (HU)\u0027, \u0027Hungary\u0027), (\u0027Ireland (IE)\u0027, \u0027Ireland\u0027), (\u0027IE(SEM)\u0027, \u0027Ireland\u0027), (\u0027Italy (IT)\u0027, \u0027Italy\u0027), (\u0027IT-Calabria\u0027, \u0027Italy\u0027), (\u0027IT-Centre-North\u0027, \u0027Italy\u0027), (\u0027IT-Centre-South\u0027, \u0027Italy\u0027), (\u0027IT-North\u0027, \u0027Italy\u0027), (\u0027IT-Sardinia\u0027, \u0027Italy\u0027), (\u0027IT-Sicily\u0027, \u0027Italy\u0027), (\u0027IT-South\u0027, \u0027Italy\u0027), (\u0027Kosovo (XK)\u0027, \u0027Kosovo\u0027), (\u0027Latvia (LV)\u0027, \u0027Latvia\u0027), (\u0027Lithuania (LT)\u0027, \u0027Lithuania\u0027), (\u0027Luxembourg (LU)\u0027, \u0027Luxembourg\u0027), (\u0027Moldova (MD)\u0027, \u0027Moldova\u0027), (\u0027Montenegro (ME)\u0027, \u0027Montenegro\u0027), (\u0027Netherlands (NL)\u0027, \u0027Netherlands\u0027), (\u0027North Macedonia (MK)\u0027, \u0027North Macedonia\u0027), (\u0027Norway (NO)\u0027, \u0027Norway\u0027), (\u0027NO1\u0027, \u0027Norway\u0027), (\u0027NO2\u0027, \u0027Norway\u0027), (\u0027NO3\u0027, \u0027Norway\u0027), (\u0027NO4\u0027, \u0027Norway\u0027), (\u0027NO5\u0027, \u0027Norway\u0027), (\u0027Poland (PL)\u0027, \u0027Poland\u0027), (\u0027Portugal (PT)\u0027, \u0027Portugal\u0027), (\u0027Romania (RO)\u0027, \u0027Romania\u0027), (\u0027Serbia (RS)\u0027, \u0027Serbia\u0027), (\u0027Slovakia (SK)\u0027, \u0027Slovakia\u0027), (\u0027Slovenia (SI)\u0027, \u0027Slovenia\u0027), (\u0027Spain (ES)\u0027, \u0027Spain\u0027), (\u0027Sweden (SE)\u0027, \u0027Sweden\u0027), (\u0027SE1\u0027, \u0027Sweden\u0027), (\u0027SE2\u0027, \u0027Sweden\u0027), (\u0027SE3\u0027, \u0027Sweden\u0027), (\u0027SE4\u0027, \u0027Sweden\u0027), (\u0027Switzerland (CH)\u0027, \u0027Switzerland\u0027), (\u0027United Kingdom (UK)\u0027, \u0027United Kingdom\u0027), (\u0027GB\u0027, \u0027United Kingdom\u0027), (\u0027Ukraine (UA)\u0027, \u0027Ukraine\u0027)), latest_prices AS (SELECT DISTINCT ON (\"AreaDisplayName\") \"AreaDisplayName\" AS area_name, \"Price[Currency/MWh]\" AS price_mwh, \"DateTime(UTC)\" AS price_time FROM entsoe_fms.\"EnergyPrices\" WHERE \"DateTime(UTC)\" \u003e= now() - interval \u00273 days\u0027 AND \"AreaDisplayName\" IN (\u0027DE-LU\u0027, \u0027Belgium (BE)\u0027, \u0027DK1\u0027, \u0027DK2\u0027, \u0027France (FR)\u0027, \u0027Netherlands (NL)\u0027, \u0027NO2\u0027, \u0027Austria (AT)\u0027, \u0027Poland (PL)\u0027, \u0027SE4\u0027, \u0027Switzerland (CH)\u0027, \u0027Czech Republic (CZ)\u0027, \u0027IT-North\u0027, \u0027Slovenia (SI)\u0027, \u0027Hungary (HU)\u0027) AND \"AreaTypeCode\" = \u0027BZN\u0027 AND (TRIM(COALESCE(\"Sequence\", \u0027\u0027)) = \u0027\u0027 OR \"Sequence\" = \u00271\u0027) ORDER BY \"AreaDisplayName\", \"DateTime(UTC)\" DESC), country_centroids AS (SELECT country AS db_name, AVG(lat) AS lat, AVG(lon) AS lon FROM power_system_data.powersystemdata WHERE lat IS NOT NULL AND lon IS NOT NULL GROUP BY country), country_prices AS (SELECT m.db_name, AVG(lp.price_mwh) AS price_mwh, MAX(lp.price_time) AS price_time, COUNT(*) AS bidding_zones FROM latest_prices lp JOIN val_map m ON m.grafana_label = lp.area_name GROUP BY m.db_name) SELECT 0 AS \"time\", cc.lat, cc.lon, cp.db_name AS name, cp.db_name AS country, cp.price_mwh, cp.bidding_zones, cp.price_time FROM country_prices cp JOIN country_centroids cc ON cc.db_name = cp.db_name ORDER BY cp.price_mwh DESC",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Europe Day-Ahead Price Map",
+                       "type":  "geomap",
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           }
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  10,
+                                       "w":  10,
+                                       "x":  14,
+                                       "y":  20
+                                   },
+                       "id":  10,
+                       "options":  {
+                                       "cellHeight":  "sm",
+                                       "footer":  {
+                                                      "countRows":  false,
+                                                      "fields":  "",
+                                                      "reducer":  [
+                                                                      "sum"
+                                                                  ],
+                                                      "show":  false
+                                                  },
+                                       "showHeader":  true
+                                   },
+                       "pluginVersion":  "11.3.1",
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "table",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH next_24h AS (SELECT \u0027Import\u0027 AS direction, \"OutAreaDisplayName\" AS neighbour, AVG(\"ForecastTransferCapacity[MW]\") AS avg_capacity_mw, MIN(\"ForecastTransferCapacity[MW]\") AS min_capacity_mw, MAX(\"ForecastTransferCapacity[MW]\") AS max_capacity_mw FROM entsoe_fms.\"ForecastedTransferCapacities\" WHERE \"InAreaDisplayName\" = \u0027$Country\u0027 AND \"ContractType\" = \u0027$Transfer_Contract\u0027 AND \"DateTime(UTC)\" \u003e= now() AND \"DateTime(UTC)\" \u003c now() + interval \u002724 hours\u0027 GROUP BY 1, 2 UNION ALL SELECT \u0027Export\u0027 AS direction, \"InAreaDisplayName\" AS neighbour, AVG(\"ForecastTransferCapacity[MW]\") AS avg_capacity_mw, MIN(\"ForecastTransferCapacity[MW]\") AS min_capacity_mw, MAX(\"ForecastTransferCapacity[MW]\") AS max_capacity_mw FROM entsoe_fms.\"ForecastedTransferCapacities\" WHERE \"OutAreaDisplayName\" = \u0027$Country\u0027 AND \"ContractType\" = \u0027$Transfer_Contract\u0027 AND \"DateTime(UTC)\" \u003e= now() AND \"DateTime(UTC)\" \u003c now() + interval \u002724 hours\u0027 GROUP BY 1, 2) SELECT direction, neighbour, ROUND(avg_capacity_mw::numeric, 1) AS avg_capacity_mw, ROUND(min_capacity_mw::numeric, 1) AS min_capacity_mw, ROUND(max_capacity_mw::numeric, 1) AS max_capacity_mw FROM next_24h ORDER BY avg_capacity_mw DESC",
+                                           "refId":  "A",
+                                           "sql":  {
+                                                       "columns":  [
+                                                                       {
+                                                                           "parameters":  [
+
+                                                                                          ],
+                                                                           "type":  "function"
+                                                                       }
+                                                                   ],
+                                                       "groupBy":  [
+                                                                       {
+                                                                           "property":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                           "type":  "groupBy"
+                                                                       }
+                                                                   ],
+                                                       "limit":  50
+                                                   }
+                                       }
+                                   ],
+                       "title":  "Cross-Border Headroom (Next 24h)",
+                       "type":  "table"
+                   }
+               ],
+    "refresh":  "5m",
+    "schemaVersion":  40,
+    "style":  "dark",
+    "templating":  {
+                       "list":  [
+                                    {
+                                        "current":  {
+                                                        "text":  "DE-LU",
+                                                        "value":  "DE-LU"
+                                                    },
+                                        "definition":  "SELECT area_name FROM (VALUES (\u0027DE-LU\u0027), (\u0027Belgium (BE)\u0027), (\u0027DK1\u0027), (\u0027DK2\u0027), (\u0027France (FR)\u0027), (\u0027Netherlands (NL)\u0027), (\u0027NO2\u0027), (\u0027Austria (AT)\u0027), (\u0027Poland (PL)\u0027), (\u0027SE4\u0027), (\u0027Switzerland (CH)\u0027), (\u0027Czech Republic (CZ)\u0027), (\u0027IT-North\u0027), (\u0027Slovenia (SI)\u0027), (\u0027Hungary (HU)\u0027)) AS allowed(area_name) ORDER BY 1",
+                                        "label":  "Country / Zone",
+                                        "name":  "Country",
+                                        "options":  [
+
+                                                    ],
+                                        "query":  "SELECT area_name FROM (VALUES (\u0027DE-LU\u0027), (\u0027Belgium (BE)\u0027), (\u0027DK1\u0027), (\u0027DK2\u0027), (\u0027France (FR)\u0027), (\u0027Netherlands (NL)\u0027), (\u0027NO2\u0027), (\u0027Austria (AT)\u0027), (\u0027Poland (PL)\u0027), (\u0027SE4\u0027), (\u0027Switzerland (CH)\u0027), (\u0027Czech Republic (CZ)\u0027), (\u0027IT-North\u0027), (\u0027Slovenia (SI)\u0027), (\u0027Hungary (HU)\u0027)) AS allowed(area_name) ORDER BY 1",
+                                        "refresh":  1,
+                                        "regex":  "",
+                                        "type":  "query"
+                                    },
+                                    {
+                                        "current":  {
+                                                        "text":  "BZN",
+                                                        "value":  "BZN"
+                                                    },
+                                        "definition":  "SELECT DISTINCT \"AreaTypeCode\" FROM entsoe_fms.\"ActualTotalLoad\" WHERE \"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 AND \"AreaDisplayName\" = \u0027$Country\u0027 ORDER BY 1",
+                                        "label":  "Area Type",
+                                        "name":  "Area_Type",
+                                        "options":  [
+
+                                                    ],
+                                        "query":  "SELECT DISTINCT \"AreaTypeCode\" FROM entsoe_fms.\"ActualTotalLoad\" WHERE \"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 AND \"AreaDisplayName\" = \u0027$Country\u0027 ORDER BY 1",
+                                        "refresh":  1,
+                                        "regex":  "",
+                                        "type":  "query"
+                                    },
+                                    {
+                                        "current":  {
+                                                        "text":  "Wind Onshore",
+                                                        "value":  "Wind Onshore"
+                                                    },
+                                        "definition":  "Solar,Wind Onshore,Wind Offshore",
+                                        "label":  "RES Type",
+                                        "name":  "RES_Type",
+                                        "options":  [
+
+                                                    ],
+                                        "query":  "Solar,Wind Onshore,Wind Offshore",
+                                        "refresh":  1,
+                                        "regex":  "",
+                                        "type":  "custom"
+                                    },
+                                    {
+                                        "current":  {
+                                                        "text":  "Day-ahead",
+                                                        "value":  "Day-ahead"
+                                                    },
+                                        "definition":  "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
+                                        "label":  "Transfer Contract",
+                                        "name":  "Transfer_Contract",
+                                        "options":  [
+
+                                                    ],
+                                        "query":  "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
+                                        "refresh":  1,
+                                        "regex":  "",
+                                        "type":  "custom"
+                                    }
+                                ]
+                   },
+    "time":  {
+                 "from":  "now-7d",
+                 "to":  "now"
+             },
+    "timepicker":  {
+
+                   },
+    "timezone":  "",
+    "version":  1,
+    "weekStart":  "",
+    "uid":  "entsoe-stress-external",
+    "title":  "ENTSOE Stress Cockpit (External)",
+    "description":  "Variant: External. Sources: ENTSO-E. External price views: SMARD. Price zones: DE-LU, Belgium (BE), DK1, DK2, France (FR), Netherlands (NL), NO2, Austria (AT), Poland (PL), SE4, Switzerland (CH), Czech Republic (CZ), IT-North, Slovenia (SI), Hungary (HU)",
+    "tags":  [
+                 "entsoe",
+                 "oeds",
+                 "stress",
+                 "market",
+                 "external"
+             ]
+}
+

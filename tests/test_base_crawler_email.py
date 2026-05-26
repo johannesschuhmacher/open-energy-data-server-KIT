@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import tempfile
 import unittest
-from logging.handlers import SMTPHandler
+from logging.handlers import RotatingFileHandler, SMTPHandler
 from pathlib import Path
 
 from crawler.common.base_crawler import BaseCrawler, RateLimitedSMTPHandler
@@ -91,6 +91,10 @@ class EmailAlertLimitTest(unittest.TestCase):
                 "password": "",
                 "rate_limit_minutes": 60,
             },
+            "logging": {
+                "max_bytes": 12345,
+                "backup_count": 2,
+            },
         }
 
         try:
@@ -118,6 +122,9 @@ class EmailAlertLimitTest(unittest.TestCase):
 
             self.assertEqual(len(file_handlers), 1)
             self.assertEqual(len(smtp_handlers), 1)
+            self.assertIsInstance(file_handlers[0], RotatingFileHandler)
+            self.assertEqual(file_handlers[0].maxBytes, 12345)
+            self.assertEqual(file_handlers[0].backupCount, 2)
             self.assertNotIn(legacy_handler, logger.handlers)
         finally:
             for handler in list(logger.handlers):

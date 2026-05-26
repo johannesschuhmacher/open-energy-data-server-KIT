@@ -1,856 +1,330 @@
-# SPDX-FileCopyrightText: Steffen Carstensen
+# SPDX-FileCopyrightText: OpenAI
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""
-https://regelleistung.net/
-"""
+from __future__ import annotations
 
-import functools as ft
-import json
+from datetime import datetime, timedelta, timezone
+import io
 import logging
-import os.path
-import sys
-import warnings
-from datetime import date, datetime, timedelta
+from typing import Any
 
-import numpy as np
 import pandas as pd
-import sqlalchemy
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 
-from .config import db_uri
+from crawler.common.base_crawler import BaseCrawler
+from crawler.common.crawler_utils import (
+    build_session,
+    compact_json,
+    normalize_column_name,
+    parse_number,
+    stable_hash,
+    utc_now,
+    write_access_status,
+)
+
 
 log = logging.getLogger("regelleistung")
 log.setLevel(logging.INFO)
 
-EARLIEST_DATE_TO_WRITE = datetime.strptime("2019-01-01", "%Y-%m-%d").date()
-
-DATES_IN_DB = {}
-FILE_PATH_DATE_IN_DB = "regelleistung_dates_written_in_db.json"
-
-# Regelleistungsmarkt
-TABLE_NAME_FCR_DEMANDS = "fcr_bedarfe"
-URL_FCR_DEMANDS = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/demands?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=FCR"
-TABLE_NAME_FCR_RESULTS = "fcr_ergebnisse"
-URL_FCR_RESULTS = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/resultsoverview?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=FCR"
-TABLE_NAME_FCR_ANONYM_RESULTS = "fcr_anonyme_ergebnisse"
-URL_FCR_ANONYM_RESULTS = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/anonymousresults?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=FCR"
-
-TABLE_NAME_AFRR_DEMANDS_CAPACITY = "afrr_bedarfe_regelleistung"
-URL_AFRR_DEMANDS_CAPACITY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/demands?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=aFRR"
-TABLE_NAME_AFRR_RESULTS_CAPACITY = "afrr_ergebnisse_regelleistung"
-URL_AFRR_RESULTS_CAPACITY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/resultsoverview?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=aFRR"
-TABLE_NAME_AFRR_ANONYM_RESULTS_CAPACITY = "afrr_anonyme_ergebnisse_regelleistung"
-URL_AFRR_ANONYM_RESULTS_CAPACITY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/anonymousresults?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=aFRR"
-
-TABLE_NAME_MFRR_DEMANDS_CAPACITY = "mfrr_bedarfe_regelleistung"
-URL_MFRR_DEMANDS_CAPACITY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/demands?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=mFRR"
-TABLE_NAME_MFRR_RESULTS_CAPACITY = "mfrr_ergebnisse_regelleistung"
-URL_MFRR_RESULTS_CAPACITY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/resultsoverview?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=mFRR"
-TABLE_NAME_MFRR_ANONYM_RESULTS_CAPACITY = "mfrr_anonyme_ergebnisse_regelleistung"
-URL_MFRR_ANONYM_RESULTS_CAPACITY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/anonymousresults?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=mFRR"
-
-# Regelarbeitsmarkt
-TABLE_NAME_AFRR_DEMANDS_ENERGY = "afrr_bedarfe_regelarbeit"
-URL_AFRR_DEMANDS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/demands?date={date_str}&exportFormat=xlsx&market=ENERGY&productTypes=aFRR"
-TABLE_NAME_AFRR_RESULTS_ENERGY = "afrr_ergebnisse_regelarbeit"
-URL_AFRR_RESULTS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/resultsoverview?date={date_str}&exportFormat=xlsx&market=ENERGY&productTypes=aFRR"
-TABLE_NAME_AFRR_ANONYM_RESULTS_ENERGY = "afrr_anonyme_ergebnisse_regelarbeit"
-URL_AFRR_ANONYM_RESULTS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/anonymousresults?date={date_str}&exportFormat=xlsx&market=ENERGY&productTypes=aFRR"
-
-TABLE_NAME_MFRR_DEMANDS_ENERGY = "mfrr_bedarfe_regelarbeit"
-URL_MFRR_DEMANDS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/demands?date={date_str}&exportFormat=xlsx&market=ENERGY&productTypes=mFRR"
-TABLE_NAME_MFRR_RESULTS_ENERGY = "mfrr_ergebnisse_regelarbeit"
-URL_MFRR_RESULTS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/resultsoverview?date={date_str}&exportFormat=xlsx&market=ENERGY&productTypes=mFRR"
-TABLE_NAME_MFRR_ANONYM_RESULTS_ENERGY = "mfrr_anonyme_ergebnisse_regelarbeit"
-URL_MFRR_ANONYM_RESULTS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/anonymousresults?date={date_str}&exportFormat=xlsx&market=ENERGY&productTypes=mFRR"
-
-# Abschaltbare Lasten
-TABLE_NAME_ABLA_DEMANDS_ENERGY = "abla_bedarfe"
-URL_ABLA_DEMANDS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/demands?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=ABLA"
-TABLE_NAME_ABLA_RESULTS_ENERGY = "abla_ergebnisse"
-URL_ABLA_RESULTS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/resultsoverview?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=ABLA"
-TABLE_NAME_ABLA_ANONYM_RESULTS_ENERGY = "abla_anonyme_ergebnisse"
-URL_ABLA_ANONYM_RESULTS_ENERGY = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/anonymousresults?date={date_str}&exportFormat=xlsx&market=CAPACITY&productTypes=ABLA"
+API_BASE_URL = "https://www.regelleistung.net/apps/crds/api/v2"
+DOCS_URL = "https://www.regelleistung.net/en-us/Data/Where-can-I-find-what-data"
 
 
-def add_latest_date_to_dict(date, table_name):
-    if date is not None:
-        if f"latest_date_in_db_{table_name}" in DATES_IN_DB.keys():
-            latest_date_str = DATES_IN_DB[f"latest_date_in_db_{table_name}"]
-            latest_date = datetime.strptime(latest_date_str, "%Y-%m-%d").date()
-            if latest_date < date:
-                DATES_IN_DB[f"latest_date_in_db_{table_name}"] = date.strftime(
-                    "%Y-%m-%d"
+class RegelleistungCrawler(BaseCrawler):
+    def __init__(self, crawler_name: str, config: dict):
+        super().__init__(crawler_name, config)
+        self.schema_name = self.get("schema_name")
+        self.session = build_session(self.config.get("user_agent"))
+        self.timeout_seconds = int(self.config.get("request_timeout_seconds", 90))
+
+    def _prepare_schema(self) -> None:
+        with self.engine.begin() as conn:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS tender_files (
+                        file_name text PRIMARY KEY,
+                        control_block text,
+                        date_range_type text,
+                        file_type text,
+                        product_type text,
+                        market text,
+                        date_range text,
+                        source_url text,
+                        discovered_at timestamp with time zone NOT NULL
+                    )
+                    """
                 )
-        else:
-            DATES_IN_DB[f"latest_date_in_db_{table_name}"] = date.strftime("%Y-%m-%d")
-
-
-def add_earliest_date_to_dict(date, table_name):
-    if date is not None:
-        if f"earliest_date_in_db_{table_name}" in DATES_IN_DB.keys():
-            earliest_date_str = DATES_IN_DB[f"earliest_date_in_db_{table_name}"]
-            earliest_date = datetime.strptime(earliest_date_str, "%Y-%m-%d").date()
-            if earliest_date > date:
-                DATES_IN_DB[f"earliest_date_in_db_{table_name}"] = date.strftime(
-                    "%Y-%m-%d"
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS file_rows (
+                        file_name text NOT NULL,
+                        sheet_name text NOT NULL,
+                        row_number integer NOT NULL,
+                        fetched_at timestamp with time zone NOT NULL,
+                        payload_json text NOT NULL,
+                        PRIMARY KEY (file_name, sheet_name, row_number, fetched_at)
+                    )
+                    """
                 )
-        else:
-            DATES_IN_DB[f"earliest_date_in_db_{table_name}"] = date.strftime("%Y-%m-%d")
-
-
-def get_date_column_from_table_name(table_name):
-    if "regelarbeit" in table_name:
-        return "delivery_date"
-    else:
-        return "date_from"
-
-
-def get_date_from_sql(engine, table_name, sql):
-    try:
-        with engine.begin() as conn:
-            date_col = get_date_column_from_table_name(table_name)
-            df = pd.read_sql(sql, conn, parse_dates=[date_col])
-            date = (df[date_col][0]).date()
-            return date
-    except sqlalchemy.exc.ProgrammingError as e:
-        _, err_obj, _ = sys.exc_info()
-        if "psycopg2.errors.UndefinedTable" in str(err_obj):
-            log.info(f"There does not exist a table {table_name} yet.")
-            return None
-        elif (
-            f'(psycopg2.errors.UndefinedColumn) column "{date_col}" does not exist'
-            in str(err_obj)
-        ):
-            log.info(
-                f'The date column "{date_col}" does not exist in the table "{table_name}".'
             )
-        else:
-            log.error(e)
-    except Exception as e:
-        log.error(e)
-
-
-def get_latest_date(engine, table_name):
-    latest_date = get_latest_date_if_table_exists(engine, table_name)
-    if latest_date is None and f"latest_date_in_db_{table_name}" in DATES_IN_DB.keys():
-        latest_date_str = DATES_IN_DB[f"latest_date_in_db_{table_name}"]
-        latest_date = datetime.strptime(latest_date_str, "%Y-%m-%d").date()
-
-    return latest_date
-
-
-def get_earliest_date(engine, table_name):
-    earliest_date = get_earliest_date_if_table_exists(engine, table_name)
-    if (
-        earliest_date is None
-        and f"earliest_date_in_db_{table_name}" in DATES_IN_DB.keys()
-    ):
-        earliest_date_str = DATES_IN_DB[f"earliest_date_in_db_{table_name}"]
-        earliest_date = datetime.strptime(earliest_date_str, "%Y-%m-%d").date()
-    return earliest_date
-
-
-def get_latest_date_if_table_exists(engine, table_name):
-    date_col = get_date_column_from_table_name(table_name)
-    sql = f"SELECT max({date_col}) AS {date_col} FROM {table_name}"
-    return get_date_from_sql(engine, table_name, sql)
-
-
-def get_earliest_date_if_table_exists(engine, table_name):
-    date_col = get_date_column_from_table_name(table_name)
-    sql = f"SELECT min({date_col}) AS {date_col} FROM {table_name}"
-    return get_date_from_sql(engine, table_name, sql)
-
-
-def database_friendly(string):
-    return (
-        string.lower()
-        .replace("(eur/mw)/h", "eur_mwh")
-        .replace("productname", "product")
-        .replace("[", "")
-        .replace("]", "")
-        .replace("/", "_")
-        .replace("(", "")
-        .replace(")", "")
-        .replace("-", "")
-        .replace("+", "")
-        .replace(" ", "_")
-        # Table fcr_ergebnisse
-        .replace("fr_demand_mw", "france_demand_mw")
-        .replace("dk_demand_mw", "denmark_demand_mw")
-        .replace("nl_demand_mw", "netherlands_demand_mw")
-        .replace("at_demand_mw", "austria_demand_mw")
-        .replace("be_demand_mw", "belgium_demand_mw")
-        .replace("de_demand_mw", "germany_demand_mw")
-        .replace("ch_demand_mw", "switzerland_demand_mw")
-        .replace("si_demand_mw", "slovenia_demand_mw")
-        .replace("at_import_export_mw", "austria_deficit_surplus_mw")
-        .replace("fr_import_export_mw", "france_deficit_surplus_mw")
-        .replace("dk_import_export_mw", "denmark_deficit_surplus_mw")
-        .replace("ch_import_export_mw", "switzerland_deficit_surplus_mw")
-        .replace("si_import_export_mw", "slovenia_deficit_surplus_mw")
-        .replace("be_import_export_mw", "belgium_deficit_surplus_mw")
-        .replace("de_import_export_mw", "germany_deficit_surplus_mw")
-        .replace("nl_import_export_mw", "netherlands_deficit_surplus_mw")
-        .replace(
-            "at_settlementcapacity_price_eur_mw",
-            "austria_settlementcapacity_price_eur_mw",
-        )
-        .replace(
-            "ch_settlementcapacity_price_eur_mw",
-            "switzerland_settlementcapacity_price_eur_mw",
-        )
-        .replace(
-            "de_settlementcapacity_price_eur_mw",
-            "germany_settlementcapacity_price_eur_mw",
-        )
-        .replace(
-            "si_settlementcapacity_price_eur_mw",
-            "slovenia_settlementcapacity_price_eur_mw",
-        )
-        .replace(
-            "be_settlementcapacity_price_eur_mw",
-            "belgium_settlementcapacity_price_eur_mw",
-        )
-        .replace(
-            "dk_settlementcapacity_price_eur_mw",
-            "denmark_settlementcapacity_price_eur_mw",
-        )
-        .replace(
-            "nl_settlementcapacity_price_eur_mw",
-            "netherlands_settlementcapacity_price_eur_mw",
-        )
-        .replace(
-            "fr_settlementcapacity_price_eur_mw",
-            "france_settlementcapacity_price_eur_mw",
-        )
-    )
-
-
-def col_rename_fcr_demand(string):
-    return (
-        string.lower()
-        # fcr_bedarfe (am 07.09.2022 wurde West Dänemark in den LFC Block aufgenommen) -> Spalten können zusammengefügt werden
-        .replace("germany_block_demand_mw", "germany_country_demand_mw")
-        .replace("germany_block_export_limit_mw", "germany_country_export_limit_mw")
-        .replace("germany_block_core_portion_mw", "germany_country_core_portion_mw")
-        .replace("denmark_block_demand_mw", "denmark_country_demand_mw")
-        .replace("denmark_block_export_limit_mw", "denmark_country_export_limit_mw")
-        .replace("denmark_block_core_portion_mw", "denmark_country_core_portion_mw")
-    )
-
-
-def prepare_demands_df(df):
-    df.rename(mapper=lambda x: col_rename_fcr_demand(x), axis="columns", inplace=True)
-    col_mapping = {}
-    id_vars = []
-    demand_cols = []
-    export_cols = []
-    nuclear_portion_cols = []
-    for col_name in df.columns:
-        if col_name.endswith("_demand_mw"):
-            area_name = (
-                col_name.rsplit("_", 2)[0]
-                if col_name == "total_demand_mw"
-                else col_name.rsplit("_", 3)[0]
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS numeric_values (
+                        file_name text NOT NULL,
+                        sheet_name text NOT NULL,
+                        row_number integer NOT NULL,
+                        delivery_date timestamp with time zone,
+                        product_type text,
+                        market text,
+                        measure text NOT NULL,
+                        value double precision,
+                        unit text,
+                        fetched_at timestamp with time zone NOT NULL,
+                        record_key text NOT NULL
+                    )
+                    """
+                )
             )
-            col_mapping.update({col_name: area_name})
-            demand_cols.append(col_name)
-        elif col_name.endswith("_export_limit_mw"):
-            area_name = (
-                col_name.rsplit("_", 3)[0]
-                if col_name == "total_export_limit_mw"
-                else col_name.rsplit("_", 4)[0]
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_rl_values_date ON numeric_values (delivery_date DESC)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_rl_values_product ON numeric_values (product_type, market, measure)"))
+            conn.execute(
+                text(
+                    """
+                    CREATE OR REPLACE VIEW file_summary AS
+                    SELECT
+                        product_type,
+                        market,
+                        file_type,
+                        count(*) AS files,
+                        max(discovered_at) AS last_discovery
+                    FROM tender_files
+                    GROUP BY product_type, market, file_type
+                    """
+                )
             )
-            col_mapping.update({col_name: area_name})
-            export_cols.append(col_name)
-        elif col_name.endswith("_core_portion_mw"):
-            area_name = (
-                col_name.rsplit("_", 3)[0]
-                if col_name == "total_core_portion_mw"
-                else col_name.rsplit("_", 4)[0]
+            conn.execute(
+                text(
+                    """
+                    CREATE OR REPLACE VIEW latest_numeric_values AS
+                    WITH ranked AS (
+                        SELECT
+                            *,
+                            row_number() OVER (
+                                PARTITION BY product_type, market, measure
+                                ORDER BY delivery_date DESC NULLS LAST, fetched_at DESC
+                            ) AS rn
+                        FROM numeric_values
+                    )
+                    SELECT *
+                    FROM ranked
+                    WHERE rn = 1
+                    """
+                )
             )
-            col_mapping.update({col_name: area_name})
-            nuclear_portion_cols.append(col_name)
-        else:
-            id_vars.append(col_name)
-    var_col_name = "area"
-    df_melted_demand = df.melt(
-        id_vars=id_vars,
-        value_vars=demand_cols,
-        var_name=var_col_name,
-        value_name="demand_mw",
-    )
-    df_melted_demand[var_col_name] = df_melted_demand[var_col_name].replace(col_mapping)
-    df_melted_export = df.melt(
-        id_vars=id_vars,
-        value_vars=export_cols,
-        var_name=var_col_name,
-        value_name="export_limit_mw",
-    )
-    df_melted_export[var_col_name] = df_melted_export[var_col_name].replace(col_mapping)
-    df_melted_nuclear = df.melt(
-        id_vars=id_vars,
-        value_vars=nuclear_portion_cols,
-        var_name=var_col_name,
-        value_name="nuclear_portion_mw",
-    )
-    df_melted_nuclear[var_col_name] = df_melted_nuclear[var_col_name].replace(
-        col_mapping
-    )
 
-    dfs = [df_melted_demand, df_melted_export, df_melted_nuclear]
-    dfs = [df.set_index([*id_vars, var_col_name]) for df in dfs]
-    df_final = ft.reduce(lambda left, right: left.join(right, how="outer"), dfs)
+    def _date_window(self) -> tuple[datetime, datetime]:
+        today = datetime.now(tz=timezone.utc).date()
+        lookback_days = int(self.config.get("lookback_days", 35))
+        date_from = today - timedelta(days=lookback_days)
+        return datetime.combine(date_from, datetime.min.time(), tzinfo=timezone.utc), datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)
 
-    df_final = df_final.dropna(
-        subset=["demand_mw", "export_limit_mw", "nuclear_portion_mw"], how="all"
-    )
+    def _query_files(self, date_from: datetime, date_to: datetime) -> list[dict[str, Any]]:
+        params = {
+            "from": date_from.date().isoformat(),
+            "to": date_to.date().isoformat(),
+            "productTypes": ",".join(self.config.get("product_types", ["FCR", "aFRR", "mFRR"])),
+            "markets": ",".join(self.config.get("markets", ["CAPACITY", "ENERGY"])),
+            "fileTypes": ",".join(self.config.get("file_types", ["RESULTS", "MAXIMUM_EXCHANGE_LIMIT"])),
+            "pageSize": int(self.config.get("page_size", 1000)),
+        }
+        response = self.session.get(f"{API_BASE_URL}/tenders/files", params=params, timeout=self.timeout_seconds)
+        response.raise_for_status()
+        payload = response.json()
+        if isinstance(payload, list):
+            return payload
+        return payload.get("value", [])
 
-    return df_final.reset_index()
-
-
-def prepare_fcr_results_df(df):
-    col_mapping = {}
-    id_vars = []
-    demand_cols = []
-    settlementcapacity_cols = []
-    deficit_surplus_cols = []
-    for col_name in df.columns:
-        if col_name.endswith("_demand_mw"):
-            area_name = col_name.rsplit("_", 2)[0]
-            col_mapping.update({col_name: area_name})
-            demand_cols.append(col_name)
-        elif col_name.endswith("_settlementcapacity_price_eur_mw"):
-            area_name = col_name.rsplit("_", 4)[0]
-            col_mapping.update({col_name: area_name})
-            settlementcapacity_cols.append(col_name)
-        elif col_name.endswith("_deficit_surplus_mw"):
-            area_name = col_name.rsplit("_", 3)[0]
-            col_mapping.update({col_name: area_name})
-            deficit_surplus_cols.append(col_name)
-        else:
-            id_vars.append(col_name)
-    df_melted_demand = df.melt(
-        id_vars=id_vars,
-        value_vars=demand_cols,
-        var_name="area",
-        value_name="demand_mw",
-    )
-    df_melted_demand["area"] = df_melted_demand["area"].replace(col_mapping)
-    df_melted_settlementcapacity = df.melt(
-        id_vars=id_vars,
-        value_vars=settlementcapacity_cols,
-        var_name="area",
-        value_name="settlementcapacity_price_eur_mw",
-    )
-    df_melted_settlementcapacity["area"] = df_melted_settlementcapacity["area"].replace(
-        col_mapping
-    )
-    df_melted_deficit_surplus = df.melt(
-        id_vars=id_vars,
-        value_vars=deficit_surplus_cols,
-        var_name="area",
-        value_name="deficit_surplus_mw",
-    )
-    df_melted_deficit_surplus["area"] = df_melted_deficit_surplus["area"].replace(
-        col_mapping
-    )
-
-    dfs = [
-        df_melted_demand,
-        df_melted_settlementcapacity,
-        df_melted_deficit_surplus,
-    ]
-    dfs = [df.set_index([*id_vars, "area"]) for df in dfs]
-    df_final = ft.reduce(lambda left, right: left.join(right, how="outer"), dfs)
-
-    df_final = df_final.dropna(
-        subset=[
-            "demand_mw",
-            "settlementcapacity_price_eur_mw",
-            "deficit_surplus_mw",
-        ],
-        how="all",
-    )
-    return df_final.reset_index()
-
-
-def prepare_afrr_mfrr_results_df(df):
-    col_mapping = {}
-    id_vars = []
-    min_cap_price_cols = []
-    avg_cap_price_cols = []
-    max_cap_price_cols = []
-    import_export_cols = []
-    sum_off_cap_cols = []
-    min_energy_price_cols = []
-    avg_energy_price_cols = []
-    max_energy_price_cols = []
-    for col_name in df.columns:
-        if col_name.endswith("_min_capacity_price_eur_mwh"):
-            area_name = col_name.rsplit("_", 5)[0]
-            col_mapping.update({col_name: area_name})
-            min_cap_price_cols.append(col_name)
-        elif col_name.endswith("_average_capacity_price_eur_mwh"):
-            area_name = col_name.rsplit("_", 5)[0]
-            col_mapping.update({col_name: area_name})
-            avg_cap_price_cols.append(col_name)
-        elif col_name.endswith("_marginal_capacity_price_eur_mwh"):
-            area_name = col_name.rsplit("_", 5)[0]
-            col_mapping.update({col_name: area_name})
-            max_cap_price_cols.append(col_name)
-        elif col_name.endswith("_import_export_mw"):
-            area_name = col_name.rsplit("_", 3)[0]
-            col_mapping.update({col_name: area_name})
-            import_export_cols.append(col_name)
-        elif col_name.endswith("_sum_of_offered_capacity_mw"):
-            area_name = col_name.rsplit("_", 5)[0]
-            col_mapping.update({col_name: area_name})
-            sum_off_cap_cols.append(col_name)
-        elif col_name.endswith("_min_energy_price_eur_mwh"):
-            area_name = col_name.rsplit("_", 5)[0]
-            col_mapping.update({col_name: area_name})
-            min_energy_price_cols.append(col_name)
-        elif col_name.endswith("_average_energy_price_eur_mwh"):
-            area_name = col_name.rsplit("_", 5)[0]
-            col_mapping.update({col_name: area_name})
-            avg_energy_price_cols.append(col_name)
-        elif col_name.endswith("_marginal_energy_price_eur_mwh"):
-            area_name = col_name.rsplit("_", 5)[0]
-            col_mapping.update({col_name: area_name})
-            max_energy_price_cols.append(col_name)
-        else:
-            id_vars.append(col_name)
-    df_melted_min_cap_price = df.melt(
-        id_vars=id_vars,
-        value_vars=min_cap_price_cols,
-        var_name="area",
-        value_name="min_capacity_price_eur_mwh",
-    )
-    df_melted_min_cap_price["area"] = df_melted_min_cap_price["area"].replace(
-        col_mapping
-    )
-    df_melted_avg_cap_price = df.melt(
-        id_vars=id_vars,
-        value_vars=avg_cap_price_cols,
-        var_name="area",
-        value_name="average_capacity_price_eur_mwh",
-    )
-    df_melted_avg_cap_price["area"] = df_melted_avg_cap_price["area"].replace(
-        col_mapping
-    )
-    df_melted_max_cap_price = df.melt(
-        id_vars=id_vars,
-        value_vars=max_cap_price_cols,
-        var_name="area",
-        value_name="marginal_capacity_price_eur_mwh",
-    )
-    df_melted_max_cap_price["area"] = df_melted_max_cap_price["area"].replace(
-        col_mapping
-    )
-    df_melted_import_export = df.melt(
-        id_vars=id_vars,
-        value_vars=import_export_cols,
-        var_name="area",
-        value_name="import_export_mw",
-    )
-    df_melted_import_export["area"] = df_melted_import_export["area"].replace(
-        col_mapping
-    )
-    df_melted_sum_off_cap = df.melt(
-        id_vars=id_vars,
-        value_vars=sum_off_cap_cols,
-        var_name="area",
-        value_name="sum_of_offered_capacity_mw",
-    )
-    df_melted_sum_off_cap["area"] = df_melted_sum_off_cap["area"].replace(col_mapping)
-    df_melted_min_energy_price = df.melt(
-        id_vars=id_vars,
-        value_vars=min_energy_price_cols,
-        var_name="area",
-        value_name="min_energy_price_eur_mwh",
-    )
-    df_melted_min_energy_price["area"] = df_melted_min_energy_price["area"].replace(
-        col_mapping
-    )
-    df_melted_avg_energy_price = df.melt(
-        id_vars=id_vars,
-        value_vars=avg_energy_price_cols,
-        var_name="area",
-        value_name="average_energy_price_eur_mwh",
-    )
-    df_melted_avg_energy_price["area"] = df_melted_avg_energy_price["area"].replace(
-        col_mapping
-    )
-    df_melted_max_energy_price = df.melt(
-        id_vars=id_vars,
-        value_vars=max_energy_price_cols,
-        var_name="area",
-        value_name="marginal_energy_price_eur_mwh",
-    )
-    df_melted_max_energy_price["area"] = df_melted_max_energy_price["area"].replace(
-        col_mapping
-    )
-
-    dfs = [
-        df_melted_min_cap_price,
-        df_melted_avg_cap_price,
-        df_melted_max_cap_price,
-        df_melted_import_export,
-        df_melted_sum_off_cap,
-        df_melted_min_energy_price,
-        df_melted_avg_energy_price,
-        df_melted_max_energy_price,
-    ]
-    dfs = [df.set_index([*id_vars, "area"]) for df in dfs]
-    df_final = ft.reduce(lambda left, right: left.join(right, how="outer"), dfs)
-
-    pivot_cols = [
-        "min_capacity_price_eur_mwh",
-        "average_capacity_price_eur_mwh",
-        "marginal_capacity_price_eur_mwh",
-        "import_export_mw",
-        "sum_of_offered_capacity_mw",
-        "min_energy_price_eur_mwh",
-        "average_energy_price_eur_mwh",
-        "marginal_energy_price_eur_mwh",
-    ]
-
-    df_final = df_final.dropna(subset=pivot_cols, how="all")
-    return df_final.reset_index()
-
-
-def get_df_for_date(url, date_to_get, table_name):
-    date_str = date_to_get.strftime("%Y-%m-%d")
-    url_with_date = url.format(date_str=date_str)
-    warnings.filterwarnings(
-        action="ignore",
-        category=UserWarning,
-        message="Workbook contains no default style, apply openpyxl's default",
-    )
-    df = pd.read_excel(url_with_date, sheet_name="001", na_values=["-", "n.a.", "n.e."])
-    df.rename(mapper=lambda x: database_friendly(x), axis="columns", inplace=True)
-
-    # adapt date_from and date_to column if from regelleistungsmarkt
-    if get_date_column_from_table_name(table_name) == "date_from" and df.shape[0] > 0:
-        product_split_array = (df["product"].str.split("_")).to_numpy()
-        hours_from = np.array([product_list[1] for product_list in product_split_array])
-        hours_to = np.array([product_list[2] for product_list in product_split_array])
-        timedelta_from = np.array([timedelta(hours=int(hour)) for hour in hours_from])
-        timedelta_to = np.array([timedelta(hours=int(hour)) for hour in hours_to])
-        df["date_from"] = df["date_from"] + pd.to_timedelta(timedelta_from, "d")
-        df["date_to"] = df["date_to"] + pd.to_timedelta(timedelta_to, "d")
-
-    # adapt mw column to mwh column
-    if get_date_column_from_table_name(table_name) == "date_from" and df.shape[0] > 0:
-        hours_from = np.array([product_list[1] for product_list in product_split_array])
-        hours_to = np.array([product_list[2] for product_list in product_split_array])
-        hours_from_int = (hours_from).astype(np.int16)
-        hours_to_int = (hours_to).astype(np.int16)
-        hours_diff = hours_to_int - hours_from_int
-        cols_to_adapt = [
-            "total_min_capacity_price_eur_mw",
-            "total_average_capacity_price_eur_mw",
-            "total_marginal_capacity_price_eur_mw",
-            "germany_min_capacity_price_eur_mw",
-            "germany_average_capacity_price_eur_mw",
-            "germany_marginal_capacity_price_eur_mw",
-            "austria_min_capacity_price_eur_mw",
-            "austria_average_capacity_price_eur_mw",
-            "austria_marginal_capacity_price_eur_mw",
-            "capacity_price_eur_mw",
-        ]
-        for col_to_adapt in cols_to_adapt:
-            if col_to_adapt in df.columns:
-                final_col_name = col_to_adapt + "h"
-                df[final_col_name] = pd.to_numeric(df[col_to_adapt]) / hours_diff
-
-        cols_to_drop = [*cols_to_adapt]
-        for col_to_drop in cols_to_drop:
-            if col_to_drop in df.columns:
-                df = df.drop(col_to_drop, axis=1)
-
-    if (
-        table_name
-        in [
-            TABLE_NAME_FCR_DEMANDS,
-            TABLE_NAME_AFRR_DEMANDS_CAPACITY,
-            TABLE_NAME_MFRR_DEMANDS_CAPACITY,
-            TABLE_NAME_AFRR_DEMANDS_ENERGY,
-            TABLE_NAME_MFRR_DEMANDS_ENERGY,
-            TABLE_NAME_ABLA_DEMANDS_ENERGY,
-        ]
-        and df.shape[0] > 0
-    ):
-        df = prepare_demands_df(df)
-    elif table_name == TABLE_NAME_FCR_RESULTS and df.shape[0] > 0:
-        df = prepare_fcr_results_df(df)
-    elif (
-        table_name
-        in [
-            TABLE_NAME_AFRR_RESULTS_CAPACITY,
-            TABLE_NAME_MFRR_RESULTS_CAPACITY,
-            TABLE_NAME_AFRR_RESULTS_ENERGY,
-            TABLE_NAME_MFRR_RESULTS_ENERGY,
-            TABLE_NAME_ABLA_RESULTS_ENERGY,
-        ]
-        and df.shape[0] > 0
-    ):
-        df = prepare_afrr_mfrr_results_df(df)
-
-    df = df.dropna(axis="columns", how="all")
-
-    # unify country representation to NUTS standard
-    if "area" in df.columns or "country" in df.columns:
-        df.rename(columns={"country": "area"}, inplace=True)
-        df["area"] = (
-            df["area"]
-            .replace(
+    def _upsert_files(self, files: list[dict[str, Any]]) -> None:
+        if not files:
+            return
+        discovered_at = utc_now()
+        rows = []
+        for file_info in files:
+            file_name = file_info.get("fileName")
+            if not file_name:
+                continue
+            rows.append(
                 {
-                    "germany": "DE",
-                    "netherlands": "NL",
-                    "belgium": "BE",
-                    "austria": "AT",
-                    "slovenia": "SI",
-                    "czech_republic": "CZ",
-                    "denmark": "DK",
-                    "france": "FR",
-                    "switzerland": "CH",
+                    "file_name": file_name,
+                    "control_block": file_info.get("controlBlock"),
+                    "date_range_type": file_info.get("dateRangeType"),
+                    "file_type": file_info.get("fileType"),
+                    "product_type": file_info.get("productType"),
+                    "market": file_info.get("market"),
+                    "date_range": file_info.get("dateRange"),
+                    "source_url": f"{API_BASE_URL}/tenders/files/{file_name}",
+                    "discovered_at": discovered_at,
                 }
             )
-            .str.upper()
+        with self.engine.begin() as conn:
+            for row in rows:
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO tender_files
+                            (file_name, control_block, date_range_type, file_type, product_type, market, date_range, source_url, discovered_at)
+                        VALUES
+                            (:file_name, :control_block, :date_range_type, :file_type, :product_type, :market, :date_range, :source_url, :discovered_at)
+                        ON CONFLICT (file_name) DO UPDATE SET
+                            control_block = EXCLUDED.control_block,
+                            date_range_type = EXCLUDED.date_range_type,
+                            file_type = EXCLUDED.file_type,
+                            product_type = EXCLUDED.product_type,
+                            market = EXCLUDED.market,
+                            date_range = EXCLUDED.date_range,
+                            source_url = EXCLUDED.source_url,
+                            discovered_at = EXCLUDED.discovered_at
+                        """
+                    ),
+                    row,
+                )
+
+    def _download_file(self, file_name: str) -> bytes:
+        response = self.session.get(f"{API_BASE_URL}/tenders/files/{file_name}", timeout=self.timeout_seconds)
+        response.raise_for_status()
+        return response.content
+
+    def _parse_workbook(self, file_name: str, content: bytes) -> tuple[pd.DataFrame, pd.DataFrame]:
+        fetched_at = utc_now()
+        workbook = pd.read_excel(io.BytesIO(content), sheet_name=None, dtype=object)
+        raw_rows = []
+        numeric_rows = []
+        for sheet_name, frame in workbook.items():
+            frame = frame.dropna(how="all")
+            if frame.empty:
+                continue
+            frame.columns = [str(column).strip() for column in frame.columns]
+            normalized_columns = {column: normalize_column_name(column) for column in frame.columns}
+            date_candidates = [
+                column
+                for column, normalized in normalized_columns.items()
+                if normalized in {"delivery_date", "date", "date_from", "date_to", "lieferdatum", "ausschreibungstag"}
+            ]
+            product_candidates = [column for column, normalized in normalized_columns.items() if normalized in {"product_type", "product", "produkt"}]
+            market_candidates = [column for column, normalized in normalized_columns.items() if normalized in {"market", "markt"}]
+            for row_number, (_, row) in enumerate(frame.iterrows(), start=1):
+                payload = {column: row.get(column) for column in frame.columns if pd.notnull(row.get(column))}
+                raw_rows.append(
+                    {
+                        "file_name": file_name,
+                        "sheet_name": str(sheet_name),
+                        "row_number": row_number,
+                        "fetched_at": fetched_at,
+                        "payload_json": compact_json(payload),
+                    }
+                )
+                delivery_date = None
+                for candidate in date_candidates:
+                    parsed = pd.to_datetime(row.get(candidate), errors="coerce", utc=True)
+                    if not pd.isna(parsed):
+                        delivery_date = parsed.to_pydatetime()
+                        break
+                product_type = str(row.get(product_candidates[0])).strip() if product_candidates and pd.notnull(row.get(product_candidates[0])) else None
+                market = str(row.get(market_candidates[0])).strip() if market_candidates and pd.notnull(row.get(market_candidates[0])) else None
+                for column in frame.columns:
+                    value = parse_number(row.get(column))
+                    if value is None:
+                        continue
+                    normalized = normalized_columns[column]
+                    if normalized in {"year", "month", "day"}:
+                        continue
+                    numeric_rows.append(
+                        {
+                            "file_name": file_name,
+                            "sheet_name": str(sheet_name),
+                            "row_number": row_number,
+                            "delivery_date": delivery_date,
+                            "product_type": product_type,
+                            "market": market,
+                            "measure": column,
+                            "value": value,
+                            "unit": None,
+                            "fetched_at": fetched_at,
+                            "record_key": stable_hash(file_name, sheet_name, row_number, column, value),
+                        }
+                    )
+        return pd.DataFrame(raw_rows), pd.DataFrame(numeric_rows)
+
+    def _write_file_content(self, file_name: str, raw_rows: pd.DataFrame, numeric_rows: pd.DataFrame) -> None:
+        with self.engine.begin() as conn:
+            conn.execute(text("DELETE FROM file_rows WHERE file_name = :file_name"), {"file_name": file_name})
+            conn.execute(text("DELETE FROM numeric_values WHERE file_name = :file_name"), {"file_name": file_name})
+            if not raw_rows.empty:
+                raw_rows.to_sql("file_rows", conn, if_exists="append", index=False)
+            if not numeric_rows.empty:
+                numeric_rows.to_sql("numeric_values", conn, if_exists="append", index=False)
+
+    def run(self):
+        self._prepare_schema()
+        write_access_status(
+            self.engine,
+            source_name="regelleistung.net Datacenter",
+            status="public",
+            access_model="Public datacenter API for tender file discovery and downloads; BSP API credentials only for provider-specific workflows",
+            credentials_required=False,
+            configured_credentials=False,
+            message="Public tender files are accessible without credentials. Use a clear User-Agent and keep request volume moderate.",
+            docs_url=DOCS_URL,
         )
 
-    return df
+        date_from, date_to = self._date_window()
+        files = self._query_files(date_from, date_to)
+        self._upsert_files(files)
 
+        max_files = int(self.config.get("max_files_per_run", 12))
+        download_files = bool(self.config.get("download_files", True))
+        downloaded = 0
+        if download_files:
+            for file_info in files[:max_files]:
+                file_name = file_info.get("fileName")
+                if not file_name:
+                    continue
+                try:
+                    content = self._download_file(file_name)
+                    raw_rows, numeric_rows = self._parse_workbook(file_name, content)
+                    self._write_file_content(file_name, raw_rows, numeric_rows)
+                    downloaded += 1
+                except Exception as exc:
+                    self.logger.error("Failed to download or parse %s: %s", file_name, exc)
 
-def write_concat_table(engine, table_name, new_data):
-    with engine.begin() as conn:
-        # merge old data with new data
-        prev = pd.read_sql_query(f"select * from {table_name}", conn)
-        new_cols = set(new_data.columns).difference(set(prev.columns))
-        removed_cols = set(prev.columns).difference(set(new_data.columns))
-        log.info(f"New columns: {new_cols}")
-        log.info(f"Removed columns: {removed_cols}")
-        date_col = get_date_column_from_table_name(table_name)
-        log.info(new_data[date_col])
-        complete_data = pd.concat([prev, new_data])
-        complete_data.to_sql(table_name, conn, if_exists="replace", index=False)
-
-
-def write_past_entries(
-    engine,
-    table_name,
-    url,
-    earliest_date,
-    earliest_date_to_write=EARLIEST_DATE_TO_WRITE,
-):
-    data_for_date_exists = True
-    wrote_data = False
-    start_date = earliest_date - timedelta(days=1)
-
-    while data_for_date_exists and (earliest_date_to_write < earliest_date):
-        try:
-            earliest_date -= timedelta(days=1)
-            df = get_df_for_date(url, earliest_date, table_name)
-            with engine.begin() as conn:
-                df.to_sql(table_name, conn, if_exists="append", index=False)
-            wrote_data = True
-        except sqlalchemy.exc.ProgrammingError as e:
-            _, err_obj, _ = sys.exc_info()
-            if "psycopg2.errors.UndefinedColumn" in str(err_obj):
-                log.info(f"handling {repr(e)} by concat")
-                write_concat_table(engine, table_name, df)
-                log.info(f"replaced table {table_name}")
-                wrote_data = True
-            else:
-                log.error(f"Encountered error {e}")
-                data_for_date_exists = False
-        except Exception as e:
-            log.info(
-                f"The earliest date for {table_name} is the date {earliest_date}. {e}"
-            )
-            add_earliest_date_to_dict(earliest_date, table_name)
-            data_for_date_exists = False
-
-    if wrote_data:
-        log.info(
-            f"Finished writing {table_name} to Database with earliest date {earliest_date}"
+        self.set_metadata(
+            {
+                "schema_name": self.schema_name,
+                "data_date": datetime.now(tz=timezone.utc).date().isoformat(),
+                "data_source": API_BASE_URL,
+                "license": "Public regelleistung.net data; review upstream terms before republication",
+                "description": "Tender file discovery and selected workbook imports from regelleistung.net datacenter.",
+                "contact": "https://www.regelleistung.net/en-us/Contact",
+                "temporal_start": date_from.isoformat(),
+                "temporal_end": date_to.isoformat(),
+            }
         )
-        add_latest_date_to_dict(start_date, table_name)
-        add_earliest_date_to_dict(earliest_date, table_name)
-    elif not wrote_data and data_for_date_exists:
-        log.info(
-            f"The defined date for the earliest entry was already reached in {table_name}. If you want to have more data, simply adjust the earliest date to write parameter."
-        )
-        add_earliest_date_to_dict(earliest_date, table_name)
-    else:
-        log.info(f"No past data was written for {table_name}")
+        self.logger.info("Regelleistung crawler discovered %s files and imported %s.", len(files), downloaded)
 
 
-def create_table_and_write_past_data(
-    engine, url, table_name, earliest_date_to_write=EARLIEST_DATE_TO_WRITE
-):
-    log.info(f"Start creating table {table_name} and adding new data")
-    earliest_date = date.today()
-    write_past_entries(engine, table_name, url, earliest_date, earliest_date_to_write)
-
-
-def add_additional_past_entries(
-    engine, table_name, url, earliest_date_to_write=EARLIEST_DATE_TO_WRITE
-):
-    log.info(f"Start writing missing past entries in table {table_name} if any")
-    earliest_date = get_earliest_date(engine, table_name)
-    write_past_entries(engine, table_name, url, earliest_date, earliest_date_to_write)
-
-
-def write_new_data_from_latest_date_to_today(engine, url, table_name, latest_data_date):
-    log.info(f"Start writing new data to {table_name}")
-
-    today_date = datetime.today().date()
-
-    if latest_data_date == (today_date - timedelta(days=1)):
-        log.info(f"Table {table_name} has already the newest data.")
-    else:
-        latest_data_date = latest_data_date + timedelta(days=1)
-        encountered_problem = False
-        while latest_data_date < today_date and not encountered_problem:
-            try:
-                df = get_df_for_date(url, latest_data_date, table_name)
-                with engine.begin() as conn:
-                    df.to_sql(table_name, conn, if_exists="append", index=False)
-                latest_data_date += timedelta(days=1)
-            except sqlalchemy.exc.ProgrammingError as e:
-                _, err_obj, _ = sys.exc_info()
-                if "psycopg2.errors.UndefinedColumn" in str(err_obj):
-                    log.info(f"handling {repr(e)} by concat")
-                    write_concat_table(engine, table_name, df)
-                    log.info(f"replaced table {table_name}")
-                else:
-                    log.error(f"Encountered error {e}")
-                    encountered_problem = True
-            except Exception:
-                encountered_problem = True
-
-        if not encountered_problem:
-            add_latest_date_to_dict(latest_data_date - timedelta(days=1), table_name)
-
-        log.info(
-            f"Finished writing new data to {table_name} with newest date being yesterday {(latest_data_date - timedelta(days=1))}"
-        )
-
-
-def create_hypertable(engine, table_name):
-    try:
-        date_col = get_date_column_from_table_name(table_name)
-        query_create_hypertable = f"SELECT public.create_hypertable('{table_name}', '{date_col}', if_not_exists => TRUE, migrate_data => TRUE);"
-        with engine.begin() as conn:
-            conn.execute(text(query_create_hypertable))
-        log.info(f"created hypertable {table_name}")
-    except Exception as e:
-        log.error(f"could not create hypertable: {e}")
-
-
-def write_data_in_table(
-    engine,
-    table_name,
-    url,
-    earliest_date_to_write=EARLIEST_DATE_TO_WRITE,
-    write_additional_past_entries_if_any=True,
-):
-    if os.path.isfile(FILE_PATH_DATE_IN_DB):
-        f = open(FILE_PATH_DATE_IN_DB)
-        global DATES_IN_DB
-        DATES_IN_DB = json.load(f)
-
-    latest_date = get_latest_date(engine, table_name)
-    add_latest_date_to_dict(latest_date, table_name)
-    if latest_date is not None:
-        write_new_data_from_latest_date_to_today(engine, url, table_name, latest_date)
-        if write_additional_past_entries_if_any:
-            add_additional_past_entries(engine, table_name, url, earliest_date_to_write)
-    else:
-        create_table_and_write_past_data(
-            engine, url, table_name, earliest_date_to_write
-        )
-    create_hypertable(engine, table_name)
-
-    with open(FILE_PATH_DATE_IN_DB, "w") as outfile:
-        json.dump(DATES_IN_DB, outfile)
-
-
-def write_all_tables(engine):
-    # Regelleistungsmarkt
-    write_data_in_table(engine, TABLE_NAME_FCR_DEMANDS, URL_FCR_DEMANDS)
-    write_data_in_table(engine, TABLE_NAME_FCR_RESULTS, URL_FCR_RESULTS)
-    write_data_in_table(engine, TABLE_NAME_FCR_ANONYM_RESULTS, URL_FCR_ANONYM_RESULTS)
-
-    write_data_in_table(
-        engine, TABLE_NAME_AFRR_DEMANDS_CAPACITY, URL_AFRR_DEMANDS_CAPACITY
-    )
-    write_data_in_table(
-        engine, TABLE_NAME_AFRR_RESULTS_CAPACITY, URL_AFRR_RESULTS_CAPACITY
-    )
-    write_data_in_table(
-        engine,
-        TABLE_NAME_AFRR_ANONYM_RESULTS_CAPACITY,
-        URL_AFRR_ANONYM_RESULTS_CAPACITY,
-    )
-
-    write_data_in_table(
-        engine, TABLE_NAME_MFRR_DEMANDS_CAPACITY, URL_MFRR_DEMANDS_CAPACITY
-    )
-    write_data_in_table(
-        engine, TABLE_NAME_MFRR_RESULTS_CAPACITY, URL_MFRR_RESULTS_CAPACITY
-    )
-    write_data_in_table(
-        engine,
-        TABLE_NAME_MFRR_ANONYM_RESULTS_CAPACITY,
-        URL_MFRR_ANONYM_RESULTS_CAPACITY,
-    )
-
-    # Regelarbeitsmarkt
-    write_data_in_table(engine, TABLE_NAME_AFRR_DEMANDS_ENERGY, URL_AFRR_DEMANDS_ENERGY)
-    write_data_in_table(engine, TABLE_NAME_AFRR_RESULTS_ENERGY, URL_AFRR_RESULTS_ENERGY)
-    write_data_in_table(
-        engine,
-        TABLE_NAME_AFRR_ANONYM_RESULTS_ENERGY,
-        URL_AFRR_ANONYM_RESULTS_ENERGY,
-    )
-
-    write_data_in_table(engine, TABLE_NAME_MFRR_DEMANDS_ENERGY, URL_MFRR_DEMANDS_ENERGY)
-    write_data_in_table(engine, TABLE_NAME_MFRR_RESULTS_ENERGY, URL_MFRR_RESULTS_ENERGY)
-    write_data_in_table(
-        engine,
-        TABLE_NAME_MFRR_ANONYM_RESULTS_ENERGY,
-        URL_MFRR_ANONYM_RESULTS_ENERGY,
-    )
-
-    # Abschaltbare Lasten
-    write_data_in_table(engine, TABLE_NAME_ABLA_DEMANDS_ENERGY, URL_ABLA_DEMANDS_ENERGY)
-    write_data_in_table(engine, TABLE_NAME_ABLA_RESULTS_ENERGY, URL_ABLA_RESULTS_ENERGY)
-    write_data_in_table(
-        engine,
-        TABLE_NAME_ABLA_ANONYM_RESULTS_ENERGY,
-        URL_ABLA_ANONYM_RESULTS_ENERGY,
-    )
-
-
-def main(db_uri):
-    if os.path.isfile(FILE_PATH_DATE_IN_DB):
-        f = open(FILE_PATH_DATE_IN_DB)
-        global DATES_IN_DB
-        DATES_IN_DB = json.load(f)
-    engine = create_engine(db_uri)
-    write_all_tables(engine)
-    with open(FILE_PATH_DATE_IN_DB, "w") as outfile:
-        json.dump(DATES_IN_DB, outfile)
+def main(schema_name: str = "regelleistung"):
+    config = {
+        "database_uri": "postgresql://opendata:opendata@localhost:6432/opendata?options=--search_path=",
+        "schema_name": schema_name,
+    }
+    RegelleistungCrawler("regelleistung", config).run()
 
 
 if __name__ == "__main__":
-    logging.basicConfig()
-    main(db_uri("regelleistung"))
+    logging.basicConfig(level=logging.INFO)
+    main()

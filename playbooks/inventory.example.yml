@@ -13,3 +13,6 @@ all:
           # ansible_user: your-ssh-user
           # ansible_become: true
           # ansible_become_method: sudo
+          # Optional per-host rotation labels:
+          # oeds_rotation_deployment_name: intern-test
+          # oeds_rotation_access_host: iip-vm-oeds-intern-test.iip.kit.edu

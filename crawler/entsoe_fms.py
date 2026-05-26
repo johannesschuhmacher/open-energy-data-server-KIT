@@ -664,7 +664,9 @@ class EntsoeFMSCrawler(BaseCrawler):
             batch_df = df.iloc[i : i + batch_size]
             try:
                 batch_df.to_sql(table_name, con=self.engine, if_exists="append", index=False)
-            except IntegrityError:
+            except (IntegrityError, pd.errors.DatabaseError) as exc:
+                if not self._is_integrity_error(exc):
+                    raise
                 self.logger.warning(
                     "Insert conflict detected for table '%s' in rows %s-%s. Falling back to upsert for this batch.",
                     table_name,
@@ -672,6 +674,15 @@ class EntsoeFMSCrawler(BaseCrawler):
                     i + len(batch_df) - 1,
                 )
                 self._upsert_dataframe(table_name, batch_df)
+
+    @staticmethod
+    def _is_integrity_error(exc: BaseException) -> bool:
+        current: BaseException | None = exc
+        while current is not None:
+            if isinstance(current, IntegrityError):
+                return True
+            current = current.__cause__ or current.__context__
+        return False
 
     def _split_incremental_chunk(
         self,

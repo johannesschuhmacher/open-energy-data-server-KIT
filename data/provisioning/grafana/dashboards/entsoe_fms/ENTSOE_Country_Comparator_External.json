@@ -1,0 +1,884 @@
+{
+    "__inputs":  [
+
+                 ],
+    "__requires":  [
+                       {
+                           "type":  "datasource",
+                           "id":  "grafana-postgresql-datasource",
+                           "name":  "OPENDATA",
+                           "version":  "1.0.0"
+                       },
+                       {
+                           "type":  "panel",
+                           "id":  "stat",
+                           "name":  "Stat",
+                           "version":  "11.3.1"
+                       },
+                       {
+                           "type":  "panel",
+                           "id":  "timeseries",
+                           "name":  "Time series",
+                           "version":  "11.3.1"
+                       },
+                       {
+                           "type":  "panel",
+                           "id":  "table",
+                           "name":  "Table",
+                           "version":  "11.3.1"
+                       },
+                       {
+                           "type":  "panel",
+                           "id":  "geomap",
+                           "name":  "Geomap",
+                           "version":  "11.3.1"
+                       }
+                   ],
+    "annotations":  {
+                        "list":  [
+                                     {
+                                         "builtIn":  1,
+                                         "datasource":  {
+                                                            "type":  "grafana",
+                                                            "uid":  "-- Grafana --"
+                                                        },
+                                         "enable":  true,
+                                         "hide":  true,
+                                         "iconColor":  "rgba(0, 211, 255, 1)",
+                                         "name":  "Annotations \u0026 Alerts",
+                                         "type":  "dashboard"
+                                     }
+                                 ]
+                    },
+    "editable":  true,
+    "fiscalYearStartMonth":  0,
+    "graphTooltip":  0,
+    "links":  [
+                  {
+                      "asDropdown":  false,
+                      "icon":  "external link",
+                      "includeVars":  false,
+                      "keepTime":  false,
+                      "targetBlank":  true,
+                      "title":  "Impressum",
+                      "type":  "link",
+                      "url":  "https://www.iip.kit.edu/16.php"
+                  },
+                  {
+                      "asDropdown":  false,
+                      "icon":  "info",
+                      "includeVars":  false,
+                      "keepTime":  false,
+                      "targetBlank":  false,
+                      "title":  "Datenschutz",
+                      "type":  "link",
+                      "url":  "/d/oeds-datenschutz/oeds-datenschutz"
+                  }
+              ],
+    "liveNow":  false,
+    "panels":  [
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-GrYlRd"
+                                                                      },
+                                                            "decimals":  2,
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             },
+                                                                                             {
+                                                                                                 "color":  "orange",
+                                                                                                 "value":  50
+                                                                                             },
+                                                                                             {
+                                                                                                 "color":  "red",
+                                                                                                 "value":  100
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "currencyEUR"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  4,
+                                       "w":  6,
+                                       "x":  0,
+                                       "y":  0
+                                   },
+                       "id":  1,
+                       "options":  {
+                                       "colorMode":  "value",
+                                       "graphMode":  "area",
+                                       "orientation":  "horizontal",
+                                       "reduceOptions":  {
+                                                             "calcs":  [
+                                                                           "lastNotNull"
+                                                                       ],
+                                                             "fields":  "",
+                                                             "values":  false
+                                                         },
+                                       "textMode":  "auto"
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), latest_prices AS (SELECT DISTINCT ON (e.\"AreaDisplayName\") e.\"AreaDisplayName\" AS country, e.\"Price[Currency/MWh]\" AS price_mwh FROM entsoe_fms.\"EnergyPrices\" e JOIN countries c ON c.country = e.\"AreaDisplayName\" WHERE e.\"AreaTypeCode\" = \u0027BZN\u0027 AND (TRIM(COALESCE(e.\"Sequence\", \u0027\u0027)) = \u0027\u0027 OR e.\"Sequence\" = \u00271\u0027) AND e.\"DateTime(UTC)\" \u003e= now() - interval \u00273 days\u0027 ORDER BY e.\"AreaDisplayName\", e.\"DateTime(UTC)\" DESC) SELECT now() AS \"time\", MAX(price_mwh) - MIN(price_mwh) AS \"value\" FROM latest_prices",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Widest Day-Ahead Price Spread",
+                       "type":  "stat",
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-GrYlRd"
+                                                                      },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "yellow",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  4,
+                                       "w":  6,
+                                       "x":  6,
+                                       "y":  0
+                                   },
+                       "id":  2,
+                       "options":  {
+                                       "colorMode":  "value",
+                                       "graphMode":  "area",
+                                       "orientation":  "horizontal",
+                                       "reduceOptions":  {
+                                                             "calcs":  [
+                                                                           "lastNotNull"
+                                                                       ],
+                                                             "fields":  "",
+                                                             "values":  false
+                                                         },
+                                       "textMode":  "auto"
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), preferred_load_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT l.\"AreaDisplayName\" AS country, l.\"AreaTypeCode\" AS area_type, MAX(l.\"DateTime(UTC)\") AS latest_ts, CASE l.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"ActualTotalLoad\" l JOIN countries c ON c.country = l.\"AreaDisplayName\" WHERE l.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1), latest_loads AS (SELECT DISTINCT ON (l.\"AreaDisplayName\") l.\"AreaDisplayName\" AS country, l.\"TotalLoad[MW]\" AS load_mw FROM entsoe_fms.\"ActualTotalLoad\" l JOIN preferred_load_area_types pat ON pat.country = l.\"AreaDisplayName\" AND pat.area_type = l.\"AreaTypeCode\" WHERE l.\"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 ORDER BY l.\"AreaDisplayName\", l.\"DateTime(UTC)\" DESC) SELECT now() AS \"time\", SUM(load_mw) AS \"value\" FROM latest_loads",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Combined Load",
+                       "type":  "stat"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-GrYlRd"
+                                                                      },
+                                                            "decimals":  1,
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "red",
+                                                                                                 "value":  null
+                                                                                             },
+                                                                                             {
+                                                                                                 "color":  "yellow",
+                                                                                                 "value":  0.3
+                                                                                             },
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  0.5
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "percentunit"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  4,
+                                       "w":  6,
+                                       "x":  12,
+                                       "y":  0
+                                   },
+                       "id":  3,
+                       "options":  {
+                                       "colorMode":  "value",
+                                       "graphMode":  "area",
+                                       "orientation":  "horizontal",
+                                       "reduceOptions":  {
+                                                             "calcs":  [
+                                                                           "lastNotNull"
+                                                                       ],
+                                                             "fields":  "",
+                                                             "values":  false
+                                                         },
+                                       "textMode":  "auto"
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), preferred_generation_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT g.\"AreaDisplayName\" AS country, g.\"AreaTypeCode\" AS area_type, MAX(g.\"DateTime(UTC)\") AS latest_ts, CASE g.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN countries c ON c.country = g.\"AreaDisplayName\" WHERE g.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1), latest_ts AS (SELECT g.\"AreaDisplayName\" AS country, MAX(g.\"DateTime(UTC)\") AS ts FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN preferred_generation_area_types pat ON pat.country = g.\"AreaDisplayName\" AND pat.area_type = g.\"AreaTypeCode\" WHERE g.\"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 GROUP BY 1), latest_mix AS (SELECT g.\"AreaDisplayName\" AS country, SUM(CASE WHEN g.\"ProductionType\" IN (\u0027Solar\u0027, \u0027Wind Onshore\u0027, \u0027Wind Offshore\u0027) THEN g.\"ActualGenerationOutput[MW]\" ELSE 0 END) AS vres_mw, SUM(g.\"ActualGenerationOutput[MW]\") AS total_gen_mw FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN latest_ts lt ON lt.country = g.\"AreaDisplayName\" AND lt.ts = g.\"DateTime(UTC)\" JOIN preferred_generation_area_types pat ON pat.country = g.\"AreaDisplayName\" AND pat.area_type = g.\"AreaTypeCode\" GROUP BY 1) SELECT now() AS \"time\", AVG(vres_mw / NULLIF(total_gen_mw, 0)) AS \"value\" FROM latest_mix",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Average Wind + Solar Share",
+                       "type":  "stat"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-GrYlRd"
+                                                                      },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "yellow",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  4,
+                                       "w":  6,
+                                       "x":  18,
+                                       "y":  0
+                                   },
+                       "id":  4,
+                       "options":  {
+                                       "colorMode":  "value",
+                                       "graphMode":  "area",
+                                       "orientation":  "horizontal",
+                                       "reduceOptions":  {
+                                                             "calcs":  [
+                                                                           "lastNotNull"
+                                                                       ],
+                                                             "fields":  "",
+                                                             "values":  false
+                                                         },
+                                       "textMode":  "auto"
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), imports AS (SELECT \"InAreaDisplayName\" AS country, \"DateTime(UTC)\" AS ts, SUM(\"ForecastTransferCapacity[MW]\") AS import_mw FROM entsoe_fms.\"ForecastedTransferCapacities\" WHERE \"InAreaDisplayName\" IN (SELECT country FROM countries) AND \"ContractType\" = \u0027$Transfer_Contract\u0027 AND \"DateTime(UTC)\" \u003e= now() AND \"DateTime(UTC)\" \u003c now() + interval \u002724 hours\u0027 GROUP BY 1, 2), exports AS (SELECT \"OutAreaDisplayName\" AS country, \"DateTime(UTC)\" AS ts, SUM(\"ForecastTransferCapacity[MW]\") AS export_mw FROM entsoe_fms.\"ForecastedTransferCapacities\" WHERE \"OutAreaDisplayName\" IN (SELECT country FROM countries) AND \"ContractType\" = \u0027$Transfer_Contract\u0027 AND \"DateTime(UTC)\" \u003e= now() AND \"DateTime(UTC)\" \u003c now() + interval \u002724 hours\u0027 GROUP BY 1, 2), net AS (SELECT COALESCE(i.country, e.country) AS country, COALESCE(i.ts, e.ts) AS ts, COALESCE(i.import_mw, 0) - COALESCE(e.export_mw, 0) AS net_headroom_mw FROM imports i FULL OUTER JOIN exports e ON e.country = i.country AND e.ts = i.ts) SELECT now() AS \"time\", AVG(net_headroom_mw) AS \"value\" FROM net",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Avg Net Import Headroom (Next 24h)",
+                       "type":  "stat"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "custom":  {
+                                                                           "drawStyle":  "line",
+                                                                           "fillOpacity":  10,
+                                                                           "lineWidth":  2,
+                                                                           "showPoints":  "never"
+                                                                       },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "currencyEUR"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  12,
+                                       "x":  0,
+                                       "y":  4
+                                   },
+                       "id":  5,
+                       "options":  {
+                                       "legend":  {
+                                                      "displayMode":  "list",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "mode":  "single",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "SELECT $__timeGroupAlias(my_time, $__interval), metric, AVG(value) AS \"value\" FROM (SELECT \"DateTime(UTC)\" AS my_time, \"AreaDisplayName\" AS metric, \"Price[Currency/MWh]\" AS value FROM entsoe_fms.\"EnergyPrices\" WHERE \"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND \"AreaDisplayName\" IN (\u0027$Country_A\u0027, \u0027$Country_B\u0027, \u0027$Country_C\u0027) AND \"AreaTypeCode\" = \u0027BZN\u0027 AND (TRIM(COALESCE(\"Sequence\", \u0027\u0027)) = \u0027\u0027 OR \"Sequence\" = \u00271\u0027)) s GROUP BY 1, 2 ORDER BY 1",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Selected Country Price Comparison",
+                       "type":  "timeseries",
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "custom":  {
+                                                                           "drawStyle":  "line",
+                                                                           "fillOpacity":  10,
+                                                                           "lineWidth":  2,
+                                                                           "showPoints":  "never"
+                                                                       },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  12,
+                                       "x":  12,
+                                       "y":  4
+                                   },
+                       "id":  6,
+                       "options":  {
+                                       "legend":  {
+                                                      "displayMode":  "list",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "mode":  "single",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), preferred_load_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT l.\"AreaDisplayName\" AS country, l.\"AreaTypeCode\" AS area_type, MAX(l.\"DateTime(UTC)\") AS latest_ts, CASE l.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"ActualTotalLoad\" l JOIN countries c ON c.country = l.\"AreaDisplayName\" WHERE l.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1) SELECT $__timeGroupAlias(my_time, $__interval), metric, AVG(value) AS \"value\" FROM (SELECT l.\"DateTime(UTC)\" AS my_time, l.\"AreaDisplayName\" AS metric, l.\"TotalLoad[MW]\" AS value FROM entsoe_fms.\"ActualTotalLoad\" l JOIN preferred_load_area_types pat ON pat.country = l.\"AreaDisplayName\" AND pat.area_type = l.\"AreaTypeCode\" WHERE l.\"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND l.\"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0)) s GROUP BY 1, 2 ORDER BY 1",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Selected Country Load Comparison",
+                       "type":  "timeseries"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "custom":  {
+                                                                           "drawStyle":  "line",
+                                                                           "fillOpacity":  10,
+                                                                           "lineWidth":  2,
+                                                                           "showPoints":  "never"
+                                                                       },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "megwatt"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  12,
+                                       "x":  0,
+                                       "y":  12
+                                   },
+                       "id":  7,
+                       "options":  {
+                                       "legend":  {
+                                                      "displayMode":  "list",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "mode":  "single",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), preferred_load_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT l.\"AreaDisplayName\" AS country, l.\"AreaTypeCode\" AS area_type, MAX(l.\"DateTime(UTC)\") AS latest_ts, CASE l.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"ActualTotalLoad\" l JOIN countries c ON c.country = l.\"AreaDisplayName\" WHERE l.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1), preferred_generation_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT g.\"AreaDisplayName\" AS country, g.\"AreaTypeCode\" AS area_type, MAX(g.\"DateTime(UTC)\") AS latest_ts, CASE g.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN countries c ON c.country = g.\"AreaDisplayName\" WHERE g.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1), vres AS (SELECT g.\"DateTime(UTC)\" AS ts, g.\"AreaDisplayName\" AS country, SUM(\"ActualGenerationOutput[MW]\") AS vres_mw FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN preferred_generation_area_types pgat ON pgat.country = g.\"AreaDisplayName\" AND pgat.area_type = g.\"AreaTypeCode\" WHERE g.\"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND g.\"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) AND g.\"ProductionType\" IN (\u0027Solar\u0027, \u0027Wind Onshore\u0027, \u0027Wind Offshore\u0027) GROUP BY 1, 2) SELECT l.\"DateTime(UTC)\" AS \"time\", l.\"AreaDisplayName\" AS metric, l.\"TotalLoad[MW]\" - COALESCE(v.vres_mw, 0) AS \"value\" FROM entsoe_fms.\"ActualTotalLoad\" l JOIN preferred_load_area_types plat ON plat.country = l.\"AreaDisplayName\" AND plat.area_type = l.\"AreaTypeCode\" LEFT JOIN vres v ON v.ts = l.\"DateTime(UTC)\" AND v.country = l.\"AreaDisplayName\" WHERE l.\"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND l.\"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) ORDER BY 1",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Selected Country Residual Load",
+                       "type":  "timeseries"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "palette-classic"
+                                                                      },
+                                                            "custom":  {
+                                                                           "drawStyle":  "line",
+                                                                           "fillOpacity":  10,
+                                                                           "lineWidth":  2,
+                                                                           "showPoints":  "never"
+                                                                       },
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "percentunit"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  12,
+                                       "x":  12,
+                                       "y":  12
+                                   },
+                       "id":  8,
+                       "options":  {
+                                       "legend":  {
+                                                      "displayMode":  "list",
+                                                      "placement":  "bottom",
+                                                      "showLegend":  true
+                                                  },
+                                       "tooltip":  {
+                                                       "mode":  "single",
+                                                       "sort":  "none"
+                                                   }
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "time_series",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), preferred_generation_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT g.\"AreaDisplayName\" AS country, g.\"AreaTypeCode\" AS area_type, MAX(g.\"DateTime(UTC)\") AS latest_ts, CASE g.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN countries c ON c.country = g.\"AreaDisplayName\" WHERE g.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1), mix AS (SELECT g.\"DateTime(UTC)\" AS ts, g.\"AreaDisplayName\" AS country, SUM(CASE WHEN \"ProductionType\" IN (\u0027Solar\u0027, \u0027Wind Onshore\u0027, \u0027Wind Offshore\u0027) THEN \"ActualGenerationOutput[MW]\" ELSE 0 END) AS vres_mw, SUM(\"ActualGenerationOutput[MW]\") AS total_gen_mw FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN preferred_generation_area_types pat ON pat.country = g.\"AreaDisplayName\" AND pat.area_type = g.\"AreaTypeCode\" WHERE g.\"DateTime(UTC)\" \u003e= to_timestamp($__from / 1000.0) AND g.\"DateTime(UTC)\" \u003c= to_timestamp($__to / 1000.0) GROUP BY 1, 2) SELECT ts AS \"time\", country AS metric, 100 * vres_mw / NULLIF(total_gen_mw, 0) AS \"value\" FROM mix ORDER BY 1",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Wind + Solar Share Comparison",
+                       "type":  "timeseries"
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "color":  {
+                                                                          "mode":  "continuous-YlRd"
+                                                                      },
+                                                            "decimals":  2,
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           },
+                                                            "unit":  "currencyEUR"
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  10,
+                                       "w":  12,
+                                       "x":  0,
+                                       "y":  20
+                                   },
+                       "id":  9,
+                       "options":  {
+                                       "basemap":  {
+                                                       "config":  {
+
+                                                                  },
+                                                       "name":  "Layer 0",
+                                                       "type":  "default"
+                                                   },
+                                       "controls":  {
+                                                        "mouseWheelZoom":  true,
+                                                        "showAttribution":  true,
+                                                        "showMeasure":  false,
+                                                        "showZoom":  true
+                                                    },
+                                       "layers":  [
+                                                      {
+                                                          "config":  {
+                                                                         "showLegend":  true,
+                                                                         "style":  {
+                                                                                       "color":  {
+                                                                                                     "field":  "price_mwh"
+                                                                                                 },
+                                                                                       "opacity":  0.85,
+                                                                                       "size":  {
+                                                                                                    "field":  "price_mwh",
+                                                                                                    "fixed":  8,
+                                                                                                    "max":  16,
+                                                                                                    "min":  6
+                                                                                                }
+                                                                                   }
+                                                                     },
+                                                          "location":  {
+                                                                           "latitude":  "lat",
+                                                                           "longitude":  "lon",
+                                                                           "mode":  "coords"
+                                                                       },
+                                                          "name":  "Layer 1",
+                                                          "tooltip":  true,
+                                                          "type":  "markers"
+                                                      }
+                                                  ],
+                                       "tooltip":  {
+                                                       "mode":  "details"
+                                                   },
+                                       "view":  {
+                                                    "id":  "europe",
+                                                    "lat":  50,
+                                                    "lon":  10,
+                                                    "zoom":  3
+                                                }
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "table",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH val_map (grafana_label, db_name) AS (VALUES (\u0027Albania (AL)\u0027, \u0027Albania\u0027), (\u0027Austria (AT)\u0027, \u0027Austria\u0027), (\u0027Belgium (BE)\u0027, \u0027Belgium\u0027), (\u0027Bosnia and Herz. (BA)\u0027, \u0027Bosnia and Herzegovina\u0027), (\u0027Bulgaria (BG)\u0027, \u0027Bulgaria\u0027), (\u0027Croatia (HR)\u0027, \u0027Croatia\u0027), (\u0027Cyprus (CY)\u0027, \u0027Cyprus\u0027), (\u0027Czech Republic (CZ)\u0027, \u0027Czechia\u0027), (\u0027Denmark (DK)\u0027, \u0027Denmark\u0027), (\u0027DK\u0027, \u0027Denmark\u0027), (\u0027DK1\u0027, \u0027Denmark\u0027), (\u0027DK2\u0027, \u0027Denmark\u0027), (\u0027Estonia (EE)\u0027, \u0027Estonia\u0027), (\u0027Finland (FI)\u0027, \u0027Finland\u0027), (\u0027France (FR)\u0027, \u0027France\u0027), (\u0027Germany (DE)\u0027, \u0027Germany\u0027), (\u0027DE(50Hertz)\u0027, \u0027Germany\u0027), (\u0027DE(Amprion)\u0027, \u0027Germany\u0027), (\u0027DE(TenneT GER)\u0027, \u0027Germany\u0027), (\u0027DE(TransnetBW)\u0027, \u0027Germany\u0027), (\u0027DE-LU\u0027, \u0027Germany\u0027), (\u0027Greece (GR)\u0027, \u0027Greece\u0027), (\u0027Hungary (HU)\u0027, \u0027Hungary\u0027), (\u0027Ireland (IE)\u0027, \u0027Ireland\u0027), (\u0027IE(SEM)\u0027, \u0027Ireland\u0027), (\u0027Italy (IT)\u0027, \u0027Italy\u0027), (\u0027IT-Calabria\u0027, \u0027Italy\u0027), (\u0027IT-Centre-North\u0027, \u0027Italy\u0027), (\u0027IT-Centre-South\u0027, \u0027Italy\u0027), (\u0027IT-North\u0027, \u0027Italy\u0027), (\u0027IT-Sardinia\u0027, \u0027Italy\u0027), (\u0027IT-Sicily\u0027, \u0027Italy\u0027), (\u0027IT-South\u0027, \u0027Italy\u0027), (\u0027Kosovo (XK)\u0027, \u0027Kosovo\u0027), (\u0027Latvia (LV)\u0027, \u0027Latvia\u0027), (\u0027Lithuania (LT)\u0027, \u0027Lithuania\u0027), (\u0027Luxembourg (LU)\u0027, \u0027Luxembourg\u0027), (\u0027Moldova (MD)\u0027, \u0027Moldova\u0027), (\u0027Montenegro (ME)\u0027, \u0027Montenegro\u0027), (\u0027Netherlands (NL)\u0027, \u0027Netherlands\u0027), (\u0027North Macedonia (MK)\u0027, \u0027North Macedonia\u0027), (\u0027Norway (NO)\u0027, \u0027Norway\u0027), (\u0027NO1\u0027, \u0027Norway\u0027), (\u0027NO2\u0027, \u0027Norway\u0027), (\u0027NO3\u0027, \u0027Norway\u0027), (\u0027NO4\u0027, \u0027Norway\u0027), (\u0027NO5\u0027, \u0027Norway\u0027), (\u0027Poland (PL)\u0027, \u0027Poland\u0027), (\u0027Portugal (PT)\u0027, \u0027Portugal\u0027), (\u0027Romania (RO)\u0027, \u0027Romania\u0027), (\u0027Serbia (RS)\u0027, \u0027Serbia\u0027), (\u0027Slovakia (SK)\u0027, \u0027Slovakia\u0027), (\u0027Slovenia (SI)\u0027, \u0027Slovenia\u0027), (\u0027Spain (ES)\u0027, \u0027Spain\u0027), (\u0027Sweden (SE)\u0027, \u0027Sweden\u0027), (\u0027SE1\u0027, \u0027Sweden\u0027), (\u0027SE2\u0027, \u0027Sweden\u0027), (\u0027SE3\u0027, \u0027Sweden\u0027), (\u0027SE4\u0027, \u0027Sweden\u0027), (\u0027Switzerland (CH)\u0027, \u0027Switzerland\u0027), (\u0027United Kingdom (UK)\u0027, \u0027United Kingdom\u0027), (\u0027GB\u0027, \u0027United Kingdom\u0027), (\u0027Ukraine (UA)\u0027, \u0027Ukraine\u0027)), countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), latest_prices AS (SELECT DISTINCT ON (e.\"AreaDisplayName\") e.\"AreaDisplayName\" AS country, e.\"Price[Currency/MWh]\" AS price_mwh, e.\"DateTime(UTC)\" AS price_time FROM entsoe_fms.\"EnergyPrices\" e JOIN countries c ON c.country = e.\"AreaDisplayName\" WHERE e.\"AreaTypeCode\" = \u0027BZN\u0027 AND (TRIM(COALESCE(e.\"Sequence\", \u0027\u0027)) = \u0027\u0027 OR e.\"Sequence\" = \u00271\u0027) AND e.\"DateTime(UTC)\" \u003e= now() - interval \u00273 days\u0027 ORDER BY e.\"AreaDisplayName\", e.\"DateTime(UTC)\" DESC), country_centroids AS (SELECT country AS db_name, AVG(lat) AS lat, AVG(lon) AS lon FROM power_system_data.powersystemdata WHERE lat IS NOT NULL AND lon IS NOT NULL GROUP BY country) SELECT 0 AS \"time\", cc.lat, cc.lon, lp.country AS name, lp.country, ROUND(lp.price_mwh::numeric, 2) AS price_mwh, lp.price_time FROM latest_prices lp JOIN val_map vm ON vm.grafana_label = lp.country JOIN country_centroids cc ON cc.db_name = vm.db_name ORDER BY lp.price_mwh DESC",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Selected Country Price Map",
+                       "type":  "geomap",
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           }
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  10,
+                                       "w":  12,
+                                       "x":  12,
+                                       "y":  20
+                                   },
+                       "id":  10,
+                       "options":  {
+                                       "cellHeight":  "sm",
+                                       "showHeader":  true
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "table",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), preferred_load_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT l.\"AreaDisplayName\" AS country, l.\"AreaTypeCode\" AS area_type, MAX(l.\"DateTime(UTC)\") AS latest_ts, CASE l.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"ActualTotalLoad\" l JOIN countries c ON c.country = l.\"AreaDisplayName\" WHERE l.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1), preferred_generation_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT g.\"AreaDisplayName\" AS country, g.\"AreaTypeCode\" AS area_type, MAX(g.\"DateTime(UTC)\") AS latest_ts, CASE g.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN countries c ON c.country = g.\"AreaDisplayName\" WHERE g.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1), preferred_dayahead_area_types AS (SELECT country, area_type FROM (SELECT country, area_type, latest_ts, priority, ROW_NUMBER() OVER (PARTITION BY country ORDER BY priority, latest_ts DESC) AS rn FROM (SELECT d.\"AreaDisplayName\" AS country, d.\"AreaTypeCode\" AS area_type, MAX(d.\"DateTime(UTC)\") AS latest_ts, CASE d.\"AreaTypeCode\" WHEN \u0027BZN\u0027 THEN 1 WHEN \u0027CTA\u0027 THEN 2 WHEN \u0027CTY\u0027 THEN 3 ELSE 9 END AS priority FROM entsoe_fms.\"DayAheadAggregatedGeneration\" d JOIN countries c ON c.country = d.\"AreaDisplayName\" WHERE d.\"DateTime(UTC)\" \u003e= now() - interval \u002730 days\u0027 GROUP BY 1, 2) candidates) ranked WHERE rn = 1), latest_prices AS (SELECT DISTINCT ON (e.\"AreaDisplayName\") e.\"AreaDisplayName\" AS country, e.\"Price[Currency/MWh]\" AS price_mwh, e.\"DateTime(UTC)\" AS price_time FROM entsoe_fms.\"EnergyPrices\" e JOIN countries c ON c.country = e.\"AreaDisplayName\" WHERE e.\"AreaTypeCode\" = \u0027BZN\u0027 AND (TRIM(COALESCE(e.\"Sequence\", \u0027\u0027)) = \u0027\u0027 OR e.\"Sequence\" = \u00271\u0027) AND e.\"DateTime(UTC)\" \u003e= now() - interval \u00273 days\u0027 ORDER BY e.\"AreaDisplayName\", e.\"DateTime(UTC)\" DESC), latest_loads AS (SELECT DISTINCT ON (l.\"AreaDisplayName\") l.\"AreaDisplayName\" AS country, l.\"DateTime(UTC)\" AS load_time, l.\"TotalLoad[MW]\" AS load_mw FROM entsoe_fms.\"ActualTotalLoad\" l JOIN preferred_load_area_types pat ON pat.country = l.\"AreaDisplayName\" AND pat.area_type = l.\"AreaTypeCode\" WHERE l.\"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 ORDER BY l.\"AreaDisplayName\", l.\"DateTime(UTC)\" DESC), latest_vres AS (SELECT g.\"AreaDisplayName\" AS country, g.\"DateTime(UTC)\" AS ts, SUM(g.\"ActualGenerationOutput[MW]\") AS vres_mw FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN preferred_generation_area_types pat ON pat.country = g.\"AreaDisplayName\" AND pat.area_type = g.\"AreaTypeCode\" WHERE g.\"ProductionType\" IN (\u0027Solar\u0027, \u0027Wind Onshore\u0027, \u0027Wind Offshore\u0027) AND g.\"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 GROUP BY 1, 2), latest_residuals AS (SELECT ll.country, ll.load_mw - COALESCE(v.vres_mw, 0) AS residual_load_mw FROM latest_loads ll LEFT JOIN latest_vres v ON v.country = ll.country AND v.ts = ll.load_time), latest_gen_ts AS (SELECT g.\"AreaDisplayName\" AS country, MAX(g.\"DateTime(UTC)\") AS ts FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN preferred_generation_area_types pat ON pat.country = g.\"AreaDisplayName\" AND pat.area_type = g.\"AreaTypeCode\" WHERE g.\"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 GROUP BY 1), latest_res_share AS (SELECT g.\"AreaDisplayName\" AS country, 100 * SUM(CASE WHEN g.\"ProductionType\" IN (\u0027Solar\u0027, \u0027Wind Onshore\u0027, \u0027Wind Offshore\u0027) THEN g.\"ActualGenerationOutput[MW]\" ELSE 0 END) / NULLIF(SUM(g.\"ActualGenerationOutput[MW]\"), 0) AS res_share_pct FROM entsoe_fms.\"AggregatedGenerationPerType\" g JOIN latest_gen_ts gt ON gt.country = g.\"AreaDisplayName\" AND gt.ts = g.\"DateTime(UTC)\" JOIN preferred_generation_area_types pat ON pat.country = g.\"AreaDisplayName\" AND pat.area_type = g.\"AreaTypeCode\" GROUP BY 1), latest_dayahead AS (SELECT DISTINCT ON (d.\"AreaDisplayName\") d.\"AreaDisplayName\" AS country, d.\"GenerationForecast[MW]\" AS day_ahead_generation_mw FROM entsoe_fms.\"DayAheadAggregatedGeneration\" d JOIN preferred_dayahead_area_types pat ON pat.country = d.\"AreaDisplayName\" AND pat.area_type = d.\"AreaTypeCode\" WHERE d.\"DateTime(UTC)\" \u003e= now() - interval \u00272 days\u0027 ORDER BY d.\"AreaDisplayName\", d.\"DateTime(UTC)\" DESC) SELECT c.country, ROUND(lp.price_mwh::numeric, 2) AS price_eur_mwh, ROUND(ll.load_mw::numeric, 1) AS load_mw, ROUND(lr.residual_load_mw::numeric, 1) AS residual_load_mw, ROUND(rs.res_share_pct::numeric, 1) AS res_share_pct, ROUND(dg.day_ahead_generation_mw::numeric, 1) AS day_ahead_generation_mw, lp.price_time, ll.load_time FROM countries c LEFT JOIN latest_prices lp ON lp.country = c.country LEFT JOIN latest_loads ll ON ll.country = c.country LEFT JOIN latest_residuals lr ON lr.country = c.country LEFT JOIN latest_res_share rs ON rs.country = c.country LEFT JOIN latest_dayahead dg ON dg.country = c.country ORDER BY c.country",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "Selected Country Snapshot",
+                       "type":  "table",
+                       "description":  "Sources: ENTSO-E. External price views: SMARD."
+                   },
+                   {
+                       "datasource":  {
+                                          "type":  "grafana-postgresql-datasource",
+                                          "uid":  "P6EAA63344BCC9F38"
+                                      },
+                       "fieldConfig":  {
+                                           "defaults":  {
+                                                            "mappings":  [
+
+                                                                         ],
+                                                            "thresholds":  {
+                                                                               "mode":  "absolute",
+                                                                               "steps":  [
+                                                                                             {
+                                                                                                 "color":  "green",
+                                                                                                 "value":  null
+                                                                                             }
+                                                                                         ]
+                                                                           }
+                                                        },
+                                           "overrides":  [
+
+                                                         ]
+                                       },
+                       "gridPos":  {
+                                       "h":  8,
+                                       "w":  24,
+                                       "x":  0,
+                                       "y":  30
+                                   },
+                       "id":  11,
+                       "options":  {
+                                       "cellHeight":  "sm",
+                                       "showHeader":  true
+                                   },
+                       "targets":  [
+                                       {
+                                           "editorMode":  "code",
+                                           "format":  "table",
+                                           "rawQuery":  true,
+                                           "rawSql":  "WITH countries(country) AS (SELECT DISTINCT country FROM (VALUES (\u0027$Country_A\u0027), (\u0027$Country_B\u0027), (\u0027$Country_C\u0027)) AS c(country)), imports AS (SELECT \"InAreaDisplayName\" AS country, AVG(\"ForecastTransferCapacity[MW]\") AS avg_import_capacity_mw FROM entsoe_fms.\"ForecastedTransferCapacities\" WHERE \"InAreaDisplayName\" IN (SELECT country FROM countries) AND \"ContractType\" = \u0027$Transfer_Contract\u0027 AND \"DateTime(UTC)\" \u003e= now() AND \"DateTime(UTC)\" \u003c now() + interval \u002724 hours\u0027 GROUP BY 1), exports AS (SELECT \"OutAreaDisplayName\" AS country, AVG(\"ForecastTransferCapacity[MW]\") AS avg_export_capacity_mw FROM entsoe_fms.\"ForecastedTransferCapacities\" WHERE \"OutAreaDisplayName\" IN (SELECT country FROM countries) AND \"ContractType\" = \u0027$Transfer_Contract\u0027 AND \"DateTime(UTC)\" \u003e= now() AND \"DateTime(UTC)\" \u003c now() + interval \u002724 hours\u0027 GROUP BY 1) SELECT c.country, ROUND(COALESCE(i.avg_import_capacity_mw, 0)::numeric, 1) AS avg_import_capacity_mw, ROUND(COALESCE(e.avg_export_capacity_mw, 0)::numeric, 1) AS avg_export_capacity_mw, ROUND((COALESCE(i.avg_import_capacity_mw, 0) - COALESCE(e.avg_export_capacity_mw, 0))::numeric, 1) AS net_headroom_mw FROM countries c LEFT JOIN imports i ON i.country = c.country LEFT JOIN exports e ON e.country = c.country ORDER BY net_headroom_mw DESC, c.country",
+                                           "refId":  "A"
+                                       }
+                                   ],
+                       "title":  "24h Import / Export Headroom by Country",
+                       "type":  "table"
+                   }
+               ],
+    "refresh":  "5m",
+    "schemaVersion":  40,
+    "style":  "dark",
+    "templating":  {
+                       "list":  [
+                                    {
+                                        "current":  {
+                                                        "text":  "DE-LU",
+                                                        "value":  "DE-LU"
+                                                    },
+                                        "definition":  "SELECT area_name FROM (VALUES (\u0027DE-LU\u0027), (\u0027Belgium (BE)\u0027), (\u0027DK1\u0027), (\u0027DK2\u0027), (\u0027France (FR)\u0027), (\u0027Netherlands (NL)\u0027), (\u0027NO2\u0027), (\u0027Austria (AT)\u0027), (\u0027Poland (PL)\u0027), (\u0027SE4\u0027), (\u0027Switzerland (CH)\u0027), (\u0027Czech Republic (CZ)\u0027), (\u0027IT-North\u0027), (\u0027Slovenia (SI)\u0027), (\u0027Hungary (HU)\u0027)) AS allowed(area_name) ORDER BY 1",
+                                        "label":  "Country A",
+                                        "name":  "Country_A",
+                                        "options":  [
+
+                                                    ],
+                                        "query":  "SELECT area_name FROM (VALUES (\u0027DE-LU\u0027), (\u0027Belgium (BE)\u0027), (\u0027DK1\u0027), (\u0027DK2\u0027), (\u0027France (FR)\u0027), (\u0027Netherlands (NL)\u0027), (\u0027NO2\u0027), (\u0027Austria (AT)\u0027), (\u0027Poland (PL)\u0027), (\u0027SE4\u0027), (\u0027Switzerland (CH)\u0027), (\u0027Czech Republic (CZ)\u0027), (\u0027IT-North\u0027), (\u0027Slovenia (SI)\u0027), (\u0027Hungary (HU)\u0027)) AS allowed(area_name) ORDER BY 1",
+                                        "refresh":  1,
+                                        "regex":  "",
+                                        "type":  "query"
+                                    },
+                                    {
+                                        "current":  {
+                                                        "text":  "France (FR)",
+                                                        "value":  "France (FR)"
+                                                    },
+                                        "definition":  "SELECT area_name FROM (VALUES (\u0027DE-LU\u0027), (\u0027Belgium (BE)\u0027), (\u0027DK1\u0027), (\u0027DK2\u0027), (\u0027France (FR)\u0027), (\u0027Netherlands (NL)\u0027), (\u0027NO2\u0027), (\u0027Austria (AT)\u0027), (\u0027Poland (PL)\u0027), (\u0027SE4\u0027), (\u0027Switzerland (CH)\u0027), (\u0027Czech Republic (CZ)\u0027), (\u0027IT-North\u0027), (\u0027Slovenia (SI)\u0027), (\u0027Hungary (HU)\u0027)) AS allowed(area_name) ORDER BY 1",
+                                        "label":  "Country B",
+                                        "name":  "Country_B",
+                                        "options":  [
+
+                                                    ],
+                                        "query":  "SELECT area_name FROM (VALUES (\u0027DE-LU\u0027), (\u0027Belgium (BE)\u0027), (\u0027DK1\u0027), (\u0027DK2\u0027), (\u0027France (FR)\u0027), (\u0027Netherlands (NL)\u0027), (\u0027NO2\u0027), (\u0027Austria (AT)\u0027), (\u0027Poland (PL)\u0027), (\u0027SE4\u0027), (\u0027Switzerland (CH)\u0027), (\u0027Czech Republic (CZ)\u0027), (\u0027IT-North\u0027), (\u0027Slovenia (SI)\u0027), (\u0027Hungary (HU)\u0027)) AS allowed(area_name) ORDER BY 1",
+                                        "refresh":  1,
+                                        "regex":  "",
+                                        "type":  "query"
+                                    },
+                                    {
+                                        "current":  {
+                                                        "text":  "Netherlands (NL)",
+                                                        "value":  "Netherlands (NL)"
+                                                    },
+                                        "definition":  "SELECT area_name FROM (VALUES (\u0027DE-LU\u0027), (\u0027Belgium (BE)\u0027), (\u0027DK1\u0027), (\u0027DK2\u0027), (\u0027France (FR)\u0027), (\u0027Netherlands (NL)\u0027), (\u0027NO2\u0027), (\u0027Austria (AT)\u0027), (\u0027Poland (PL)\u0027), (\u0027SE4\u0027), (\u0027Switzerland (CH)\u0027), (\u0027Czech Republic (CZ)\u0027), (\u0027IT-North\u0027), (\u0027Slovenia (SI)\u0027), (\u0027Hungary (HU)\u0027)) AS allowed(area_name) ORDER BY 1",
+                                        "label":  "Country C",
+                                        "name":  "Country_C",
+                                        "options":  [
+
+                                                    ],
+                                        "query":  "SELECT area_name FROM (VALUES (\u0027DE-LU\u0027), (\u0027Belgium (BE)\u0027), (\u0027DK1\u0027), (\u0027DK2\u0027), (\u0027France (FR)\u0027), (\u0027Netherlands (NL)\u0027), (\u0027NO2\u0027), (\u0027Austria (AT)\u0027), (\u0027Poland (PL)\u0027), (\u0027SE4\u0027), (\u0027Switzerland (CH)\u0027), (\u0027Czech Republic (CZ)\u0027), (\u0027IT-North\u0027), (\u0027Slovenia (SI)\u0027), (\u0027Hungary (HU)\u0027)) AS allowed(area_name) ORDER BY 1",
+                                        "refresh":  1,
+                                        "regex":  "",
+                                        "type":  "query"
+                                    },
+                                    {
+                                        "current":  {
+                                                        "text":  "Day-ahead",
+                                                        "value":  "Day-ahead"
+                                                    },
+                                        "definition":  "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
+                                        "label":  "Transfer Contract",
+                                        "name":  "Transfer_Contract",
+                                        "options":  [
+
+                                                    ],
+                                        "query":  "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
+                                        "refresh":  1,
+                                        "regex":  "",
+                                        "type":  "custom"
+                                    }
+                                ]
+                   },
+    "time":  {
+                 "from":  "now-7d",
+                 "to":  "now"
+             },
+    "timepicker":  {
+
+                   },
+    "timezone":  "",
+    "version":  1,
+    "weekStart":  "",
+    "uid":  "entsoe-country-comparator-external",
+    "title":  "ENTSOE Country Comparator (External)",
+    "description":  "Variant: External. Sources: ENTSO-E. External price views: SMARD. Price zones: DE-LU, Belgium (BE), DK1, DK2, France (FR), Netherlands (NL), NO2, Austria (AT), Poland (PL), SE4, Switzerland (CH), Czech Republic (CZ), IT-North, Slovenia (SI), Hungary (HU)",
+    "tags":  [
+                 "entsoe",
+                 "oeds",
+                 "comparison",
+                 "country",
+                 "external"
+             ]
+}
+

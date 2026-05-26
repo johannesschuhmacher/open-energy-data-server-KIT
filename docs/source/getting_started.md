@@ -1,7 +1,7 @@
 # Getting Started
 
 This guide covers the local development setup, crawler execution, and the main
-services that ship with OEDS.
+services that ship with OEDS-KIT.
 
 ## Choose your path
 
@@ -9,9 +9,9 @@ Pick the shortest path that matches your goal:
 
 | Goal | Fastest path | Continue with |
 | --- | --- | --- |
-| Explore the stack without scheduled crawlers | start the core Compose services | [Start the local services](#start-the-local-services) |
-| Run scheduler and admin UI in containers | start the `crawlers` Compose profile | [Start the local services](#start-the-local-services) |
-| Run crawlers directly on the host | prepare `uv`, sync Python dependencies, and use `uv run` | [Prepare the Python environment](#prepare-the-python-environment) |
+| Explore the stack without scheduled crawlers | start the core Compose services | see **Start the local services** below |
+| Run scheduler and admin UI in containers | start the `crawlers` Compose profile | see **Start the local services** below |
+| Run crawlers directly on the host | prepare `uv`, sync Python dependencies, and use `uv run` | see **Prepare the Python environment** below |
 | Deploy a reproducible long-lived server | use the Ansible path instead of the local path | [Deployment Guide](./deployment.md) |
 
 ## Requirements
@@ -209,7 +209,8 @@ Default insecure test credentials:
 - username: `opendata`
 - password: `opendata`
 
-Provisioned dashboards live under `data/provisioning/grafana/dashboards/`.
+Provisioned dashboards live under `data/provisioning/grafana/dashboards/` and
+are grouped into crawler-specific subfolders plus `shared/`.
 Many dashboards stay empty until their related crawlers have populated the
 target schemas. On a clean installation, that means the dashboard panels only
 become meaningful after the first successful crawler run.
@@ -220,6 +221,5 @@ become meaningful after the first successful crawler run.
 - deployment on a long-lived host: [Deployment Guide](./deployment.md)
 - operations and manual runs: [Crawler Admin UI](./crawler_admin.md)
 - scheduler options: [Crawler Configuration](./crawler_config.md)
-- minimal end-to-end example: [Minimal Walkthrough](./minimal_walkthrough/minimal_example_walkthrough.md)
-- export examples: [HTTP Export Examples](./examples/http_export_examples.md)
 - maintained examples: [Examples](examples/index)
+- common operator issues: [Troubleshooting](./troubleshooting.md)

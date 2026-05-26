@@ -1,9 +1,23 @@
-Welcome to the OEDS documentation
-=================================
+Open Energy Data Server (KIT)
+=============================
 
-Open Energy Data Server (OEDS) combines crawlers, PostgreSQL/TimescaleDB,
-PostgREST, and Grafana into one reusable data platform for energy-system
-analysis.
+Open Energy Data Server (KIT), or OEDS-KIT, combines crawlers,
+PostgreSQL/TimescaleDB, PostgREST, and Grafana into one reusable data platform
+for energy-system analysis.
+
+Start here
+----------
+
+Choose the shortest entry path for your goal:
+
+- New to the project and want a local stack:
+  `Getting Started <getting_started.html>`_
+- Deploying a long-lived server or VM:
+  `Deployment Guide <deployment.html>`_
+- Operating schedulers, manual runs, and gapfill:
+  `Crawler Admin UI <crawler_admin.html>`_
+- Looking for a specific data source:
+  `Crawler Documentation <crawlers/README.html>`_
 
 .. toctree::
    :maxdepth: 1
@@ -27,7 +41,6 @@ analysis.
 
    crawlers/README
    crawlers/entsoe_fms
-   crawlers/entsog
    crawlers/entsoe_api
    crawlers/weather_forecast
    crawlers/energy_forecast_crawler
@@ -35,14 +48,13 @@ analysis.
    crawlers/mastr
    crawlers/eurostat_crawler
    crawlers/epex_spot
+   crawlers/additional_energy_sources
 
 .. toctree::
    :maxdepth: 1
    :caption: Guides and Examples
 
-   minimal_walkthrough/index
    examples/index
-   backup_restore_migration/index
 
 Architecture
 ------------
@@ -64,4 +76,4 @@ Workflow
 
 The documentation is organized so that new users can start with the overview
 and getting-started guides, while operators and developers can jump directly to
-the crawler-specific pages and example sections.
+deployment, crawler operations, troubleshooting, and crawler-specific pages.

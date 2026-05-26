@@ -17,8 +17,9 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    "recommonmark",
-    "sphinx_rtd_theme",
+    "myst_parser",
+    "sphinx_copybutton",
+    "sphinx_design",
 ]
 
 
@@ -29,12 +30,24 @@ intersphinx_mapping = {
 intersphinx_disabled_domains = ["std"]
 
 templates_path = ["_templates"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+]
 
 # -- Options for HTML output
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"
+html_title = "Open Energy Data Server (KIT)"
+html_theme_options = {
+    "navigation_depth": 2,
+    "show_nav_level": 1,
+    "show_toc_level": 2,
+}
 
 # -- Options for EPUB output
 epub_show_urls = "footnote"
-
-source_suffix = [".rst", ".md"]
