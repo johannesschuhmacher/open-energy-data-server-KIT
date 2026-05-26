@@ -22,6 +22,10 @@ from threading import Event, Lock, Thread
 from typing import Any
 
 import yaml
+from crawler.common.base_crawler import (
+    cleanup_expired_log_files,
+    get_log_retention_days,
+)
 from crawler.common.local_env import apply_email_env_overrides
 from crawler_core.base import BaseCrawler
 from crawler_core.runtime_env import load_local_crawler_env
@@ -194,6 +198,10 @@ class SchedulerThread(Thread):
         self.stop_event = Event()
         self.job_queue = CrawlerJobQueue()
         config = load_config()
+        cleanup_expired_log_files(
+            "logs",
+            get_log_retention_days(config.get("default", {})),
+        )
         logging.debug("Configuration loaded: %s", config)
         self.scheduled_jobs = get_scheduled_jobs(config)
 

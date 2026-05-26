@@ -44,6 +44,9 @@ Most crawlers use some or all of these options:
   at 100 MiB with 5 retained backups by default. Set `logging.max_bytes` and
   `logging.backup_count`, or the environment variables
   `OEDS_LOG_FILE_MAX_BYTES` and `OEDS_LOG_FILE_BACKUP_COUNT`, to tune this.
+  Log files older than 30 days are removed from the runtime `logs/` directory
+  by default. Set `logging.retention_days` or `OEDS_LOG_RETENTION_DAYS` to tune
+  this; use `0` to disable age-based cleanup.
 
 List values are replaced completely when overridden. Dictionary values are
 merged key-by-key.

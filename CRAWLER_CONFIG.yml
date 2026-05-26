@@ -10,6 +10,10 @@ default:
     subject: "OEDS Crawler :crawler_name Critical Error Notification" # :crawler_name will be replaced by the crawler name
     username: ""
     password: ""
+  logging:
+    max_bytes: 104857600
+    backup_count: 5
+    retention_days: 30
   enable: false
   schedule: "0 4 * * *" # CRON STRING see on: https://cron.help
   post_run_scripts:

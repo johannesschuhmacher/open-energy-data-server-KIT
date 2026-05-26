@@ -5,12 +5,18 @@
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
 import unittest
 from logging.handlers import RotatingFileHandler, SMTPHandler
 from pathlib import Path
 
-from crawler.common.base_crawler import BaseCrawler, RateLimitedSMTPHandler
+from crawler.common.base_crawler import (
+    BaseCrawler,
+    RateLimitedSMTPHandler,
+    cleanup_expired_log_files,
+    get_log_retention_days,
+)
 
 
 class CountingSMTPHandler(RateLimitedSMTPHandler):
@@ -132,6 +138,49 @@ class EmailAlertLimitTest(unittest.TestCase):
                 handler.close()
             for handler in previous_handlers:
                 logger.addHandler(handler)
+
+    def test_log_cleanup_removes_expired_rotated_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_dir = Path(temp_dir)
+            active_log = log_dir / "entsoe_fms.log"
+            expired_log = log_dir / "entsoe_fms.log.1"
+            expired_other_log = log_dir / "epex_spot.log"
+            recent_log = log_dir / "weather_forecast.log.1"
+            unrelated_file = log_dir / "email_alert_state.json"
+
+            for path in [
+                active_log,
+                expired_log,
+                expired_other_log,
+                recent_log,
+                unrelated_file,
+            ]:
+                path.write_text("log", encoding="utf-8")
+
+            now = 1_700_000_000.0
+            old_timestamp = now - (8 * 24 * 60 * 60)
+            recent_timestamp = now - (2 * 24 * 60 * 60)
+            os.utime(active_log, (old_timestamp, old_timestamp))
+            os.utime(expired_log, (old_timestamp, old_timestamp))
+            os.utime(expired_other_log, (old_timestamp, old_timestamp))
+            os.utime(recent_log, (recent_timestamp, recent_timestamp))
+
+            removed = cleanup_expired_log_files(
+                log_dir,
+                retention_days=7,
+                active_log=active_log,
+                now=now,
+            )
+
+            self.assertEqual({path.name for path in removed}, {"entsoe_fms.log.1", "epex_spot.log"})
+            self.assertTrue(active_log.exists())
+            self.assertFalse(expired_log.exists())
+            self.assertFalse(expired_other_log.exists())
+            self.assertTrue(recent_log.exists())
+            self.assertTrue(unrelated_file.exists())
+
+    def test_log_retention_days_can_be_configured(self) -> None:
+        self.assertEqual(get_log_retention_days({"logging": {"retention_days": 14}}), 14)
 
 
 if __name__ == "__main__":

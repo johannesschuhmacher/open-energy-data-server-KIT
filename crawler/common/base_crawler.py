@@ -19,6 +19,7 @@ from crawler.common.runtime_env import resolve_database_uri
 DEFAULT_EMAIL_RATE_LIMIT_SECONDS = 60 * 60
 DEFAULT_LOG_FILE_MAX_BYTES = 100 * 1024 * 1024
 DEFAULT_LOG_FILE_BACKUP_COUNT = 5
+DEFAULT_LOG_RETENTION_DAYS = 30
 
 
 class RateLimitedSMTPHandler(SMTPHandler):
@@ -153,6 +154,51 @@ def _log_file_backup_count(config: dict) -> int:
     )
 
 
+def get_log_retention_days(config: dict) -> int:
+    env_value = os.getenv("OEDS_LOG_RETENTION_DAYS")
+    if env_value not in (None, ""):
+        return _parse_nonnegative_int(env_value, DEFAULT_LOG_RETENTION_DAYS)
+    return _parse_nonnegative_int(
+        _logging_config(config).get("retention_days"),
+        DEFAULT_LOG_RETENTION_DAYS,
+    )
+
+
+def cleanup_expired_log_files(
+    log_dir: str | os.PathLike[str],
+    retention_days: int,
+    *,
+    active_log: str | os.PathLike[str] | None = None,
+    now: float | None = None,
+) -> list[Path]:
+    if retention_days <= 0:
+        return []
+
+    log_path = Path(log_dir)
+    if not log_path.is_dir():
+        return []
+
+    active_log_path = Path(active_log).resolve() if active_log else None
+    cutoff = (time.time() if now is None else now) - (retention_days * 24 * 60 * 60)
+    removed_paths: list[Path] = []
+
+    for candidate in log_path.glob("*.log*"):
+        try:
+            if not candidate.is_file():
+                continue
+            if active_log_path and candidate.resolve() == active_log_path:
+                continue
+            if candidate.stat().st_mtime >= cutoff:
+                continue
+
+            candidate.unlink()
+            removed_paths.append(candidate)
+        except OSError:
+            continue
+
+    return removed_paths
+
+
 def _handler_matches_key(handler: logging.Handler, key: tuple) -> bool:
     if getattr(handler, "_oeds_handler_key", None) == key:
         return True
@@ -211,12 +257,16 @@ class BaseCrawler(ABC):
 
         self.logger = logging.getLogger(self.crawler_name)
 
-        log_file_name = f'logs/{self.crawler_name}.log'
-        if not os.path.isfile(log_file_name):
-            os.makedirs(os.path.dirname(log_file_name), exist_ok=True)
+        log_file_path = Path("logs") / f"{self.crawler_name}.log"
+        os.makedirs(log_file_path.parent, exist_ok=True)
+        cleanup_expired_log_files(
+            log_file_path.parent,
+            get_log_retention_days(self.config),
+            active_log=log_file_path,
+        )
 
         fileHandler = RotatingFileHandler(
-            log_file_name,
+            log_file_path,
             maxBytes=_log_file_max_bytes(self.config),
             backupCount=_log_file_backup_count(self.config),
         )
@@ -225,7 +275,7 @@ class BaseCrawler(ABC):
         _add_unique_handler(
             self.logger,
             fileHandler,
-            ("file", str(Path(log_file_name).resolve())),
+            ("file", str(log_file_path.resolve())),
         )
 
         try:
