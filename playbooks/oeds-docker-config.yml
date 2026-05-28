@@ -25,8 +25,6 @@
         mountpoint: "{{ oeds_data_dir_effective }}/postgres-home"
       - name: pgadmin-varlib
         mountpoint: "{{ oeds_data_dir_effective }}/pgadmin-varlib"
-      - name: portainer-data
-        mountpoint: "{{ oeds_data_dir_effective }}/portainer-data"
   tasks:
   - name: Download docker plugin local-persist executable
     ansible.builtin.get_url:

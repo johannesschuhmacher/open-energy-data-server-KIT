@@ -161,8 +161,8 @@
 
     <rect class="card-soft" x="28" y="78" width="390" height="125" rx="16"/>
     <text class="label" x="52" y="112">Docker Compose profiles</text>
-    <text class="text" x="52" y="145">core stack, crawlers profile, ops profile</text>
-    <text class="small" x="52" y="174">PostgreSQL, PgAdmin, PostgREST, Grafana, Portainer</text>
+    <text class="text" x="52" y="145">core stack, crawlers profile</text>
+    <text class="small" x="52" y="174">PostgreSQL, PgAdmin, PostgREST, Grafana</text>
 
     <rect class="card-soft" x="450" y="78" width="370" height="125" rx="16"/>
     <text class="label" x="474" y="112">Runtime directory support</text>

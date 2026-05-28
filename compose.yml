@@ -54,8 +54,6 @@ volumes:
     name: pgadmin-varlib
   grafana-varlib:
     name: grafana-varlib
-  portainer-data:
-    name: portainer-data
 
 services:
   open-data:
@@ -132,6 +130,7 @@ services:
     environment:
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_GEOMAP_DEFAULT_BASELAYER_CONFIG: '{"type":"carto","config":{"theme":"auto","showLabels":true}}'
       GF_PLUGINS_PREINSTALL: "marcusolsson-dynamictext-panel,orchestracities-map-panel"
       GF_SECURITY_ADMIN_USER: opendata
       GF_SECURITY_ADMIN_PASSWORD: ${OEDS_GRAFANA_ADMIN_PASSWORD:-opendata}
@@ -145,35 +144,6 @@ services:
       - netlocalhost
     ports:
       - "${OEDS_GRAFANA_PORT:-3006}:3000"
-
-  portainer:
-    image: portainer/portainer-ce:2.39.1
-    container_name: portainer
-    profiles:
-      - ops
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer-data:/data
-    networks:
-      - netlocalhost
-    ports:
-      - "${OEDS_PORTAINER_EDGE_PORT:-8001}:8000"
-      - "${OEDS_PORTAINER_HTTP_PORT:-9000}:9000"
-      - "${OEDS_PORTAINER_HTTPS_PORT:-9443}:9443"
-
-  portainer_agent:
-    image: portainer/agent:2.39.1
-    container_name: portainer_agent
-    profiles:
-      - ops
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/volumes:/var/lib/docker/volumes
-      - /:/host
-    networks:
-      - netlocalhost
-    ports:
-      - "${OEDS_PORTAINER_AGENT_PORT:-9001}:9001"
 
   scheduler:
     <<: *oeds-python-service

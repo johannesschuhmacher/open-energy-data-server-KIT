@@ -44,7 +44,8 @@ Pick the shortest path that matches your goal:
 | Goal | Recommended path | Use this when |
 | --- | --- | --- |
 | Explore the stack locally | `docker compose up -d` | you want PostgreSQL, PgAdmin, PostgREST, and Grafana without scheduled crawlers |
-| Run crawlers locally or on a small VM | `docker compose --profile crawlers up -d scheduler crawler-admin` | you want the core stack plus the scheduler and admin UI in containers |
+| Run crawlers locally or on a small VM | `docker compose --profile crawlers up -d --build scheduler crawler-admin` | you want the core stack plus the scheduler and admin UI in containers |
+| Install OEDS on a clean server | [Installation](./installation.md) | you start from a CentOS/RHEL-compatible Linux host and need the exact commands |
 | Install or update a long-lived server reproducibly | `ansible-playbook -i inventory.yml oeds-install-core.yml` or `oeds-install-crawlers.yml` | you want repeatable host preparation, repo rollout, runtime directories, and update playbooks |
 
 If you are unsure, start with the local Compose path and only move to the
@@ -109,12 +110,14 @@ see it:
 
 Once the stack is running, there are four main ways to inspect or use the data:
 
-| Access path | What you get | How to use it |
-| --- | --- | --- |
-| Grafana | ready-made dashboards and exploratory charts | open `http://localhost:3006/` and use the provisioned dashboards |
-| PgAdmin / SQL | direct schema, table, and query access | open `http://localhost:8080/` and query PostgreSQL directly |
-| PostgREST | HTTP access to tables, views, and database objects | call `http://localhost:3001/` from scripts, notebooks, or services |
-| Python / notebooks | programmatic access and custom analysis | run `uv run python ...` and use the example scripts under `examples/` or `scripts/` |
+- Grafana: ready-made dashboards and exploratory charts at
+  `http://localhost:3006/`.
+- PgAdmin / SQL: direct schema, table, and query access at
+  `http://localhost:8080/`.
+- PostgREST: HTTP access to tables, views, and database objects at
+  `http://localhost:3001/`.
+- Python / notebooks: programmatic access and custom analysis through
+  `uv run python ...` and the example scripts under `examples/` or `scripts/`.
 
 The Crawler Admin UI at `http://localhost:3010/admin` is the operational
 surface for schedules, manual runs, YAML editing, logs, run history, and

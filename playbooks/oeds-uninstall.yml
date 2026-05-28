@@ -34,8 +34,6 @@
       - open-postgrest
       - pgadmin
       - grafana
-      - portainer
-      - portainer_agent
       - oeds-scheduler
       - oeds-crawler-admin
 
@@ -46,7 +44,6 @@
       - pgadmin-etc
       - grafana-varlib
       - grafana-etc
-      - portainer-data
 
     oeds_uninstall_network_names:
       - "{{ oeds_compose_project_name_effective }}_netlocalhost"
@@ -58,8 +55,6 @@
       - dpage/pgadmin4:9.14
       - postgrest/postgrest:v14.10
       - grafana/grafana-oss:13.0.1
-      - portainer/portainer-ce:2.39.1
-      - portainer/agent:2.39.1
   tasks:
     - name: Validate uninstall target paths
       ansible.builtin.assert:

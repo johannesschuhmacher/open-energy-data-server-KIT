@@ -1,7 +1,6 @@
 # Deployment Guide
 
-This guide describes a public, reusable deployment path for OEDS-KIT without
-the old internal VM notes.
+This guide describes the reusable deployment path for OEDS-KIT.
 
 ## What gets deployed
 
@@ -24,16 +23,36 @@ without splitting them into a single multi-process container.
 
 ## Prerequisites
 
-Before deploying on a long-lived host, make sure you have:
+OEDS is deployed on Linux. The recommended and currently supported server
+family for the Ansible playbooks is CentOS/RHEL-compatible Linux with `dnf`,
+for example:
 
-- Docker with the Compose plugin
-- `uv`, if you plan to run crawlers directly on the host
+- CentOS Stream
+- Rocky Linux
+- AlmaLinux
+- Red Hat Enterprise Linux
+
+For the target host, make sure you have:
+
+- a sudo-capable user
+- Python for Ansible modules
+- network access to Docker registries and the selected Git remote
+- enough storage for PostgreSQL data, Docker images, and backups
+- Docker with the Compose plugin, unless you first run
+  `oeds-install-host-prep.yml` to install Docker on a supported `dnf` host
 - a writable host path for database and provisioning data
 - a writable host path for crawler runtime data such as `logs/` and
   `crawler_admin_state/`
 - a `crawler/.env` file for crawler secrets when using the containerized
   scheduler or admin UI
 - credentials for any authenticated crawler sources you plan to enable
+
+For the Ansible control node, use the target host itself or another Linux/WSL
+machine with Ansible installed. Native Windows is not a good Ansible control
+environment.
+
+Install `uv` only if you plan to run Python crawlers directly on the host
+outside Docker.
 
 ## Source licensing and access
 
@@ -68,7 +87,6 @@ Persistent named volumes from the current file:
 - `postgres-home`
 - `pgadmin-varlib`
 - `grafana-varlib`
-- optional `portainer-data`
 
 Provisioning files are mounted directly from the repository:
 
@@ -175,14 +193,7 @@ If you also want the scheduler and admin UI in Docker, start the crawler
 profile as well:
 
 ```bash
-docker compose --profile crawlers up -d scheduler crawler-admin
-```
-
-If you also want the optional Portainer UI, start the `ops` profile
-separately:
-
-```bash
-docker compose --profile ops up -d portainer portainer_agent
+docker compose --profile crawlers up -d --build scheduler crawler-admin
 ```
 
 The crawler profile uses one shared Python image with two separate services and
@@ -226,17 +237,64 @@ Operator-specific files such as `inventory.yml`, `group_vars/oeds.yml`, and
 secret-bearing crawler environment files should stay local and are ignored by
 the playbook folder's `.gitignore`.
 
-For the simplest public install, copy `playbooks/inventory.example.yml` to
-`playbooks/inventory.yml` and run `oeds-install-crawlers.yml` without extra
-overrides. The playbooks already default to the public GitHub repository on
-`main`, and the example inventory is prefilled for a same-host install with
-`sudo`. Create `group_vars/oeds.yml` only when you need to override the git
-remote, ref, or target directories.
+For the simplest public install, run these commands from the repository root:
 
-The target host must also be able to clone `oeds_repo_url` itself. For
-unpublished or internal test branches, either give the host Git access to the
-real remote or override `oeds_repo_url` with a reachable mirror or local bare
-repository on the target system.
+```bash
+cd playbooks
+cp inventory.example.yml inventory.yml
+ansible -i inventory.yml oeds -m ping
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml
+```
+
+This installs the core stack plus scheduler and crawler admin UI from the
+public GitHub `main` branch. The example inventory is already set up for a
+same-host Linux install with `sudo`. For a remote host, replace the
+`localhost` entry in `inventory.yml` with `ansible_host` and, when needed,
+`ansible_user`.
+
+After the install, run the smoke test explicitly when you want a separate
+verification step:
+
+```bash
+ansible-playbook -i inventory.yml oeds-smoke-test.yml \
+  -e oeds_expect_crawler_admin=true
+```
+
+The install wrapper already imports the smoke test, so this extra command is
+mainly useful when you want to re-check a running system.
+
+### Deploy a local checkout
+
+The default source mode is `git`: the target host clones `oeds_repo_url`
+itself. Use this when the branch, tag, or commit is already reachable by the
+server.
+
+Use `local_archive` when the server cannot clone the source directly, for
+example while testing an unpublished local checkout:
+
+```bash
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
+  -e oeds_repo_source_mode=local_archive \
+  -e oeds_repo_local_src=/home/oeds/open-energy-data-server \
+  -e oeds_repo_version=HEAD
+```
+
+The three variables mean:
+
+- `oeds_repo_source_mode=local_archive`: package the source on the Ansible
+  control node instead of cloning it on the target host.
+- `oeds_repo_local_src`: path to the local OEDS checkout on the control node.
+  On a same-host install this can be the same machine as the target; on a
+  remote install it is still the path on the machine running Ansible.
+- `oeds_repo_version`: branch, tag, commit, or `HEAD` to package.
+
+`local_archive` uses `git archive`, so it includes committed, tracked files
+from the selected ref only. Commit the intended content first; uncommitted and
+untracked files are not included.
+
+For unpublished or internal test branches, alternatives are to give the host
+Git access to the real remote or override `oeds_repo_url` with a reachable
+mirror or local bare repository on the target system.
 
 If you drive Ansible from WSL, prefer cloning the repository inside the Linux
 filesystem instead of under `/mnt/c/...`; otherwise Ansible may ignore

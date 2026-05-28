@@ -12,6 +12,57 @@ For managed internal deployments, keep the repo-root compose `.env` at `0600`.
 It is the natural place for the rotated OEDS service passwords because Compose
 loads it automatically.
 
+## Quick install
+
+Use these playbooks on a Linux target host. The recommended and currently
+supported server family is CentOS/RHEL-compatible Linux with `dnf`, for example
+CentOS Stream, Rocky Linux, AlmaLinux, or RHEL.
+
+You need a sudo-capable user, Ansible on the control node, and the collections
+from `requirements.yml`. If Docker is not installed yet on a supported target,
+run `oeds-install-host-prep.yml` before the install playbook.
+
+Use this path for a simple same-host install with the core services, scheduler,
+and crawler admin UI:
+
+```bash
+cd playbooks
+ansible-galaxy collection install -r requirements.yml
+cp inventory.example.yml inventory.yml
+ansible -i inventory.yml oeds -m ping
+ansible-playbook -i inventory.yml oeds-install-host-prep.yml
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml
+ansible-playbook -i inventory.yml oeds-smoke-test.yml \
+  -e oeds_expect_crawler_admin=true
+```
+
+If Docker is already installed and working, `oeds-install-host-prep.yml` can be
+skipped.
+
+The install wrapper already runs the smoke test once. Running
+`oeds-smoke-test.yml` again is useful when you want an explicit final check.
+
+For a remote host, edit `inventory.yml`: replace `localhost` with the host's
+`ansible_host` and set `ansible_user` if needed. Keep `group_vars/oeds.yml`
+absent unless you really need local overrides.
+
+Use the default `git` source mode when the target host can clone the selected
+branch, tag, or commit itself. Use `local_archive` only when you need to deploy
+a local checkout that the target host cannot clone:
+
+```bash
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
+  -e oeds_repo_source_mode=local_archive \
+  -e oeds_repo_local_src=/home/oeds/open-energy-data-server \
+  -e oeds_repo_version=HEAD
+```
+
+In `local_archive` mode, Ansible creates a `git archive` on the control node
+and transfers that archive to the target host. `oeds_repo_local_src` is the
+checkout path on the machine running Ansible. `oeds_repo_version` is the branch,
+tag, commit, or `HEAD` to package. Only committed, tracked files from that ref
+are included.
+
 ## Target layout
 
 The playbooks install and operate OEDS on a Linux host with Docker Compose.
@@ -150,6 +201,11 @@ ansible-playbook -i inventory.yml oeds-update.yml \
   -e oeds_repo_version=main \
   -e oeds_enable_crawlers=true
 ```
+
+`local_archive` packages the selected git ref, not arbitrary working-tree
+state. For a current local checkout, pass `-e oeds_repo_version=HEAD` or a
+specific commit and make sure all required changes are committed. Uncommitted
+and untracked files are not included in the archive.
 
 In `git` mode, the playbooks verify repo access before any downtime step with
 `GIT_TERMINAL_PROMPT=0`. Missing credentials fail fast instead of hanging in a
@@ -362,14 +418,6 @@ If the target host is not a throwaway internal test system, set
 `OEDS_DB_PASSWORD`, `OEDS_READONLY_PASSWORD`, `OEDS_GRAFANA_ADMIN_PASSWORD`,
 and `OEDS_PGADMIN_DEFAULT_PASSWORD` before the first startup.
 
-Portainer is intentionally optional. If you want it, start it explicitly as an
-ops profile after the core install:
-
-```bash
-cd /open_energy_data_server/repo
-docker compose --profile ops up -d portainer portainer_agent
-```
-
 ### Option 4: Install OEDS with crawler services
 
 Install the core stack plus the scheduler and crawler admin UI containers:
@@ -406,6 +454,20 @@ ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
   -e oeds_repo_version=<commit>
 ansible-playbook -i inventory.yml oeds-smoke-test.yml \
   -e oeds_expect_crawler_admin=true
+```
+
+For a same-host validation of an unpublished local checkout, keep the inventory
+explicit and use `local_archive` for the install. The uninstall playbook does
+not need repository source overrides; its conservative defaults stop and remove
+containers and networks while keeping data, images, runtime files, and backups.
+
+```bash
+ansible -i inventory.yml oeds -m ping
+ansible-playbook -i inventory.yml oeds-uninstall.yml
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml \
+  -e oeds_repo_source_mode=local_archive \
+  -e oeds_repo_local_src=/home/oeds/open-energy-data-server \
+  -e oeds_repo_version=HEAD
 ```
 
 A clean install is not a fully populated OEDS instance. Crawler-dependent
@@ -586,10 +648,3 @@ The public playbooks belong in the repository as long as this boundary is kept:
   overlays, not in the public branch.
 - Updates should use tested tags, branches, or commits, not uncontrolled
   floating versions.
-
-## Validated deployment state
-
-The externally validated install and test run is documented in
-[../docs/source/deployment_validation.md](../docs/source/deployment_validation.md).
-That document covers the tested sequence of uninstall, clean install, smoke
-test, admin configuration changes, and the first manual crawler run.

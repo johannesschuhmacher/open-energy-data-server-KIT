@@ -12,6 +12,8 @@ Choose the shortest entry path for your goal:
 
 - New to the project and want a local stack:
   `Getting Started <getting_started.html>`_
+- Installing OEDS on a clean server:
+  `Installation <installation.html>`_
 - Deploying a long-lived server or VM:
   `Deployment Guide <deployment.html>`_
 - Operating schedulers, manual runs, and gapfill:
@@ -24,13 +26,14 @@ Choose the shortest entry path for your goal:
    :caption: Overview
 
    README
+   installation
    getting_started
    deployment
-   deployment_validation
    crawler_admin
    crawler_config
    post_run_scripts
    price_forecasting
+   backup_restore_migration/index
    open_source_maturity
    troubleshooting
    crawler_development
@@ -42,6 +45,7 @@ Choose the shortest entry path for your goal:
    crawlers/README
    crawlers/entsoe_fms
    crawlers/entsoe_api
+   crawlers/entsog
    crawlers/weather_forecast
    crawlers/energy_forecast_crawler
    crawlers/smard
@@ -55,6 +59,10 @@ Choose the shortest entry path for your goal:
    :caption: Guides and Examples
 
    examples/index
+   examples/application_examples
+   examples/client_export_examples
+   examples/http_export_examples
+   minimal_walkthrough/index
 
 Architecture
 ------------
@@ -65,7 +73,7 @@ Architecture
 Detailed Architecture
 ---------------------
 
-.. image:: media/oeds-architecture-detail.png
+.. image:: media/oeds-architecture-detail.svg
    :alt: Detailed OEDS architecture overview
 
 Workflow
