@@ -216,7 +216,7 @@ def geomap_panel(
         "gridPos": grid_pos,
         "id": panel_id,
         "options": {
-            "basemap": {"config": {}, "name": "Layer 0", "type": "default"},
+            "basemap": {"config": {"showLabels": True, "theme": "auto"}, "name": "Layer 0", "type": "carto"},
             "controls": {
                 "mouseWheelZoom": True,
                 "showAttribution": True,
@@ -231,10 +231,10 @@ def geomap_panel(
                         "showLegend": True,
                         "style": {
                             "color": {"field": value_field},
-                            "opacity": 0.85,
+                            "opacity": 0.9,
                             "rotation": {"fixed": 0, "max": 360, "min": -360, "mode": "mod"},
-                            "size": {"field": value_field, "fixed": 8, "max": 18, "min": 5},
-                            "symbol": {"field": "", "fixed": "", "mode": "fixed"},
+                            "size": {"field": value_field, "fixed": 10, "max": 24, "min": 7},
+                            "symbol": {"field": "", "fixed": "img/icons/marker/circle.svg", "mode": "fixed"},
                             "symbolAlign": {"horizontal": "center", "vertical": "center"},
                             "textConfig": {
                                 "fontSize": 12,
@@ -1151,6 +1151,7 @@ prices AS (
 )
 SELECT
     date_trunc('day', l.ts) AS day,
+    TO_CHAR(date_trunc('day', l.ts), 'Dy') AS weekday,
     ROUND(AVG(g.hydro_total_mw)::numeric, 1) AS avg_hydro_total_mw,
     ROUND(AVG(g.ps_generation_mw)::numeric, 1) AS avg_ps_generation_mw,
     ROUND(AVG(g.ps_consumption_mw)::numeric, 1) AS avg_pumping_mw,
@@ -1159,7 +1160,7 @@ SELECT
 FROM load_ts l
 LEFT JOIN generation_ts g ON g.ts = l.ts
 LEFT JOIN prices p ON p.ts = l.ts
-GROUP BY 1
+GROUP BY 1, 2
 ORDER BY 1 DESC
 LIMIT 21
 """.strip()

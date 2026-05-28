@@ -14,6 +14,46 @@ EVENT_SUNDAY = "DATE '2026-04-26'"
 UNIT_EUR_PER_MWH = "suffix:€/MWh"
 UNIT_MWH = "suffix:MWh"
 UNIT_HOURS = "suffix:h"
+DAY_AHEAD_TRANSFER_CONTRACT = "Day-ahead"
+
+NEGATIVE_PRICE_COUNTRY_QUERY = """
+WITH price_areas AS (
+    SELECT DISTINCT "AreaDisplayName" AS area_name
+    FROM entsoe_fms."EnergyPrices"
+    WHERE "DateTime(UTC)" >= now() - interval '730 days'
+      AND "AreaTypeCode" = 'BZN'
+),
+load_areas AS (
+    SELECT DISTINCT "AreaDisplayName" AS area_name
+    FROM entsoe_fms."ActualTotalLoad"
+    WHERE "DateTime(UTC)" >= now() - interval '730 days'
+)
+SELECT p.area_name
+FROM price_areas p
+JOIN load_areas l ON l.area_name = p.area_name
+ORDER BY 1
+""".strip()
+
+NEGATIVE_PRICE_AREA_TYPE_QUERY = """
+SELECT area_type
+FROM (
+    SELECT
+        "AreaTypeCode" AS area_type,
+        MAX("DateTime(UTC)") AS latest_ts,
+        CASE
+            WHEN "AreaTypeCode" = 'BZN' THEN 1
+            WHEN POSITION('BZN' IN "AreaTypeCode") > 0 THEN 2
+            WHEN POSITION('CTA' IN "AreaTypeCode") > 0 THEN 3
+            WHEN POSITION('CTY' IN "AreaTypeCode") > 0 THEN 4
+            ELSE 9
+        END AS priority
+    FROM entsoe_fms."ActualTotalLoad"
+    WHERE "DateTime(UTC)" >= now() - interval '730 days'
+      AND "AreaDisplayName" = '$Country'
+    GROUP BY 1, 3
+) ranked
+ORDER BY priority, latest_ts DESC, area_type
+""".strip()
 
 
 def datasource() -> dict:
@@ -349,17 +389,23 @@ def text_panel(panel_id: int, title: str, content: str, grid_pos: dict) -> dict:
     }
 
 
-def templating(*, include_neighbour: bool = True, include_area_type: bool = True) -> dict:
+def templating(
+    *,
+    include_neighbour: bool = True,
+    include_area_type: bool = True,
+    include_transfer_contract: bool = True,
+) -> dict:
     variables: list[dict] = [
         {
             "current": {"text": "DE-LU", "value": "DE-LU"},
-            "definition": 'SELECT DISTINCT "AreaDisplayName" FROM entsoe_fms."EnergyPrices" WHERE "DateTime(UTC)" >= now() - interval \'730 days\' AND "AreaTypeCode" = \'BZN\' ORDER BY 1',
+            "definition": NEGATIVE_PRICE_COUNTRY_QUERY,
             "label": "Country / Zone",
             "name": "Country",
             "options": [],
-            "query": 'SELECT DISTINCT "AreaDisplayName" FROM entsoe_fms."EnergyPrices" WHERE "DateTime(UTC)" >= now() - interval \'730 days\' AND "AreaTypeCode" = \'BZN\' ORDER BY 1',
+            "query": NEGATIVE_PRICE_COUNTRY_QUERY,
             "refresh": 1,
             "regex": "",
+            "sort": 1,
             "type": "query",
         }
     ]
@@ -367,13 +413,14 @@ def templating(*, include_neighbour: bool = True, include_area_type: bool = True
         variables.append(
             {
                 "current": {"text": "BZN", "value": "BZN"},
-                "definition": 'SELECT DISTINCT "AreaTypeCode" FROM entsoe_fms."ActualTotalLoad" WHERE "DateTime(UTC)" >= now() - interval \'730 days\' AND "AreaDisplayName" = \'$Country\' ORDER BY 1',
-                "label": "Load / Generation Area Type",
+                "definition": NEGATIVE_PRICE_AREA_TYPE_QUERY,
+                "label": "Area Type",
                 "name": "Area_Type",
                 "options": [],
-                "query": 'SELECT DISTINCT "AreaTypeCode" FROM entsoe_fms."ActualTotalLoad" WHERE "DateTime(UTC)" >= now() - interval \'730 days\' AND "AreaDisplayName" = \'$Country\' ORDER BY 1',
+                "query": NEGATIVE_PRICE_AREA_TYPE_QUERY,
                 "refresh": 1,
                 "regex": "",
+                "sort": 0,
                 "type": "query",
             }
         )
@@ -403,19 +450,20 @@ def templating(*, include_neighbour: bool = True, include_area_type: bool = True
                 "type": "query",
             }
         )
-    variables.append(
-        {
-            "current": {"text": "Day-ahead", "value": "Day-ahead"},
-            "definition": "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
-            "label": "Transfer Contract",
-            "name": "Transfer_Contract",
-            "options": [],
-            "query": "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
-            "refresh": 1,
-            "regex": "",
-            "type": "custom",
-        }
-    )
+    if include_transfer_contract:
+        variables.append(
+            {
+                "current": {"text": DAY_AHEAD_TRANSFER_CONTRACT, "value": DAY_AHEAD_TRANSFER_CONTRACT},
+                "definition": "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
+                "label": "Transfer Contract",
+                "name": "Transfer_Contract",
+                "options": [],
+                "query": "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
+                "refresh": 1,
+                "regex": "",
+                "type": "custom",
+            }
+        )
     return {"list": variables}
 
 
@@ -429,6 +477,7 @@ def dashboard_shell(
     time_from: str,
     time_to: str,
     refresh: str = "5m",
+    include_transfer_contract: bool = True,
 ) -> dict:
     return {
         "__inputs": [],
@@ -464,7 +513,7 @@ def dashboard_shell(
         "schemaVersion": 40,
         "style": "light",
         "tags": tags,
-        "templating": templating(),
+        "templating": templating(include_transfer_contract=include_transfer_contract),
         "time": {"from": time_from, "to": time_to},
         "timepicker": {},
         "timezone": "browser",
@@ -1401,14 +1450,14 @@ capacities AS (
     FROM entsoe_fms."ForecastedTransferCapacities"
     WHERE "InAreaDisplayName" = '$Country'
       AND "OutAreaDisplayName" IN (SELECT neighbour FROM connected_neighbours)
-      AND "ContractType" = '$Transfer_Contract'
+      AND "ContractType" = 'Day-ahead'
       AND {time_filter()}
     UNION ALL
     SELECT "DateTime(UTC)" AS ts, 'Export'::text AS direction, "InAreaDisplayName" AS neighbour, "ForecastTransferCapacity[MW]" AS capacity_mw
     FROM entsoe_fms."ForecastedTransferCapacities"
     WHERE "OutAreaDisplayName" = '$Country'
       AND "InAreaDisplayName" IN (SELECT neighbour FROM connected_neighbours)
-      AND "ContractType" = '$Transfer_Contract'
+      AND "ContractType" = 'Day-ahead'
       AND {time_filter()}
 ),
 flows AS (
@@ -1549,14 +1598,14 @@ capacity_ts AS (
         FROM entsoe_fms."ForecastedTransferCapacities"
         WHERE "InAreaDisplayName" = '$Country'
           AND "OutAreaDisplayName" IN (SELECT neighbour FROM connected_neighbours)
-          AND "ContractType" = '$Transfer_Contract'
+          AND "ContractType" = 'Day-ahead'
           AND {time_filter()}
         UNION ALL
         SELECT "DateTime(UTC)", 0::double precision AS import_capacity_mw, "ForecastTransferCapacity[MW]" AS export_capacity_mw
         FROM entsoe_fms."ForecastedTransferCapacities"
         WHERE "OutAreaDisplayName" = '$Country'
           AND "InAreaDisplayName" IN (SELECT neighbour FROM connected_neighbours)
-          AND "ContractType" = '$Transfer_Contract'
+          AND "ContractType" = 'Day-ahead'
           AND {time_filter()}
     ) capacities
     GROUP BY 1
@@ -1746,6 +1795,7 @@ flow_ts AS (
 SELECT
     p.ts AS timestamp_utc,
     {local_day_expr('p.ts')} AS local_day,
+    TO_CHAR({local_day_expr('p.ts')}, 'Dy') AS weekday,
     ROUND(p.price_mwh::numeric, 2) AS price_eur_mwh,
     ROUND(l.load_mw::numeric, 1) AS load_mw,
     ROUND(g.wind_mw::numeric, 1) AS wind_mw,
@@ -2177,7 +2227,7 @@ capacities AS (
       ON c."DateTime(UTC)" = p.ts
      AND c."InAreaDisplayName" = '$Country'
      AND c."OutAreaDisplayName" IN (SELECT neighbour FROM connected_neighbours)
-     AND c."ContractType" = '$Transfer_Contract'
+     AND c."ContractType" = 'Day-ahead'
     UNION ALL
     SELECT p.ts, c."InAreaDisplayName" AS neighbour, 'Export'::text AS direction, c."ForecastTransferCapacity[MW]" AS capacity_mw
     FROM negative_prices p
@@ -2185,7 +2235,7 @@ capacities AS (
       ON c."DateTime(UTC)" = p.ts
      AND c."OutAreaDisplayName" = '$Country'
      AND c."InAreaDisplayName" IN (SELECT neighbour FROM connected_neighbours)
-     AND c."ContractType" = '$Transfer_Contract'
+     AND c."ContractType" = 'Day-ahead'
 )
 SELECT
     COALESCE(f.neighbour, c.neighbour) AS neighbour,
@@ -2322,6 +2372,7 @@ def event_dashboard() -> dict:
         panels=panels,
         time_from="2026-04-24T22:00:00Z",
         time_to="2026-04-26T21:59:59Z",
+        include_transfer_contract=False,
     )
 
 
@@ -2360,6 +2411,7 @@ def long_term_dashboard() -> dict:
         panels=panels,
         time_from="now-2y",
         time_to="now",
+        include_transfer_contract=False,
     )
 
 

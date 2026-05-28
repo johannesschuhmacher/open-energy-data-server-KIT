@@ -1241,7 +1241,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "WITH prices AS (\n    SELECT date_bin(INTERVAL '15 minutes', \"DateTime(UTC)\", TIMESTAMP '1970-01-01') AS ts, AVG(\"Price[Currency/MWh]\") AS price_mwh\n    FROM entsoe_fms.\"EnergyPrices\"\n    WHERE \"AreaDisplayName\" = '$Country'\n      AND \"AreaTypeCode\" = 'BZN'\n      AND (TRIM(COALESCE(\"Sequence\", '')) = '' OR \"Sequence\" = '1')\n      AND \"DateTime(UTC)\" >= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" <= to_timestamp($__to / 1000.0)\n    GROUP BY 1\n),\nnegative_prices AS (\n    SELECT ts\n    FROM prices\n    WHERE price_mwh < 0\n),\nconnected_neighbours AS (\n    SELECT DISTINCT x.neighbour\n    FROM (\n        SELECT \"InAreaDisplayName\" AS neighbour\n        FROM entsoe_fms.\"ForecastedTransferCapacities\"\n        WHERE \"OutAreaDisplayName\" = '$Country'\n          AND \"DateTime(UTC)\" >= now() - interval '730 days'\n        UNION\n        SELECT \"OutAreaDisplayName\" AS neighbour\n        FROM entsoe_fms.\"ForecastedTransferCapacities\"\n        WHERE \"InAreaDisplayName\" = '$Country'\n          AND \"DateTime(UTC)\" >= now() - interval '730 days'\n    ) x\n    WHERE x.neighbour <> '$Country'\n),\nflows AS (\n    SELECT p.ts, \"OutAreaDisplayName\" AS neighbour, 'Import'::text AS direction, \"Flow[MW]\" AS flow_mw\n    FROM negative_prices p\n    JOIN entsoe_fms.\"PhysicalFlows\" f\n      ON date_bin(INTERVAL '15 minutes', f.\"DateTime(UTC)\", TIMESTAMP '1970-01-01') = p.ts\n     AND f.\"InAreaDisplayName\" = '$Country'\n     AND f.\"OutAreaDisplayName\" IN (SELECT neighbour FROM connected_neighbours)\n    UNION ALL\n    SELECT p.ts, \"InAreaDisplayName\" AS neighbour, 'Export'::text AS direction, \"Flow[MW]\" AS flow_mw\n    FROM negative_prices p\n    JOIN entsoe_fms.\"PhysicalFlows\" f\n      ON date_bin(INTERVAL '15 minutes', f.\"DateTime(UTC)\", TIMESTAMP '1970-01-01') = p.ts\n     AND f.\"OutAreaDisplayName\" = '$Country'\n     AND f.\"InAreaDisplayName\" IN (SELECT neighbour FROM connected_neighbours)\n),\ncapacities AS (\n    SELECT p.ts, c.\"OutAreaDisplayName\" AS neighbour, 'Import'::text AS direction, c.\"ForecastTransferCapacity[MW]\" AS capacity_mw\n    FROM negative_prices p\n    JOIN entsoe_fms.\"ForecastedTransferCapacities\" c\n      ON c.\"DateTime(UTC)\" = p.ts\n     AND c.\"InAreaDisplayName\" = '$Country'\n     AND c.\"OutAreaDisplayName\" IN (SELECT neighbour FROM connected_neighbours)\n     AND c.\"ContractType\" = '$Transfer_Contract'\n    UNION ALL\n    SELECT p.ts, c.\"InAreaDisplayName\" AS neighbour, 'Export'::text AS direction, c.\"ForecastTransferCapacity[MW]\" AS capacity_mw\n    FROM negative_prices p\n    JOIN entsoe_fms.\"ForecastedTransferCapacities\" c\n      ON c.\"DateTime(UTC)\" = p.ts\n     AND c.\"OutAreaDisplayName\" = '$Country'\n     AND c.\"InAreaDisplayName\" IN (SELECT neighbour FROM connected_neighbours)\n     AND c.\"ContractType\" = '$Transfer_Contract'\n)\nSELECT\n    COALESCE(f.neighbour, c.neighbour) AS neighbour,\n    COALESCE(f.direction, c.direction) AS direction,\n    ROUND(AVG(f.flow_mw)::numeric, 1) AS avg_physical_flow_mw,\n    ROUND(AVG(c.capacity_mw)::numeric, 1) AS avg_capacity_mw,\n    ROUND((((COUNT(DISTINCT COALESCE(f.ts, c.ts))) * 0.25))::numeric, 2) AS negative_price_hours\nFROM flows f\nFULL OUTER JOIN capacities c\n  ON c.ts = f.ts AND c.neighbour = f.neighbour AND c.direction = f.direction\nGROUP BY 1, 2\nORDER BY negative_price_hours DESC, avg_physical_flow_mw DESC NULLS LAST",
+                    "rawSql": "WITH prices AS (\n    SELECT date_bin(INTERVAL '15 minutes', \"DateTime(UTC)\", TIMESTAMP '1970-01-01') AS ts, AVG(\"Price[Currency/MWh]\") AS price_mwh\n    FROM entsoe_fms.\"EnergyPrices\"\n    WHERE \"AreaDisplayName\" = '$Country'\n      AND \"AreaTypeCode\" = 'BZN'\n      AND (TRIM(COALESCE(\"Sequence\", '')) = '' OR \"Sequence\" = '1')\n      AND \"DateTime(UTC)\" >= to_timestamp($__from / 1000.0) AND \"DateTime(UTC)\" <= to_timestamp($__to / 1000.0)\n    GROUP BY 1\n),\nnegative_prices AS (\n    SELECT ts\n    FROM prices\n    WHERE price_mwh < 0\n),\nconnected_neighbours AS (\n    SELECT DISTINCT x.neighbour\n    FROM (\n        SELECT \"InAreaDisplayName\" AS neighbour\n        FROM entsoe_fms.\"ForecastedTransferCapacities\"\n        WHERE \"OutAreaDisplayName\" = '$Country'\n          AND \"DateTime(UTC)\" >= now() - interval '730 days'\n        UNION\n        SELECT \"OutAreaDisplayName\" AS neighbour\n        FROM entsoe_fms.\"ForecastedTransferCapacities\"\n        WHERE \"InAreaDisplayName\" = '$Country'\n          AND \"DateTime(UTC)\" >= now() - interval '730 days'\n    ) x\n    WHERE x.neighbour <> '$Country'\n),\nflows AS (\n    SELECT p.ts, \"OutAreaDisplayName\" AS neighbour, 'Import'::text AS direction, \"Flow[MW]\" AS flow_mw\n    FROM negative_prices p\n    JOIN entsoe_fms.\"PhysicalFlows\" f\n      ON date_bin(INTERVAL '15 minutes', f.\"DateTime(UTC)\", TIMESTAMP '1970-01-01') = p.ts\n     AND f.\"InAreaDisplayName\" = '$Country'\n     AND f.\"OutAreaDisplayName\" IN (SELECT neighbour FROM connected_neighbours)\n    UNION ALL\n    SELECT p.ts, \"InAreaDisplayName\" AS neighbour, 'Export'::text AS direction, \"Flow[MW]\" AS flow_mw\n    FROM negative_prices p\n    JOIN entsoe_fms.\"PhysicalFlows\" f\n      ON date_bin(INTERVAL '15 minutes', f.\"DateTime(UTC)\", TIMESTAMP '1970-01-01') = p.ts\n     AND f.\"OutAreaDisplayName\" = '$Country'\n     AND f.\"InAreaDisplayName\" IN (SELECT neighbour FROM connected_neighbours)\n),\ncapacities AS (\n    SELECT p.ts, c.\"OutAreaDisplayName\" AS neighbour, 'Import'::text AS direction, c.\"ForecastTransferCapacity[MW]\" AS capacity_mw\n    FROM negative_prices p\n    JOIN entsoe_fms.\"ForecastedTransferCapacities\" c\n      ON c.\"DateTime(UTC)\" = p.ts\n     AND c.\"InAreaDisplayName\" = '$Country'\n     AND c.\"OutAreaDisplayName\" IN (SELECT neighbour FROM connected_neighbours)\n     AND c.\"ContractType\" = 'Day-ahead'\n    UNION ALL\n    SELECT p.ts, c.\"InAreaDisplayName\" AS neighbour, 'Export'::text AS direction, c.\"ForecastTransferCapacity[MW]\" AS capacity_mw\n    FROM negative_prices p\n    JOIN entsoe_fms.\"ForecastedTransferCapacities\" c\n      ON c.\"DateTime(UTC)\" = p.ts\n     AND c.\"OutAreaDisplayName\" = '$Country'\n     AND c.\"InAreaDisplayName\" IN (SELECT neighbour FROM connected_neighbours)\n     AND c.\"ContractType\" = 'Day-ahead'\n)\nSELECT\n    COALESCE(f.neighbour, c.neighbour) AS neighbour,\n    COALESCE(f.direction, c.direction) AS direction,\n    ROUND(AVG(f.flow_mw)::numeric, 1) AS avg_physical_flow_mw,\n    ROUND(AVG(c.capacity_mw)::numeric, 1) AS avg_capacity_mw,\n    ROUND((((COUNT(DISTINCT COALESCE(f.ts, c.ts))) * 0.25))::numeric, 2) AS negative_price_hours\nFROM flows f\nFULL OUTER JOIN capacities c\n  ON c.ts = f.ts AND c.neighbour = f.neighbour AND c.direction = f.direction\nGROUP BY 1, 2\nORDER BY negative_price_hours DESC, avg_physical_flow_mw DESC NULLS LAST",
                     "refId": "A"
                 }
             ],
@@ -1422,13 +1422,14 @@
                     "text": "DE-LU",
                     "value": "DE-LU"
                 },
-                "definition": "SELECT DISTINCT \"AreaDisplayName\" FROM entsoe_fms.\"EnergyPrices\" WHERE \"DateTime(UTC)\" >= now() - interval '730 days' AND \"AreaTypeCode\" = 'BZN' ORDER BY 1",
+                "definition": "WITH price_areas AS (\n    SELECT DISTINCT \"AreaDisplayName\" AS area_name\n    FROM entsoe_fms.\"EnergyPrices\"\n    WHERE \"DateTime(UTC)\" >= now() - interval '730 days'\n      AND \"AreaTypeCode\" = 'BZN'\n),\nload_areas AS (\n    SELECT DISTINCT \"AreaDisplayName\" AS area_name\n    FROM entsoe_fms.\"ActualTotalLoad\"\n    WHERE \"DateTime(UTC)\" >= now() - interval '730 days'\n)\nSELECT p.area_name\nFROM price_areas p\nJOIN load_areas l ON l.area_name = p.area_name\nORDER BY 1",
                 "label": "Country / Zone",
                 "name": "Country",
                 "options": [],
-                "query": "SELECT DISTINCT \"AreaDisplayName\" FROM entsoe_fms.\"EnergyPrices\" WHERE \"DateTime(UTC)\" >= now() - interval '730 days' AND \"AreaTypeCode\" = 'BZN' ORDER BY 1",
+                "query": "WITH price_areas AS (\n    SELECT DISTINCT \"AreaDisplayName\" AS area_name\n    FROM entsoe_fms.\"EnergyPrices\"\n    WHERE \"DateTime(UTC)\" >= now() - interval '730 days'\n      AND \"AreaTypeCode\" = 'BZN'\n),\nload_areas AS (\n    SELECT DISTINCT \"AreaDisplayName\" AS area_name\n    FROM entsoe_fms.\"ActualTotalLoad\"\n    WHERE \"DateTime(UTC)\" >= now() - interval '730 days'\n)\nSELECT p.area_name\nFROM price_areas p\nJOIN load_areas l ON l.area_name = p.area_name\nORDER BY 1",
                 "refresh": 1,
                 "regex": "",
+                "sort": 1,
                 "type": "query"
             },
             {
@@ -1436,13 +1437,14 @@
                     "text": "BZN",
                     "value": "BZN"
                 },
-                "definition": "SELECT DISTINCT \"AreaTypeCode\" FROM entsoe_fms.\"ActualTotalLoad\" WHERE \"DateTime(UTC)\" >= now() - interval '730 days' AND \"AreaDisplayName\" = '$Country' ORDER BY 1",
-                "label": "Load / Generation Area Type",
+                "definition": "SELECT area_type\nFROM (\n    SELECT\n        \"AreaTypeCode\" AS area_type,\n        MAX(\"DateTime(UTC)\") AS latest_ts,\n        CASE\n            WHEN \"AreaTypeCode\" = 'BZN' THEN 1\n            WHEN POSITION('BZN' IN \"AreaTypeCode\") > 0 THEN 2\n            WHEN POSITION('CTA' IN \"AreaTypeCode\") > 0 THEN 3\n            WHEN POSITION('CTY' IN \"AreaTypeCode\") > 0 THEN 4\n            ELSE 9\n        END AS priority\n    FROM entsoe_fms.\"ActualTotalLoad\"\n    WHERE \"DateTime(UTC)\" >= now() - interval '730 days'\n      AND \"AreaDisplayName\" = '$Country'\n    GROUP BY 1, 3\n) ranked\nORDER BY priority, latest_ts DESC, area_type",
+                "label": "Area Type",
                 "name": "Area_Type",
                 "options": [],
-                "query": "SELECT DISTINCT \"AreaTypeCode\" FROM entsoe_fms.\"ActualTotalLoad\" WHERE \"DateTime(UTC)\" >= now() - interval '730 days' AND \"AreaDisplayName\" = '$Country' ORDER BY 1",
+                "query": "SELECT area_type\nFROM (\n    SELECT\n        \"AreaTypeCode\" AS area_type,\n        MAX(\"DateTime(UTC)\") AS latest_ts,\n        CASE\n            WHEN \"AreaTypeCode\" = 'BZN' THEN 1\n            WHEN POSITION('BZN' IN \"AreaTypeCode\") > 0 THEN 2\n            WHEN POSITION('CTA' IN \"AreaTypeCode\") > 0 THEN 3\n            WHEN POSITION('CTY' IN \"AreaTypeCode\") > 0 THEN 4\n            ELSE 9\n        END AS priority\n    FROM entsoe_fms.\"ActualTotalLoad\"\n    WHERE \"DateTime(UTC)\" >= now() - interval '730 days'\n      AND \"AreaDisplayName\" = '$Country'\n    GROUP BY 1, 3\n) ranked\nORDER BY priority, latest_ts DESC, area_type",
                 "refresh": 1,
                 "regex": "",
+                "sort": 0,
                 "type": "query"
             },
             {
@@ -1466,20 +1468,6 @@
                 "regex": "",
                 "sort": 1,
                 "type": "query"
-            },
-            {
-                "current": {
-                    "text": "Day-ahead",
-                    "value": "Day-ahead"
-                },
-                "definition": "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
-                "label": "Transfer Contract",
-                "name": "Transfer_Contract",
-                "options": [],
-                "query": "Day-ahead,Week-ahead,Month-ahead,Year-ahead",
-                "refresh": 1,
-                "regex": "",
-                "type": "custom"
             }
         ]
     },
