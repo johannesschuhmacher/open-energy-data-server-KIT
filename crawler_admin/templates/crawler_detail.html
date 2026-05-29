@@ -31,7 +31,7 @@
     <div class="crawler-header__actions">
       <a href="/admin" class="button button--secondary button--small">Back</a>
       {% if card.schedule_source == "jobs" %}
-        <a href="/admin/editor" class="button button--secondary button--small">Edit YAML Jobs</a>
+        <a href="/admin?edit={{ overview.crawler_name }}&job={{ card.job_previews[0].name }}#schedule-modal" class="button button--secondary button--small">Edit Schedule</a>
       {% else %}
         <a href="/admin?edit={{ overview.crawler_name }}#schedule-modal" class="button button--secondary button--small">Edit Schedule</a>
       {% endif %}
@@ -131,7 +131,7 @@
           </dl>
           <div class="settings-card__actions">
             {% if card.schedule_source == "jobs" %}
-              <a href="/admin/editor" class="button button--secondary button--small">Edit YAML Jobs</a>
+              <a href="/admin?edit={{ overview.crawler_name }}&job={{ card.job_previews[0].name }}#schedule-modal" class="button button--secondary button--small">Edit Schedule</a>
             {% else %}
               <a href="/admin?edit={{ overview.crawler_name }}#schedule-modal" class="button button--secondary button--small">Edit Schedule</a>
             {% endif %}

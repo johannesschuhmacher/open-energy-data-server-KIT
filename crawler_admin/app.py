@@ -93,6 +93,7 @@ def dashboard(
     scheduler_saved: int | None = Query(default=None),
     created: int | None = Query(default=None),
     edit: str | None = Query(default=None),
+    job: str | None = Query(default=None),
     confirm_run: str | None = Query(default=None),
     inspect: str | None = Query(default=None),
     email_tested: int | None = Query(default=None),
@@ -101,10 +102,11 @@ def dashboard(
     message_text = None
     if scheduler_saved and crawler:
         message_kind = "success"
+        schedule_target = f"{crawler}:{job}" if job else crawler
         message_text = (
-            f"Created YAML section and saved scheduler settings for {crawler}."
+            f"Created YAML section and saved scheduler settings for {schedule_target}."
             if created
-            else f"Saved scheduler settings for {crawler}."
+            else f"Saved scheduler settings for {schedule_target}."
         )
     elif started and crawler:
         message_kind = "success"
@@ -118,6 +120,7 @@ def dashboard(
         message_kind=message_kind,
         message_text=message_text,
         selected_scheduler_for=edit,
+        selected_scheduler_job_for=job,
         selected_run_confirmation_for=confirm_run,
         selected_inspect_for=inspect,
     )
@@ -233,6 +236,7 @@ async def save_crawler_scheduler(
         raise HTTPException(status_code=404, detail=f"Crawler '{crawler_name}' not found.")
 
     enable = str(form.get("enable") or "")
+    job_name = str(form.get("job_name") or "").strip() or None
     base_hash = str(form.get("base_hash") or "")
     redirect_to = str(form.get("redirect_to") or "/admin")
     enable_value = _parse_enable_form_value(enable)
@@ -256,6 +260,7 @@ async def save_crawler_scheduler(
             scheduler_form_overrides=form_values,
             scheduler_errors={crawler_name: form_errors},
             selected_scheduler_for=crawler_name,
+            selected_scheduler_job_for=job_name,
         )
 
     try:
@@ -263,6 +268,7 @@ async def save_crawler_scheduler(
             crawler_name,
             enabled=bool(enable_value),
             schedule=schedule_value,
+            job_name=job_name,
         )
     except ValueError as exc:
         return _render_dashboard(
@@ -272,6 +278,7 @@ async def save_crawler_scheduler(
             scheduler_form_overrides=form_values,
             scheduler_errors={crawler_name: [str(exc)]},
             selected_scheduler_for=crawler_name,
+            selected_scheduler_job_for=job_name,
         )
 
     saved, _ = write_config_text_atomic(updated_yaml_text, expected_hash=base_hash)
@@ -286,17 +293,19 @@ async def save_crawler_scheduler(
             scheduler_form_overrides=form_values,
             scheduler_errors={crawler_name: ["The dashboard was stale and could not save the change."]},
             selected_scheduler_for=crawler_name,
+            selected_scheduler_job_for=job_name,
         )
 
+    success_params = {
+        "scheduler_saved": "1",
+        "crawler": crawler_name,
+        "created": "1" if created_section else "0",
+    }
+    if job_name:
+        success_params["job"] = job_name
+
     return RedirectResponse(
-        url=_append_query_string(
-            redirect_to,
-            {
-                "scheduler_saved": "1",
-                "crawler": crawler_name,
-                "created": "1" if created_section else "0",
-            },
-        ),
+        url=_append_query_string(redirect_to, success_params),
         status_code=303,
     )
 
@@ -897,6 +906,7 @@ def _render_dashboard(
     scheduler_form_overrides: dict[str, dict[str, Any]] | None = None,
     scheduler_errors: dict[str, list[str]] | None = None,
     selected_scheduler_for: str | None = None,
+    selected_scheduler_job_for: str | None = None,
     run_confirmation_errors: dict[str, list[str]] | None = None,
     selected_run_confirmation_for: str | None = None,
     email_test_errors: dict[str, list[str]] | None = None,
@@ -916,10 +926,17 @@ def _render_dashboard(
         active_run = run_service.get_active_run(card.name)
         latest_run = active_run or latest_runs.get(card.name)
         email_state = _build_email_alert_state(overview)
+        scheduler_job_name = (
+            _select_scheduler_job_name(card, selected_scheduler_job_for)
+            if selected_scheduler_for == card.name
+            else _select_scheduler_job_name(card, None)
+        )
+        scheduler_job = _find_scheduler_job(card, scheduler_job_name)
         scheduler_form = _build_scheduler_form_state(
             card=card,
             overview=overview,
             override_values=scheduler_form_overrides.get(card.name),
+            job_name=scheduler_job_name,
         )
         crawler_rows.append(
             {
@@ -931,6 +948,10 @@ def _render_dashboard(
                 "can_start": bool(overview and overview.raw_config),
                 "scheduler_form": scheduler_form,
                 "scheduler_preview": build_cron_preview(scheduler_form["schedule"] or None),
+                "scheduler_job_name": scheduler_job_name,
+                "scheduler_job": scheduler_job,
+                "scheduler_current_preview": scheduler_job.preview if scheduler_job else card.preview,
+                "scheduler_current_schedule": scheduler_job.schedule if scheduler_job else card.schedule,
                 "scheduler_errors": scheduler_errors.get(card.name, []),
                 "run_confirmation_errors": run_confirmation_errors.get(card.name, []),
                 "email_test_errors": email_test_errors.get(card.name, []),
@@ -1136,7 +1157,31 @@ def _send_test_email(crawler_name: str, effective_config: dict[str, Any]) -> Non
         server.send_message(message)
 
 
-def _build_scheduler_form_state(card: Any, overview: Any, override_values: dict[str, Any] | None = None) -> dict[str, Any]:
+def _select_scheduler_job_name(card: Any, requested_job_name: str | None) -> str | None:
+    job_previews = list(getattr(card, "job_previews", []) or [])
+    if not job_previews:
+        return None
+
+    requested = str(requested_job_name).strip() if requested_job_name else ""
+    if requested and any(job.name == requested for job in job_previews):
+        return requested
+
+    enabled_job = next((job for job in job_previews if job.enabled is True), None)
+    return (enabled_job or job_previews[0]).name
+
+
+def _find_scheduler_job(card: Any, job_name: str | None) -> Any | None:
+    if not job_name:
+        return None
+    return next((job for job in getattr(card, "job_previews", []) or [] if job.name == job_name), None)
+
+
+def _build_scheduler_form_state(
+    card: Any,
+    overview: Any,
+    override_values: dict[str, Any] | None = None,
+    job_name: str | None = None,
+) -> dict[str, Any]:
     default_enable = False
     default_schedule = ""
 
@@ -1147,8 +1192,15 @@ def _build_scheduler_form_state(card: Any, overview: Any, override_values: dict[
         if isinstance(default_candidate.get("schedule"), str):
             default_schedule = default_candidate["schedule"]
 
-    enable_value = "true" if (card.enabled if card.enabled is not None else default_enable) else "false"
-    schedule_value = card.schedule or default_schedule or "0 4 * * *"
+    selected_job = _find_scheduler_job(card, job_name)
+    if selected_job is not None:
+        selected_enabled = selected_job.enabled if selected_job.enabled is not None else default_enable
+        enable_value = "true" if selected_enabled else "false"
+        schedule_value = selected_job.schedule or default_schedule or "0 4 * * *"
+    else:
+        enable_value = "true" if (card.enabled if card.enabled is not None else default_enable) else "false"
+        schedule_value = card.schedule or default_schedule or "0 4 * * *"
+
     form_state = _parse_schedule_into_form_state(schedule_value)
     form_state["enable"] = enable_value
 

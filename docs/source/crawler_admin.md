@@ -93,9 +93,10 @@ The dashboard combines:
 - a modal schedule editor opened from the dashboard
 
 Crawler sections with a `jobs` mapping, such as the ENTSO-E FMS package-refresh
-setup, are shown as multiple named schedules. The compact modal editor is kept
-for legacy single-schedule crawlers; multi-job schedules are edited in the raw
-YAML editor so the job-specific overrides stay explicit.
+setup, are shown as multiple named schedules. The schedule dialog first asks
+which job should be edited and then writes that job's `enable` and `schedule`
+values under `jobs.<job_name>`. The raw YAML editor remains available for full
+job payload changes such as `target_data_items` or crawler-specific windows.
 
 Local email recipient overrides:
 
@@ -115,7 +116,7 @@ Dashboard scheduler edits:
 - support compact recurrence forms for hourly, daily, and weekly schedules
 - allow weekday selection with individual weekday chips in weekly mode
 - fall back to advanced CRON mode when an existing schedule cannot be mapped safely
-- direct operators to the YAML editor when a crawler uses named scheduler jobs
+- edit named scheduler jobs one job at a time
 
 Cards intentionally distinguish between:
 

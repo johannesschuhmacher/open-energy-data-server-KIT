@@ -280,8 +280,8 @@
 
               <div class="fleet-action-stack">
                 {% if card.schedule_source == "jobs" %}
-                  <a href="/admin/editor" class="button button--secondary button--small">
-                    Edit YAML Jobs
+                  <a href="/admin?edit={{ card.name }}&job={{ row.scheduler_job_name }}#schedule-modal" class="button button--secondary button--small">
+                    Edit Schedule
                   </a>
                 {% else %}
                   <a href="/admin?edit={{ card.name }}#schedule-modal" class="button button--secondary button--small">
@@ -303,13 +303,18 @@
     {% set card = scheduler_target.card %}
     {% set scheduler_form = scheduler_target.scheduler_form %}
     {% set scheduler_preview = scheduler_target.scheduler_preview %}
+    {% set scheduler_current_preview = scheduler_target.scheduler_current_preview %}
+    {% set scheduler_current_schedule = scheduler_target.scheduler_current_schedule %}
+    {% set scheduler_job = scheduler_target.scheduler_job %}
     <div class="modal-shell is-open">
       <button type="button" class="modal-backdrop js-close-modal" data-close-url="/admin" aria-label="Close schedule editor"></button>
       <section class="modal-card" id="schedule-modal" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
         <header class="modal-header">
           <div>
             <p class="eyebrow">Schedule Editor</p>
-            <h3 id="schedule-modal-title">{{ card.name }}</h3>
+            <h3 id="schedule-modal-title">
+              {{ card.name }}{% if scheduler_job %}: {{ scheduler_job.name }}{% endif %}
+            </h3>
             <p class="subtle-note">Only the active mode is used. Hidden modes are ignored on save.</p>
           </div>
           <button type="button" class="button button--secondary button--small js-close-modal" data-close-url="/admin">Close</button>
@@ -318,15 +323,21 @@
         <div class="modal-summary">
           <div class="modal-summary__item">
             <span class="metric-label">Current summary</span>
-            <strong>{{ card.preview.summary }}</strong>
+            <strong>{{ scheduler_current_preview.summary }}</strong>
           </div>
           <div class="modal-summary__item">
             <span class="metric-label">Current CRON</span>
-            <strong>{% if card.schedule %}<code>{{ card.schedule }}</code>{% else %}-{% endif %}</strong>
+            <strong>{% if scheduler_current_schedule %}<code>{{ scheduler_current_schedule }}</code>{% else %}-{% endif %}</strong>
           </div>
           <div class="modal-summary__item">
             <span class="metric-label">Source</span>
-            <strong>{{ card.schedule_source or "not set" }}</strong>
+            <strong>
+              {% if scheduler_job %}
+                job: {{ scheduler_job.name }}
+              {% else %}
+                {{ card.schedule_source or "not set" }}
+              {% endif %}
+            </strong>
           </div>
           <div class="modal-summary__item">
             <span class="metric-label">Next run</span>
@@ -353,14 +364,33 @@
           <input type="hidden" name="redirect_to" value="/admin" />
           <input type="hidden" name="base_hash" value="{{ state.config_hash }}" />
           <input type="hidden" name="schedule" value="{{ scheduler_form.schedule }}" class="js-schedule-output" />
+          {% if scheduler_job %}
+            <input type="hidden" name="job_name" value="{{ scheduler_job.name }}" />
+          {% endif %}
 
           <section class="modal-section">
             <div class="section-head">
               <h4>General</h4>
             </div>
             <div class="modal-grid modal-grid--two">
+              {% if card.job_previews %}
+                <label class="field-block">
+                  <span class="field-label">Job</span>
+                  <select class="js-scheduler-job-picker">
+                    {% for job in card.job_previews %}
+                      <option
+                        value="{{ job.name }}"
+                        data-url="/admin?edit={{ card.name }}&job={{ job.name }}#schedule-modal"
+                        {% if scheduler_job and job.name == scheduler_job.name %}selected{% endif %}
+                      >
+                        {{ job.name }}{% if job.enabled is sameas false %} (disabled){% endif %}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </label>
+              {% endif %}
               <label class="field-block">
-                <span class="field-label">Status</span>
+                <span class="field-label">{% if scheduler_job %}Job status{% else %}Status{% endif %}</span>
                 <select name="enable">
                   <option value="true" {% if scheduler_form.enable == 'true' %}selected{% endif %}>Enabled</option>
                   <option value="false" {% if scheduler_form.enable == 'false' %}selected{% endif %}>Disabled</option>
@@ -662,6 +692,7 @@
   <script>
     const schedulerForm = document.querySelector(".js-scheduler-form");
     const dashboardSampleButtons = document.querySelectorAll(".js-scheduler-sample");
+    const schedulerJobPicker = document.querySelector(".js-scheduler-job-picker");
     const closeModalButtons = document.querySelectorAll(".js-close-modal");
     const openModal = document.querySelector(".modal-shell.is-open");
     const fleetRows = Array.from(document.querySelectorAll(".fleet-row"));
@@ -936,6 +967,15 @@
 
       schedulerForm.addEventListener("submit", () => {
         schedulerForm.querySelector(".js-schedule-output").value = resolveSchedulerSchedule(schedulerForm);
+      });
+    }
+
+    if (schedulerJobPicker) {
+      schedulerJobPicker.addEventListener("change", () => {
+        const selectedOption = schedulerJobPicker.selectedOptions[0];
+        if (selectedOption?.dataset.url) {
+          window.location.href = selectedOption.dataset.url;
+        }
       });
     }
 

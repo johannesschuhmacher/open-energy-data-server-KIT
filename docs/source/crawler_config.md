@@ -89,6 +89,11 @@ When `jobs` is present, the scheduler runs named jobs such as
 `entsoe_fms:latest_hourly`. Crawler sections without `jobs` keep the legacy
 single-schedule behavior.
 
+In the Crawler Admin UI, named jobs can be edited one at a time in the schedule
+dialog. The dialog updates only the selected job's `enable` and `schedule`
+values. Use the YAML editor for wider job changes, for example `target_data_items`,
+window sizes, or crawler-specific modes.
+
 The scheduler uses an in-memory queue. It does not enqueue the same job again
 while that job is already queued or running. For `entsoe_fms`, locks are based
 on the target tables derived from `target_data_items`, so jobs touching the same

@@ -812,6 +812,7 @@ def update_crawler_schedule_config_text(
     *,
     enabled: bool,
     schedule: str,
+    job_name: str | None = None,
     repo_root: Path | None = None,
 ) -> tuple[str, bool]:
     root = repo_root or get_repo_root()
@@ -827,7 +828,10 @@ def update_crawler_schedule_config_text(
 
     created_section = False
     crawler_config = config_data.get(crawler_name)
+    normalized_job_name = str(job_name).strip() if job_name else None
     if crawler_config is None:
+        if normalized_job_name:
+            raise ValueError(f"Crawler section '{crawler_name}' must exist before a scheduler job can be edited.")
         crawler_config = CommentedMap()
         config_data[crawler_name] = crawler_config
         crawler_config["enable"] = enabled
@@ -836,9 +840,24 @@ def update_crawler_schedule_config_text(
         created_section = True
     elif not isinstance(crawler_config, dict):
         raise ValueError(f"Crawler section '{crawler_name}' must be a mapping before it can be edited.")
+    elif normalized_job_name:
+        jobs_config = crawler_config.get("jobs")
+        if not isinstance(jobs_config, dict) or not jobs_config:
+            raise ValueError(f"Crawler '{crawler_name}' does not define named scheduler jobs.")
+
+        job_config = jobs_config.get(normalized_job_name)
+        if job_config is None:
+            raise ValueError(f"Crawler '{crawler_name}' has no scheduler job named '{normalized_job_name}'.")
+        if not isinstance(job_config, dict):
+            raise ValueError(
+                f"Scheduler job '{crawler_name}:{normalized_job_name}' must be a mapping before it can be edited."
+            )
+
+        job_config["enable"] = enabled
+        job_config["schedule"] = DoubleQuotedScalarString(schedule)
     elif isinstance(crawler_config.get("jobs"), dict):
         raise ValueError(
-            f"Crawler '{crawler_name}' uses multiple scheduler jobs. Edit its 'jobs' block in the YAML editor."
+            f"Crawler '{crawler_name}' uses multiple scheduler jobs. Choose a scheduler job before saving."
         )
     else:
         crawler_config["enable"] = enabled
