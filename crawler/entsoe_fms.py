@@ -382,7 +382,7 @@ class EntsoeFMSCrawler(BaseCrawler):
         """Fetch an OAuth2 access token and initialize the retry-enabled session."""
 
         if not self.USERNAME or not self.PASSWORD:
-            print("Error: ENTSOE_USERNAME or ENTSOE_PASSWORD is not set in .env")
+            raise RuntimeError("ENTSOE_USERNAME and ENTSOE_PASSWORD must be set for ENTSO-E FMS access.")
 
         payload = (
             f"client_id={self.CLIENT_ID}"
@@ -418,6 +418,15 @@ class EntsoeFMSCrawler(BaseCrawler):
         self.session.mount("https://", adapter)
         self.logger.info("FMS Token received and session established.")
 
+    def _ensure_authenticated_session(self) -> requests.Session:
+        """Return an authenticated FMS session, creating it lazily when needed."""
+
+        if self.session is None:
+            self._authenticate()
+        if self.session is None:
+            raise RuntimeError("ENTSO-E FMS session could not be initialized.")
+        return self.session
+
     # ---------------------------
     # File‑Library Helpers
     # ---------------------------
@@ -431,16 +440,18 @@ class EntsoeFMSCrawler(BaseCrawler):
             }
         }
         all_metas = []
+        session = self._ensure_authenticated_session()
         while True:
             try:
-                r = self.session.post(f"{self.FMS_BASEURL}/listFolder", json=payload, timeout=120)
+                r = session.post(f"{self.FMS_BASEURL}/listFolder", json=payload, timeout=120)
                 r.raise_for_status()
             except requests.HTTPError as exc:
                 if exc.response.status_code == 401:
                     self.logger.warning(f"Access Token expired during listFolder for {data_item}. Re-authenticating...")
                     self._authenticate()
+                    session = self._ensure_authenticated_session()
                     self.logger.info("Re-authentication successful. Retrying listFolder...")
-                    r = self.session.post(f"{self.FMS_BASEURL}/listFolder", json=payload, timeout=120)
+                    r = session.post(f"{self.FMS_BASEURL}/listFolder", json=payload, timeout=120)
                     r.raise_for_status()
                 else:
                     self.logger.error(f"HTTP error in listFolder for {data_item}: {exc}")
@@ -466,8 +477,9 @@ class EntsoeFMSCrawler(BaseCrawler):
             "topLevelFolder": "TP_export",
             "downloadAsZip": False,
         }
+        session = self._ensure_authenticated_session()
         try:
-            r = self.session.post(f"{self.FMS_BASEURL}/downloadFileContent", json=payload, timeout=120)
+            r = session.post(f"{self.FMS_BASEURL}/downloadFileContent", json=payload, timeout=120)
             r.raise_for_status()
         except requests.HTTPError as exc:
             # Re-authenticate when the current access token has expired.
@@ -478,9 +490,10 @@ class EntsoeFMSCrawler(BaseCrawler):
 
                 # Refresh the access token and retry the download.
                 self._authenticate()
+                session = self._ensure_authenticated_session()
                 self.logger.info("Re-authentication successful. Retrying download for %s...", target)
 
-                r = self.session.post(f"{self.FMS_BASEURL}/downloadFileContent", json=payload, timeout=120)
+                r = session.post(f"{self.FMS_BASEURL}/downloadFileContent", json=payload, timeout=120)
                 r.raise_for_status()
             else:
                 raise exc
@@ -1788,8 +1801,6 @@ class EntsoeFMSCrawler(BaseCrawler):
             self.logger.warning(f"Backward update is not supported for SINGLE-FILE table '{data_item}'.")
             self.logger.info(f"Processing the single file '{data_item}.csv' one time...")
             metadata_entries = self._load_backfill_metadata(data_item)
-            if metadata_entries is None:
-                return
             self._update_data_file(
                 data_item,
                 local_dir,
@@ -1819,8 +1830,6 @@ class EntsoeFMSCrawler(BaseCrawler):
             return
 
         metadata_entries = self._load_backfill_metadata(data_item)
-        if metadata_entries is None:
-            return
 
         for period_string in backfill_periods:
             self._update_data_file(
@@ -1845,12 +1854,13 @@ class EntsoeFMSCrawler(BaseCrawler):
             dt += date_offset
         return periods
 
-    def _load_backfill_metadata(self, data_item: str) -> list[Dict] | None:
+    def _load_backfill_metadata(self, data_item: str) -> list[Dict]:
         try:
             return self._list_metadata(data_item, pd.Timestamp("2000-01-01"), pd.Timestamp.now())
         except Exception as exc:
-            self.logger.error(f"Backward update failed while listing metadata for {data_item}: {exc}", exc_info=True)
-            return None
+            message = f"Backward update failed while listing metadata for {data_item}: {exc}"
+            self.logger.error(message, exc_info=True)
+            raise RuntimeError(message) from exc
 
     def _update_data_file(
         self,

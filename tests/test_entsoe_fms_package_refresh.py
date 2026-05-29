@@ -4,10 +4,36 @@
 
 from __future__ import annotations
 
+import logging
 import unittest
+from unittest.mock import Mock
 
 import pandas as pd
 from crawler.entsoe_fms import EntsoeFMSCrawler
+
+
+class _FakeFmsResponse:
+    def __init__(self, payload: dict):
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict:
+        return self._payload
+
+
+class _FakeFmsSession:
+    def __init__(self) -> None:
+        self.posts: list[dict] = []
+
+    def post(self, url: str, json: dict, timeout: int) -> _FakeFmsResponse:
+        self.posts.append({"url": url, "json": json, "timeout": timeout})
+        if len(self.posts) == 1:
+            return _FakeFmsResponse(
+                {"contentItemList": [{"name": "2026_04_file.csv", "fileId": "file-1"}]}
+            )
+        return _FakeFmsResponse({"contentItemList": []})
 
 
 class EntsoeFMSPackageRefreshTest(unittest.TestCase):
@@ -47,6 +73,35 @@ class EntsoeFMSPackageRefreshTest(unittest.TestCase):
         self.assertTrue(inserts.empty)
         self.assertEqual(len(upserts), 2)
         self.assertEqual(upserts["TotalLoad[MW]"].tolist(), [50000.0, 51000.0])
+
+    def test_list_metadata_authenticates_when_session_is_missing(self) -> None:
+        crawler = object.__new__(EntsoeFMSCrawler)
+        crawler.session = None
+        crawler.logger = logging.getLogger("test_entsoe_fms_package_refresh")
+        fake_session = _FakeFmsSession()
+
+        def authenticate() -> None:
+            crawler.session = fake_session
+
+        crawler._authenticate = authenticate
+
+        metadata = crawler._list_metadata(
+            "EnergyPrices_12.1.D_r3",
+            pd.Timestamp("2026-04-01"),
+            pd.Timestamp("2026-05-01"),
+        )
+
+        self.assertEqual(metadata, [{"name": "2026_04_file.csv", "fileId": "file-1"}])
+        self.assertEqual(len(fake_session.posts), 2)
+        self.assertEqual(fake_session.posts[0]["json"]["path"], "/TP_export/EnergyPrices_12.1.D_r3/")
+
+    def test_backfill_metadata_errors_are_not_swallowed(self) -> None:
+        crawler = object.__new__(EntsoeFMSCrawler)
+        crawler.logger = logging.getLogger("test_entsoe_fms_package_refresh")
+        crawler._list_metadata = Mock(side_effect=RuntimeError("metadata unavailable"))
+
+        with self.assertRaisesRegex(RuntimeError, "Backward update failed while listing metadata"):
+            crawler._load_backfill_metadata("EnergyPrices_12.1.D_r3")
 
 
 if __name__ == "__main__":
