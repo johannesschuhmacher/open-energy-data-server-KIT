@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import tempfile
 import unittest
 from unittest.mock import Mock
 
@@ -34,6 +35,36 @@ class _FakeFmsSession:
                 {"contentItemList": [{"name": "2026_04_file.csv", "fileId": "file-1"}]}
             )
         return _FakeFmsResponse({"contentItemList": []})
+
+
+class _FakeSqlResult:
+    def __init__(self, rows: list[tuple[bool]]):
+        self.rows = rows
+
+    def fetchone(self) -> tuple[bool]:
+        return self.rows.pop(0)
+
+
+class _FakeSqlConnection:
+    def __init__(self) -> None:
+        self.table_exists_results = [(False,), (True,)]
+
+    def __enter__(self) -> "_FakeSqlConnection":
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        return None
+
+    def execute(self, query) -> _FakeSqlResult:
+        return _FakeSqlResult(self.table_exists_results)
+
+
+class _FakeSqlEngine:
+    def __init__(self) -> None:
+        self.connection = _FakeSqlConnection()
+
+    def connect(self) -> _FakeSqlConnection:
+        return self.connection
 
 
 class EntsoeFMSPackageRefreshTest(unittest.TestCase):
@@ -102,6 +133,53 @@ class EntsoeFMSPackageRefreshTest(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "Backward update failed while listing metadata"):
             crawler._load_backfill_metadata("EnergyPrices_12.1.D_r3")
+
+    def test_backfill_creates_missing_table_before_insert(self) -> None:
+        crawler = object.__new__(EntsoeFMSCrawler)
+        crawler.engine = _FakeSqlEngine()
+        crawler.logger = logging.getLogger("test_entsoe_fms_package_refresh")
+        inserted_batches = []
+
+        def download_file(file_id: str, target: str) -> None:
+            pd.DataFrame(
+                [
+                    {
+                        "InstanceCode": "1",
+                        "DateTime(UTC)": "2026-04-01T00:00:00Z",
+                        "ResolutionCode": "PT60M",
+                        "AreaCode": "10Y1001A1001A83F",
+                        "AreaDisplayName": "Germany",
+                        "AreaTypeCode": "BZN",
+                        "MapCode": "DE",
+                        "ContractType": "A01",
+                        "Sequence": "1",
+                        "Price[Currency/MWh]": 42.0,
+                        "Currency": "EUR",
+                        "UpdateTime(UTC)": "2026-04-01T00:30:00Z",
+                    }
+                ]
+            ).to_csv(target, sep="\t", index=False)
+
+        crawler._download_file = download_file
+        crawler._create_table_with_unique_constraint = Mock()
+        crawler._insert_dataframe = lambda table_name, frame: inserted_batches.append((table_name, frame.copy()))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            crawler._update_data_file(
+                "EnergyPrices_12.1.D_r3",
+                tmpdir,
+                file_identifier="2026_04",
+                logic_type="%Y_%m",
+                metadata_entries=[
+                    {"name": "2026_04_EnergyPrices_12.1.D_r3.csv", "fileId": "file-1"}
+                ],
+            )
+
+        crawler._create_table_with_unique_constraint.assert_called_once_with("EnergyPrices")
+        self.assertEqual(len(inserted_batches), 1)
+        table_name, inserted = inserted_batches[0]
+        self.assertEqual(table_name, "EnergyPrices")
+        self.assertEqual(len(inserted), 1)
 
 
 if __name__ == "__main__":

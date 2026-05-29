@@ -1909,6 +1909,7 @@ class EntsoeFMSCrawler(BaseCrawler):
             self.logger.info(f"Downloading (Backward Update): {fname}")
             self._download_file(file_id, local_path)
             df = pd.read_csv(local_path, encoding="utf-8-sig", sep="\t")
+            df = self._normalize_timestamp_columns(df)
 
             if table_name == "InstalledCapacityProductionUnit":
                 self.logger.info(f"[_update_data_file] Flushing (special case) {len(df)} rows for {table_name}")
@@ -1924,7 +1925,14 @@ class EntsoeFMSCrawler(BaseCrawler):
                 """)
                 result = conn.execute(table_exists_query).fetchone()
                 if not (result and result[0]):
-                    self.logger.error(f"[_update_data_file] Table '{table_name}' does not exist. Cannot run backward update.")
+                    self.logger.info(f"[_update_data_file] Table '{table_name}' does not exist. Creating it before backfill.")
+                    self._create_table_with_unique_constraint(table_name)
+                    result = conn.execute(table_exists_query).fetchone()
+                    if not (result and result[0]):
+                        raise RuntimeError(f"Table '{table_name}' could not be created for backward update.")
+                    df_insert = self._deduplicate_on_unique_keys(table_name, df)
+                    self.logger.info(f"[_update_data_file] Inserting {len(df_insert)} rows into newly created table '{table_name}' from file {fname}.")
+                    self._insert_dataframe(table_name, df_insert)
                     return
 
                 column_query = text(f"""
@@ -1964,6 +1972,7 @@ class EntsoeFMSCrawler(BaseCrawler):
 
         except Exception as e:
             self.logger.error(f"[_update_data_file] Failed during processing for identifier '{file_identifier}': {e}", exc_info=True)
+            raise
         finally:
             if local_path and os.path.exists(local_path):
                 os.remove(local_path)
