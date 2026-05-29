@@ -44,6 +44,8 @@ password, for example:
 ansible -i inventory.yml oeds -m ping -K
 ansible-playbook -i inventory.yml oeds-install-host-prep.yml -K
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml -K
+ansible-playbook -i inventory.yml oeds-smoke-test.yml -K \
+  -e oeds_expect_crawler_admin=true
 ```
 
 If `sudo -v` fails for the user, fix sudo rights first. On a disposable test

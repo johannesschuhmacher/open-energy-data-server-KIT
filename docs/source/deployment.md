@@ -258,6 +258,8 @@ password:
 ```bash
 ansible -i inventory.yml oeds -m ping -K
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml -K
+ansible-playbook -i inventory.yml oeds-smoke-test.yml -K \
+  -e oeds_expect_crawler_admin=true
 ```
 
 If `sudo -v` fails for the selected user, grant sudo rights first or use a

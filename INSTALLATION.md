@@ -28,6 +28,9 @@ If this asks for a password and succeeds, add `-K` to the Ansible commands
 below. `-K` means "ask for the sudo password". If `sudo -v` fails, the user
 does not have the required sudo rights yet.
 
+This applies to every `ansible` and `ansible-playbook` command in this guide,
+including the smoke test and uninstall commands.
+
 ## 1. Install basic tools
 
 On the target server:
@@ -106,6 +109,8 @@ requires a password:
 ```bash
 ansible-playbook -i inventory.yml oeds-install-host-prep.yml -K
 ansible-playbook -i inventory.yml oeds-install-crawlers.yml -K
+ansible-playbook -i inventory.yml oeds-smoke-test.yml -K \
+  -e oeds_expect_crawler_admin=true
 ```
 
 On a disposable test VM, passwordless sudo is also possible. Configure it only
@@ -155,10 +160,15 @@ The install uses the public GitHub `main` branch by default.
 ## 7. Verify the installation
 
 The install wrapper already runs the smoke test. You can run it again
-explicitly:
+explicitly. Add `-K` when sudo asks for a password:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-smoke-test.yml \
+  -e oeds_expect_crawler_admin=true
+```
+
+```bash
+ansible-playbook -i inventory.yml oeds-smoke-test.yml -K \
   -e oeds_expect_crawler_admin=true
 ```
 
@@ -201,6 +211,8 @@ ansible-playbook -i inventory.yml oeds-uninstall.yml \
   -e oeds_uninstall_remove_images=true \
   -e oeds_uninstall_confirm=DELETE_OEDS_DATA
 ```
+
+Add `-K` after the playbook name if sudo requires a password.
 
 Do not run this from inside `/open_energy_data_server/repo/playbooks` if
 `oeds_uninstall_remove_repo=true`, because it deletes the checkout you are
