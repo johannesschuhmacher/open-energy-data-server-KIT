@@ -18,6 +18,16 @@ You need a user with `sudo` rights. Native Windows is not a supported server
 target. Use Windows only for local Docker Desktop testing, or use WSL/Linux as
 an Ansible control node.
 
+Check sudo before you start:
+
+```bash
+sudo -v
+```
+
+If this asks for a password and succeeds, add `-K` to the Ansible commands
+below. `-K` means "ask for the sudo password". If `sudo -v` fails, the user
+does not have the required sudo rights yet.
+
 ## 1. Install basic tools
 
 On the target server:
@@ -66,6 +76,32 @@ ansible -i inventory.yml oeds -m command -a "hostname -f"
 ```
 
 The hostname check should show the server you intend to install.
+
+The example inventory uses `sudo` through `ansible_become: true`. If the ping
+fails with `sudo: a password is required`, rerun it with `-K` and enter the
+sudo password:
+
+```bash
+ansible -i inventory.yml oeds -m ping -K
+ansible -i inventory.yml oeds -m command -a "hostname -f" -K
+```
+
+Use the same `-K` flag for all later `ansible-playbook` commands when sudo
+requires a password:
+
+```bash
+ansible-playbook -i inventory.yml oeds-install-host-prep.yml -K
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml -K
+```
+
+On a disposable test VM, passwordless sudo is also possible. Configure it only
+if this matches your local security policy:
+
+```bash
+echo 'oeds ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/oeds
+sudo chmod 0440 /etc/sudoers.d/oeds
+sudo visudo -cf /etc/sudoers.d/oeds
+```
 
 If Ansible prints `Unable to parse inventory.yml`, recreate the file from
 `inventory.example.yml` and check that it starts with:

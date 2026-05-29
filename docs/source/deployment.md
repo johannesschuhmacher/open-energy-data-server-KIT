@@ -252,6 +252,17 @@ same-host Linux install with `sudo`. For a remote host, replace the
 `localhost` entry in `inventory.yml` with `ansible_host` and, when needed,
 `ansible_user`.
 
+If sudo requires a password, add `-K` to the Ansible command and enter the sudo
+password:
+
+```bash
+ansible -i inventory.yml oeds -m ping -K
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml -K
+```
+
+If `sudo -v` fails for the selected user, grant sudo rights first or use a
+different deployment user.
+
 After the install, run the smoke test explicitly when you want a separate
 verification step:
 

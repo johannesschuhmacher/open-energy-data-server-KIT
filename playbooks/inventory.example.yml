@@ -8,6 +8,7 @@ all:
           ansible_become: true
           ansible_become_method: sudo
           ansible_python_interpreter: /usr/bin/python3
+          # If sudo asks for a password, run Ansible with -K.
           # For a remote host, replace the localhost defaults above with:
           # ansible_host: your-server.example.org
           # ansible_user: your-ssh-user

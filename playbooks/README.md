@@ -36,6 +36,20 @@ ansible-playbook -i inventory.yml oeds-smoke-test.yml \
   -e oeds_expect_crawler_admin=true
 ```
 
+`inventory.example.yml` enables `sudo` through `ansible_become: true`. If sudo
+requires a password, add `-K` to each Ansible command and enter the sudo
+password, for example:
+
+```bash
+ansible -i inventory.yml oeds -m ping -K
+ansible-playbook -i inventory.yml oeds-install-host-prep.yml -K
+ansible-playbook -i inventory.yml oeds-install-crawlers.yml -K
+```
+
+If `sudo -v` fails for the user, fix sudo rights first. On a disposable test
+VM, passwordless sudo can be configured locally through `/etc/sudoers.d/`, but
+do not use that casually on shared or production hosts.
+
 If Docker is already installed and working, `oeds-install-host-prep.yml` can be
 skipped.
 
