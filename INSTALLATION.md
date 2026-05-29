@@ -65,6 +65,20 @@ ansible-galaxy collection install -r requirements.yml
 If you skip this step, Ansible can fail with an error such as
 `couldn't resolve module/action 'community.docker.docker_container'`.
 
+Steps 4, 5, and 6 have different jobs:
+
+- Step 4 checks that Ansible is talking to the right machine and can use sudo.
+  It does not install OEDS.
+- Step 5 prepares a clean CentOS/RHEL-compatible host. It configures package
+  repositories, SELinux handling, and Docker packages. Run it once on a fresh
+  server.
+- Step 6 deploys OEDS itself. It creates runtime configuration, updates the
+  repository checkout, starts Docker Compose, and runs the smoke test.
+
+On a fresh server, run all three steps in order. Seeing Docker package checks
+again in step 6 is expected; that playbook repeats the package step so updates
+and direct installs stay safe.
+
 ## 4. Create the inventory
 
 For a same-host install:
