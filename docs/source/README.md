@@ -53,8 +53,9 @@ deployment playbooks once the crawler scope and operating model are clear.
 
 The public Ansible defaults already point to the GitHub `main` branch. For a
 same-host Linux install, `playbooks/inventory.example.yml` is prefilled for
-`sudo`, so the minimal path is to copy it to `inventory.yml` and run
-`oeds-install-crawlers.yml`.
+`sudo`, so the minimal path is to run `playbooks/oeds-first-install.sh`. The
+script creates `inventory.yml` when missing, refreshes the sudo cache, prepares
+the host, installs OEDS with crawler services, and runs the smoke test.
 
 ## Operator quick map
 

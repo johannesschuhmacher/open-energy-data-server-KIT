@@ -20,30 +20,42 @@ CentOS Stream, Rocky Linux, AlmaLinux, or RHEL.
 
 You need a sudo-capable user, Ansible on the control node, and the collections
 from `requirements.yml`. If Docker is not installed yet on a supported target,
-run `oeds-install-host-prep.yml` before the install playbook.
+the first-install script runs `oeds-install-host-prep.yml` before the install
+playbook.
 
 Use this path for a simple same-host install with the core services, scheduler,
 and crawler admin UI:
 
 ```bash
 cd playbooks
-ansible-galaxy collection install -r requirements.yml
-cp inventory.example.yml inventory.yml
-ansible -i inventory.yml oeds -m ping
-ansible-playbook -i inventory.yml oeds-install-host-prep.yml
-ansible-playbook -i inventory.yml oeds-install-crawlers.yml
-ansible-playbook -i inventory.yml oeds-smoke-test.yml \
-  -e oeds_expect_crawler_admin=true
+./oeds-first-install.sh
 ```
 
-`inventory.example.yml` enables `sudo` through `ansible_become: true`. If sudo
-requires a password, add `-K` to each Ansible command and enter the sudo
-password, for example:
+The script installs the required Ansible collections, creates `inventory.yml`
+from `inventory.example.yml` if needed, checks connectivity, prepares the host,
+installs OEDS with the crawler services, and runs the smoke test through
+`oeds-install-crawlers.yml`.
+
+`inventory.example.yml` enables `sudo` through `ansible_become: true`. The
+script runs `sudo -v` once before Ansible and keeps the local sudo cache alive
+while the first install is running. This avoids entering the sudo password for
+each playbook in the normal same-host install path.
+
+For a remote host, create and edit the inventory first, then run the script:
+
+```bash
+cp inventory.example.yml inventory.yml
+vi inventory.yml
+./oeds-first-install.sh
+```
+
+The sudo cache approach helps same-host installs where Ansible uses local sudo.
+For later manual commands, or for remote hosts that still require a sudo
+password, either run `sudo -v` immediately before Ansible or add `-K` to the
+command:
 
 ```bash
 ansible -i inventory.yml oeds -m ping -K
-ansible-playbook -i inventory.yml oeds-install-host-prep.yml -K
-ansible-playbook -i inventory.yml oeds-install-crawlers.yml -K
 ansible-playbook -i inventory.yml oeds-smoke-test.yml -K \
   -e oeds_expect_crawler_admin=true
 ```
@@ -53,7 +65,7 @@ VM, passwordless sudo can be configured locally through `/etc/sudoers.d/`, but
 do not use that casually on shared or production hosts.
 
 If Docker is already installed and working, `oeds-install-host-prep.yml` can be
-skipped.
+skipped when running the playbooks manually.
 
 The install wrapper already runs the smoke test once. Running
 `oeds-smoke-test.yml` again is useful when you want an explicit final check.

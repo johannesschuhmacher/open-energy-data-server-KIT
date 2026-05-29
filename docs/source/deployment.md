@@ -241,9 +241,7 @@ For the simplest public install, run these commands from the repository root:
 
 ```bash
 cd playbooks
-cp inventory.example.yml inventory.yml
-ansible -i inventory.yml oeds -m ping
-ansible-playbook -i inventory.yml oeds-install-crawlers.yml
+./oeds-first-install.sh
 ```
 
 This installs the core stack plus scheduler and crawler admin UI from the
@@ -252,12 +250,25 @@ same-host Linux install with `sudo`. For a remote host, replace the
 `localhost` entry in `inventory.yml` with `ansible_host` and, when needed,
 `ansible_user`.
 
-If sudo requires a password, add `-K` to the Ansible command and enter the sudo
-password:
+The first-install script runs `sudo -v` once and keeps the local sudo cache
+alive while the same-host install runs. It also installs the required Ansible
+collections, creates `inventory.yml` if needed, prepares the host, runs the
+crawler install playbook, and relies on that playbook's smoke test.
+
+For remote hosts, create and edit `inventory.yml` first:
+
+```bash
+cp inventory.example.yml inventory.yml
+vi inventory.yml
+./oeds-first-install.sh
+```
+
+For later manual commands, or for remote hosts that still require a sudo
+password, either run `sudo -v` immediately before Ansible or add `-K` to the
+Ansible command:
 
 ```bash
 ansible -i inventory.yml oeds -m ping -K
-ansible-playbook -i inventory.yml oeds-install-crawlers.yml -K
 ansible-playbook -i inventory.yml oeds-smoke-test.yml -K \
   -e oeds_expect_crawler_admin=true
 ```

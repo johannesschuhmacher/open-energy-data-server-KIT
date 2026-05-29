@@ -24,12 +24,13 @@ Check sudo before you start:
 sudo -v
 ```
 
-If this asks for a password and succeeds, add `-K` to the Ansible commands
-below. `-K` means "ask for the sudo password". If `sudo -v` fails, the user
-does not have the required sudo rights yet.
+If this asks for a password and succeeds, the user has the required sudo
+rights. The first-install script below refreshes this sudo cache once and keeps
+it alive while the installation runs, so you normally enter the password only
+once during the first install.
 
-This applies to every `ansible` and `ansible-playbook` command in this guide,
-including the smoke test and uninstall commands.
+For later one-off commands, either run `sudo -v` immediately before Ansible or
+add `-K` to the Ansible command. `-K` means "ask for the sudo password".
 
 ## 1. Install basic tools
 
@@ -57,18 +58,45 @@ git clone https://github.com/johannesschuhmacher/open-energy-data-server-KIT.git
 cd /open_energy_data_server/repo/playbooks
 ```
 
-## 3. Install Ansible collections
+## 3. Run the first-install script
 
-This step is required before running the playbooks:
+The first-install script does the normal first-run sequence:
+
+- install required Ansible collections
+- create `inventory.yml` from `inventory.example.yml` if it does not exist yet
+- refresh and keep the local sudo cache alive
+- check Ansible connectivity
+- check the target hostname
+- prepare the host
+- install OEDS with scheduler and Crawler Admin UI
+- run the smoke test through the crawler install playbook
+
+For a same-host install, run:
 
 ```bash
-ansible-galaxy collection install -r requirements.yml
+./oeds-first-install.sh
 ```
 
-If you skip this step, Ansible can fail with an error such as
-`couldn't resolve module/action 'community.docker.docker_container'`.
+If you need extra Ansible options, pass them after the script name:
 
-Steps 4, 5, and 6 have different jobs:
+```bash
+./oeds-first-install.sh -e oeds_repo_version=<branch-tag-or-commit>
+```
+
+The script is intended for the simple same-host install path. For a remote
+host, create and edit `inventory.yml` first, then run the same script:
+
+```bash
+cp inventory.example.yml inventory.yml
+vi inventory.yml
+./oeds-first-install.sh
+```
+
+The sudo cache approach helps the same-host install because Ansible uses local
+sudo on the same machine. For remote installs where the target host asks for a
+sudo password, use `-K` or configure the remote sudo policy explicitly.
+
+The individual steps have different jobs:
 
 - Step 4 checks that Ansible is talking to the right machine and can use sudo.
   It does not install OEDS.
@@ -78,33 +106,39 @@ Steps 4, 5, and 6 have different jobs:
 - Step 6 deploys OEDS itself. It creates runtime configuration, updates the
   repository checkout, starts Docker Compose, and runs the smoke test.
 
-On a fresh server, run all three steps in order. Seeing Docker package checks
-again in step 6 is expected; that playbook repeats the package step so updates
-and direct installs stay safe.
+If you do not use the script, run the manual steps in order. Seeing Docker
+package checks again in step 6 is expected; that playbook repeats the package
+step so updates and direct installs stay safe.
 
-## 4. Create the inventory
+## 4. Manual inventory check
 
-For a same-host install:
+You can run the inventory checks manually, for example after editing a remote
+inventory:
 
 ```bash
-cp inventory.example.yml inventory.yml
 ansible -i inventory.yml oeds -m ping
 ansible -i inventory.yml oeds -m command -a "hostname -f"
 ```
 
 The hostname check should show the server you intend to install.
 
-The example inventory uses `sudo` through `ansible_become: true`. If the ping
-fails with `sudo: a password is required`, rerun it with `-K` and enter the
-sudo password:
+The example inventory uses `sudo` through `ansible_become: true`. If a manual
+command fails with `sudo: a password is required`, either refresh sudo first:
+
+```bash
+sudo -v
+ansible -i inventory.yml oeds -m ping
+```
+
+or rerun it with `-K` and enter the sudo password:
 
 ```bash
 ansible -i inventory.yml oeds -m ping -K
 ansible -i inventory.yml oeds -m command -a "hostname -f" -K
 ```
 
-Use the same `-K` flag for all later `ansible-playbook` commands when sudo
-requires a password:
+Use the same `-K` flag for later manual `ansible-playbook` commands when sudo
+requires a password and you did not refresh the sudo cache:
 
 ```bash
 ansible-playbook -i inventory.yml oeds-install-host-prep.yml -K
@@ -135,7 +169,7 @@ all:
 For a remote install, edit `inventory.yml` and replace the `localhost` host
 with `ansible_host` and, if needed, `ansible_user`.
 
-## 5. Prepare the host
+## 5. Manual host preparation
 
 On a clean CentOS/RHEL-compatible server, install Docker and required host
 packages through the host-prep playbook:
@@ -147,7 +181,7 @@ ansible-playbook -i inventory.yml oeds-install-host-prep.yml
 If Docker with the Compose plugin is already installed and working, this step
 can be skipped.
 
-## 6. Install OEDS
+## 6. Manual OEDS install
 
 Install the core stack plus scheduler and crawler admin UI:
 

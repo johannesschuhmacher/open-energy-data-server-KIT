@@ -71,6 +71,7 @@ the exact commands for:
 - installing Ansible and required collections
 - cloning the repository to `/open_energy_data_server/repo`
 - creating and checking `playbooks/inventory.yml`
+- running the first-install script with a refreshed sudo cache
 - preparing Docker on a CentOS/RHEL-compatible host
 - installing OEDS with scheduler and Crawler Admin UI
 - running the smoke test
